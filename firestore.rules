@@ -1,0 +1,73 @@
+rules_version = '2';
+// Portal Propaga — regras multi-cliente.
+// Princípios: (1) todo dado de cliente fica sob /clientes/{clienteId};
+// (2) gravações de pedidos, valores e eventos só pelo servidor (Cloud Functions com src/lib/fluxo.ts);
+// (3) valores só para quem acessa Relatórios; (4) referência interna de preço só para admin;
+// (5) exige segundo fator (2FA) em toda leitura.
+// Claims definidas pelo admin: papel, clienteId (cliente) ou propaga=true (equipe Propaga).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() { return request.auth != null; }
+    function doisFatores() { return request.auth.token.firebase.sign_in_second_factor != null; }
+    function papel() { return request.auth.token.papel; }
+    function equipePropaga() { return request.auth.token.propaga == true; }
+    function admin() { return logado() && doisFatores() && equipePropaga() && papel() == 'admin'; }
+    function membro(c) {
+      return logado() && doisFatores() && (equipePropaga() || request.auth.token.clienteId == c);
+    }
+    function veRelatorios(c) {
+      return membro(c) && papel() in ['financeiro_cliente', 'atendimento', 'financeiro_propaga', 'admin'];
+    }
+
+    match /clientes/{c} {
+      allow read: if membro(c);
+      allow write: if false;
+
+      // Catálogo do cliente: somente preço final (sem referência interna).
+      match /catalogo/{versao} {
+        allow read: if membro(c);
+        allow write: if false;
+      }
+
+      match /solicitacoes/{protocolo} {
+        // Solicitante vê apenas os próprios pedidos; demais papéis veem todos do cliente.
+        allow read: if membro(c) && (papel() != 'solicitante' || resource.data.solicitanteUid == request.auth.uid);
+        allow write: if false;
+
+        match /eventos/{id} {
+          allow read: if membro(c) && (papel() != 'solicitante'
+            || get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.solicitanteUid == request.auth.uid);
+          allow write: if false; // histórico permanente, gravado só pelo servidor
+        }
+      }
+
+      // Valores por pedido: só Relatórios (decisão de 02/10/2026).
+      match /valores/{protocolo} {
+        allow read: if veRelatorios(c);
+        allow write: if false;
+      }
+
+      // Rascunho automático: cada usuário só o seu.
+      match /rascunhos/{uid} {
+        allow read, write: if membro(c) && request.auth.uid == uid
+          && request.resource.size() < 200000;
+      }
+    }
+
+    match /usuarios/{uid} {
+      allow read: if logado() && (request.auth.uid == uid || admin());
+      allow write: if false; // cadastro e convites via função administrativa
+    }
+
+    // Catálogo com referência interna, configurações e auditoria.
+    match /interno/{doc=**} {
+      allow read: if admin();
+      allow write: if false;
+    }
+
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

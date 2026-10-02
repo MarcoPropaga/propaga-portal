@@ -1,26 +1,22 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tokens da marca Propaga (aprovados em 27/09/2026). Botão primário: laranja com texto grafite. */
+@theme {
+  --color-orange-500: #FF1B00;
+  --color-orange-700: #C81500;
+  --color-orange-100: #FFE3DE;
+  --color-ink-900: #141414;
+  --color-gray-200: #E9E9E9;
+  --color-paper: #F7F5F2;
+  --color-gray-600: #5F5A56;
+  --font-display: var(--font-outfit), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-hanken), "Segoe UI", system-ui, sans-serif;
+  --radius-sm: 3px;
+  --radius: 4px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
+:root { color-scheme: light; }
+body { background: var(--color-paper); color: var(--color-ink-900); font-family: var(--font-sans); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--color-ink-900); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
