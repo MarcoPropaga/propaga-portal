@@ -1,0 +1,1192 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portal B&amp;M Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Outfit:wght@500;600&display=swap">
+<style>
+/* Layout: sidebar grafite fixa + área de trabalho em papel; formulário em seções numeradas (sequência real do pedido). */
+:root {
+  --brand: #FF1B00;        /* laranja Propaga — CTA, marca, filetes */
+  --on-brand: #141414;     /* texto sobre laranja (AA) */
+  --brand-text: #C81500;   /* laranja para texto pequeno */
+  --brand-soft: #FFE3DE;
+  --bg: #F7F5F2;           /* papel */
+  --surface: #FFFFFF;
+  --surface-2: #F1EEEA;    /* caixas de nota */
+  --line: #E9E9E9;
+  --line-strong: #D6D2CE;
+  --fg: #141414;
+  --muted: #5F5A56;
+  --side: #141414;
+  --side-fg: #F7F5F2;
+  --side-muted: #A8A29C;
+  --ok: #1E7047; --ok-bg: #E3F2EA;
+  --warn: #8A5300; --warn-bg: #FBEFD9;
+  --crit: #C81500; --crit-bg: #FFE3DE;
+  --focus: #141414;
+  --f-display: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+  --f-body: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --r: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --brand-text: #FF7A63; --brand-soft: #3A1812;
+    --bg: #111010; --surface: #1A1918; --surface-2: #232120; --line: #2D2B29; --line-strong: #3D3A37;
+    --fg: #F2EFEB; --muted: #AAA39C; --side: #0A0A0A; --side-fg: #F2EFEB; --side-muted: #8E8780;
+    --ok: #6CCB97; --ok-bg: #16291F; --warn: #E7B15A; --warn-bg: #2E2312; --crit: #FF7A63; --crit-bg: #3A1812;
+    --focus: #F2EFEB; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --brand-text: #FF7A63; --brand-soft: #3A1812;
+  --bg: #111010; --surface: #1A1918; --surface-2: #232120; --line: #2D2B29; --line-strong: #3D3A37;
+  --fg: #F2EFEB; --muted: #AAA39C; --side: #0A0A0A; --side-fg: #F2EFEB; --side-muted: #8E8780;
+  --ok: #6CCB97; --ok-bg: #16291F; --warn: #E7B15A; --warn-bg: #2E2312; --crit: #FF7A63; --crit-bg: #3A1812;
+  --focus: #F2EFEB; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f-body); margin: 0; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+h1 { font-size: 1.85rem; line-height: 1.15; }
+h2 { font-size: 1.2rem; }
+h3 { font-size: 1rem; }
+p { margin: 0; }
+a { color: var(--brand-text); }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: 0.8125rem; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- shell ---------- */
+.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: 100%; }
+.side { background: var(--side); color: var(--side-fg); display: flex; flex-direction: column; padding: 22px 14px 16px; position: sticky; top: 0; height: 100vh; }
+.brand { padding: 0 8px 22px; }
+.brand svg { width: 150px; height: auto; display: block; }
+.brand span { display: block; margin-top: 6px; font-size: 0.8125rem; color: var(--side-muted); letter-spacing: 0.02em; }
+.nav { display: grid; gap: 2px; }
+.nav a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r); color: var(--side-fg); text-decoration: none; font-weight: 500; }
+.nav a:hover { background: #ffffff12; }
+.nav a[aria-current="page"] { background: var(--brand); color: var(--on-brand); }
+.nav a.locked { color: var(--side-muted); }
+.nav svg { width: 19px; height: 19px; flex: none; }
+.nav .lock { margin-left: auto; width: 15px; height: 15px; }
+.side-user { margin-top: auto; display: flex; gap: 10px; align-items: center; padding: 12px 8px 0; border-top: 1px solid #ffffff1a; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--line-strong); color: var(--fg); display: grid; place-items: center; font-weight: 600; flex: none; font-family: var(--f-display); }
+.side .avatar { background: #3a3734; color: var(--side-fg); }
+.side-user b { display: block; font-weight: 600; font-size: 0.875rem; }
+.side-user span { font-size: 0.75rem; color: var(--side-muted); }
+.side-user button { margin-left: auto; background: none; border: 1px solid #ffffff2a; color: var(--side-fg); border-radius: var(--r); padding: 4px 8px; font-size: 0.75rem; cursor: pointer; }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.top { display: flex; align-items: center; gap: 12px; padding: 12px 32px; border-bottom: 1px solid var(--line); background: var(--surface); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.crumb { font-size: 0.8125rem; color: var(--muted); }
+.crumb b { color: var(--fg); font-weight: 600; }
+.top .spacer { flex: 1; }
+.demo { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; background: var(--surface-2); border-radius: var(--r); padding: 4px 6px 4px 10px; }
+.demo select { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 3px; padding: 3px 6px; font-size: 0.8125rem; }
+.menu-btn svg { width: 20px; height: 20px; display: block; }
+.menu-btn { display: none; color: var(--fg); background: none; border: 1px solid var(--line-strong); border-radius: var(--r); padding: 6px 9px; cursor: pointer; }
+.content { padding: 28px 32px 64px; width: 100%; max-width: 1260px; }
+.page-head { display: grid; gap: 6px; margin-bottom: 22px; }
+.page-head p { color: var(--muted); max-width: 70ch; }
+
+/* ---------- blocos ---------- */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.sec { margin-bottom: 14px; }
+.sec > header { display: flex; align-items: center; gap: 10px 14px; padding: 16px 20px; cursor: pointer; user-select: none; flex-wrap: wrap; }
+.sec > header h2 { flex: 1 1 auto; min-width: 0; }
+.sec > header .hx { order: 2; }
+.sec > header button.tog { order: 3; }
+.sec > header button.tog { background: none; border: 0; padding: 6px; cursor: pointer; color: var(--muted); border-radius: var(--r); }
+.sec > header .tog svg { width: 18px; height: 18px; transition: transform .15s; }
+.sec.closed > header .tog svg { transform: rotate(180deg); }
+.sec.closed > .body { display: none; }
+.sec > .body { padding: 0 20px 20px 70px; display: grid; gap: 16px; }
+.sec > .body > * { min-width: 0; }
+#resumo { display: grid; gap: 16px; }
+.step { width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: var(--on-brand); display: grid; place-items: center; font: 600 0.95rem/1 var(--f-display); flex: none; font-variant-numeric: tabular-nums; }
+.sec .hint { font-size: 0.8125rem; color: var(--muted); }
+.sec .badge { margin-left: 4px; }
+
+.grid { display: grid; gap: 14px 16px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.grid.g4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.grid.g3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field { display: grid; gap: 5px; min-width: 0; align-content: start; }
+.field label, .lbl { font-size: 0.8125rem; font-weight: 600; }
+.req { color: var(--brand-text); }
+.input, select.input, textarea.input { width: 100%; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r); padding: 9px 11px; min-height: 40px; }
+select.input { appearance: none; padding-right: 32px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%235F5A56' stroke-width='1.6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; }
+.input[readonly] { background: var(--surface-2); color: var(--muted); }
+.input[aria-invalid="true"] { border-color: var(--crit); box-shadow: 0 0 0 1px var(--crit); }
+.err { color: var(--crit); font-size: 0.8125rem; font-weight: 500; }
+.err:empty { display: none; }
+textarea.input { resize: vertical; line-height: 1.55; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 500; cursor: pointer; }
+.check input { width: 20px; height: 20px; accent-color: var(--brand); margin: 1px 0 0; flex: none; }
+
+.note { background: var(--surface-2); border-radius: var(--r); padding: 11px 14px; display: flex; gap: 10px; font-size: 0.875rem; color: var(--fg); }
+.note svg { width: 18px; height: 18px; flex: none; margin-top: 2px; color: var(--muted); }
+.note.warn { background: var(--warn-bg); }
+.note.warn svg { color: var(--warn); }
+.note.crit { background: var(--crit-bg); }
+.note.ok { background: var(--ok-bg); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--r); padding: 10px 18px; font-weight: 600; cursor: pointer; border: 1px solid transparent; text-decoration: none; min-height: 42px; white-space: nowrap; }
+.btn svg { width: 17px; height: 17px; }
+.btn-primary { background: var(--brand); color: var(--on-brand); }
+.btn-primary:hover { filter: brightness(1.06); }
+.btn-primary:disabled { background: var(--line-strong); color: var(--muted); cursor: not-allowed; filter: none; }
+.btn-line { background: var(--surface); border-color: var(--fg); color: var(--fg); }
+.btn-ghost { background: none; color: var(--brand-text); border-color: var(--brand); }
+.btn-quiet { background: none; border-color: var(--line-strong); color: var(--fg); }
+.btn-sm { padding: 6px 12px; min-height: 34px; font-size: 0.875rem; }
+.icon-btn { background: none; border: 0; padding: 8px; border-radius: var(--r); cursor: pointer; color: var(--brand-text); display: grid; place-items: center; }
+.icon-btn svg { width: 19px; height: 19px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--fg); white-space: nowrap; letter-spacing: 0.01em; }
+.badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .75; }
+.badge.plain::before { display: none; }
+.b-ok { background: var(--ok-bg); color: var(--ok); }
+.b-warn { background: var(--warn-bg); color: var(--warn); }
+.b-crit { background: var(--crit-bg); color: var(--crit); }
+.b-brand { background: var(--brand-soft); color: var(--brand-text); }
+.b-mute { color: var(--muted); }
+
+/* serviços */
+.svc { background: var(--surface-2); border-radius: var(--r); padding: 12px 16px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: center; }
+.svc > h3 { grid-column: 1; }
+.svc > .icon-btn { grid-column: 2; grid-row: 1; }
+.svc .stack { grid-column: 1 / -1; }
+.svc .stack { display: grid; gap: 12px; min-width: 0; }
+.svc .input { background: var(--surface); }
+@media (min-width: 1101px) { .svc .grid.g4:first-child { grid-template-columns: 1fr 1.5fr 1.25fr 0.6fr; } }
+.price-line { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; font-size: 0.875rem; }
+.price-line strong { font-family: var(--f-display); font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.scope { font-size: 0.8125rem; color: var(--muted); }
+details.more summary { cursor: pointer; font-size: 0.8125rem; font-weight: 600; color: var(--brand-text); width: fit-content; }
+details.more[open] summary { margin-bottom: 8px; }
+
+/* resumo */
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; background: var(--surface-2); white-space: nowrap; }
+td.r, th.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+tr:last-child td { border-bottom: 0; }
+tfoot td { font-weight: 600; background: var(--surface-2); }
+tr.click { cursor: pointer; }
+tr.click:hover td { background: var(--surface-2); }
+.total-box { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; padding: 14px 16px; border-left: 3px solid var(--brand); background: var(--surface-2); border-radius: 0 var(--r) var(--r) 0; }
+.total-box .v { font: 600 1.5rem/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.actions { display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap; align-items: center; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line-strong); background: var(--surface); padding: 6px 11px; border-radius: var(--r); font-size: 0.8125rem; font-weight: 500; }
+.chip svg { width: 15px; height: 15px; color: var(--muted); }
+button.chip { cursor: pointer; }
+button.chip[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+
+/* listas e detalhe */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.toolbar .input { width: auto; min-width: 200px; flex: 1 1 220px; max-width: 360px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.kpi { padding: 14px 16px; display: grid; gap: 4px; }
+.kpi .k { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.kpi .v { font: 600 1.35rem/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.kpi .s { font-size: 0.8125rem; color: var(--muted); }
+
+.detail { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.panel { padding: 18px 20px; display: grid; gap: 14px; }
+.panel h2 { font-size: 1.05rem; }
+.kv { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 14px; font-size: 0.875rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.flow { display: flex; flex-wrap: wrap; gap: 4px; }
+.flow span { font-size: 0.6875rem; font-weight: 600; padding: 4px 8px; border-radius: 3px; background: var(--surface-2); color: var(--muted); }
+.flow span.done { background: var(--fg); color: var(--bg); }
+.flow span.now { background: var(--brand); color: var(--on-brand); }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.timeline li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 12px; padding-bottom: 14px; position: relative; }
+.timeline li::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); margin-top: 5px; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line-strong); }
+.timeline li.key::before { background: var(--brand); box-shadow: 0 0 0 1px var(--brand); }
+.timeline li::after { content: ''; position: absolute; left: 6px; top: 18px; bottom: 0; width: 1px; background: var(--line); }
+.timeline li:last-child::after { display: none; }
+.timeline b { font-weight: 600; font-size: 0.875rem; }
+.timeline .meta { font-size: 0.75rem; color: var(--muted); }
+.timeline .tnote { font-size: 0.8125rem; margin-top: 2px; }
+.act-box { border-top: 1px solid var(--line); padding-top: 14px; display: grid; gap: 10px; }
+
+/* catálogo */
+.cat-group { margin-bottom: 26px; }
+.cat-group > h2 { margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline; }
+.svc-card { padding: 14px 16px; display: grid; grid-template-columns: 52px minmax(0, 1fr) minmax(220px, 300px); gap: 14px; border-top: 1px solid var(--line); }
+.svc-card:first-of-type { border-top: 0; }
+.svc-card .cod { font: 600 0.8125rem/1.6 var(--f-display); color: var(--brand-text); font-variant-numeric: tabular-nums; }
+.vlist { display: grid; gap: 4px; font-size: 0.8125rem; }
+.vlist div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1px dotted var(--line-strong); padding-bottom: 3px; }
+.vlist b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* login */
+.auth { min-height: 100%; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.auth-side { background: var(--side); color: var(--side-fg); padding: 48px; display: flex; flex-direction: column; gap: 28px; }
+.auth-side svg.logo { width: 190px; height: auto; }
+.auth-side h1 { font-size: 2.3rem; max-width: 16ch; }
+.auth-side p { color: var(--side-muted); max-width: 46ch; }
+.auth-side .fine { margin-top: auto; font-size: 0.8125rem; color: var(--side-muted); }
+.auth-main { padding: 48px 24px; display: grid; place-items: center; }
+.auth-box { width: 100%; max-width: 420px; display: grid; gap: 18px; }
+.steps { display: flex; gap: 6px; }
+.steps i { height: 4px; flex: 1; background: var(--line-strong); border-radius: 2px; }
+.steps i.on { background: var(--brand); }
+.qr { width: 132px; height: 132px; display: grid; grid-template-columns: repeat(11, 1fr); gap: 1px; padding: 8px; background: #fff; border: 1px solid var(--line-strong); border-radius: var(--r); }
+.qr i { background: #141414; }
+.qr i.o { background: #fff; }
+.pw-rules { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: 0.8125rem; color: var(--muted); }
+.pw-rules li.ok { color: var(--ok); }
+.pw-rules li::before { content: '○ '; }
+.pw-rules li.ok::before { content: '● '; }
+.who { display: grid; gap: 8px; }
+.who button { text-align: left; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-strong); background: var(--surface); border-radius: var(--r); cursor: pointer; }
+.who button:hover { border-color: var(--fg); }
+.who small { display: block; color: var(--muted); font-size: 0.75rem; }
+
+/* overlay / toast */
+.toast-wrap { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; z-index: 50; max-width: min(420px, calc(100vw - 32px)); }
+.toast { background: var(--fg); color: var(--bg); padding: 12px 16px; border-radius: var(--r); font-size: 0.875rem; box-shadow: 0 6px 24px #0003; }
+.modal-bg { position: fixed; inset: 0; background: #0008; display: grid; place-items: center; z-index: 40; padding: 16px; }
+.modal { background: var(--surface); border-radius: var(--r); width: min(980px, 100%); max-height: 92vh; display: grid; grid-template-rows: auto 1fr auto; }
+.modal header, .modal footer { padding: 14px 18px; display: flex; align-items: center; gap: 12px; }
+.modal header { border-bottom: 1px solid var(--line); }
+.modal footer { border-top: 1px solid var(--line); justify-content: flex-end; }
+.modal textarea { border: 0; border-radius: 0; height: 100%; min-height: 60vh; padding: 18px; }
+.empty { padding: 28px; text-align: center; color: var(--muted); }
+.lockpage { padding: 40px; display: grid; gap: 10px; justify-items: start; max-width: 560px; }
+
+@media (max-width: 1100px) {
+  .detail { grid-template-columns: minmax(0, 1fr); }
+  .grid.g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .svc-card { grid-template-columns: 52px minmax(0, 1fr); }
+  .svc-card .vlist { grid-column: 2; }
+}
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side { position: fixed; inset: 0 auto 0 0; width: 260px; z-index: 30; transform: translateX(-100%); transition: transform .2s; padding-top: calc(22px + env(safe-area-inset-top, 0px)); }
+  .side.open { transform: none; box-shadow: 0 0 0 100vmax #0007; }
+  .menu-btn { display: inline-flex; }
+  .top { padding: 10px 16px; }
+  .content { padding: 20px 16px 56px; }
+  .sec > .body { padding: 0 16px 18px; }
+  .sec > header { padding: 14px 16px; }
+  .sec > header .hx { order: 4; flex-basis: 100%; padding-left: 50px; }
+  .grid.g3, .split { grid-template-columns: minmax(0, 1fr); }
+  .auth { grid-template-columns: minmax(0, 1fr); }
+  .auth-side { padding: 28px 20px; gap: 14px; }
+  .auth-side h1 { font-size: 1.6rem; }
+  .auth-side .fine { display: none; }
+  .crumb { display: none; }
+}
+@media (max-width: 520px) {
+  .grid.g4, .kpis { grid-template-columns: minmax(0, 1fr); }
+  h1 { font-size: 1.5rem; }
+  .kv { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .kv dd { margin-bottom: 8px; }
+  .demo span { display: none; }
+  .page-head .badge { white-space: normal; }
+  .actions .btn { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+.linkbtn { background: none; border: 0; padding: 0; color: var(--brand-text); text-decoration: underline; cursor: pointer; font: inherit; }
+.toolbar select.input { width: auto; flex: 0 1 320px; min-width: 0; }
+
+</style>
+</head><body><div id="app"></div>
+<script>
+/* Catálogo B&M Log v1.0 (01/10/2026) — fonte: Propaga_Catalogo_Servicos_BM_Log.pdf
+   ref = valor de referência recomendado (uso interno). Cliente vê apenas ref × 0,85.
+   null = a cotar. */
+const CAT_VERSION = { id: '1.0', data: '01/10/2026', status: 'Vigente · contrato assinado' };
+
+const CATEGORIAS = [
+  { id: 'rs', nome: 'Redes sociais' },
+  { id: 'dg', nome: 'Digital, WhatsApp e e-mail' },
+  { id: 'ap', nome: 'Apresentações e institucional' },
+  { id: 'vd', nome: 'Vídeos e TV' },
+  { id: 'im', nome: 'Impressos' },
+  { id: 'br', nome: 'Brindes' },
+  { id: 'ev', nome: 'Eventos e feiras' },
+  { id: 'rh', nome: 'RH e comunicação interna' },
+  { id: 'cp', nome: 'Campanhas' },
+  { id: 'lg', nome: 'Soluções para logística' }
+];
+
+const OP = {
+  sq: { k: 'Formato', o: ['1:1', '4:5', '9:16'] },
+  sq2: { k: 'Formato', o: ['1:1', '4:5'] },
+  vid: { k: 'Formato', o: ['9:16 vertical', '1:1 quadrado', '16:9 horizontal'] },
+  tv: { k: 'Formato', o: ['16:9 horizontal', 'Resolução da TV (informar)'] },
+  pap: { k: 'Tamanho', o: ['A6', 'A5', 'A4', 'Personalizado (informar)'] },
+  doc: { k: 'Formato', o: ['A4 vertical', 'A4 horizontal', '16:9'] },
+  rede: { k: 'Rede', o: ['Instagram', 'Facebook', 'LinkedIn', 'YouTube'] },
+  rhf: { k: 'Formato', o: ['Digital', 'A4 para mural', 'TV 16:9'] },
+  tela: { k: 'Aplicação', o: ['Computador', 'Celular'] },
+  ori: { k: 'Orientação', o: ['Horizontal', 'Vertical'] },
+  fdr: { k: 'Tamanho fechado', o: ['A5', 'A4', '10 × 21 cm', 'Personalizado (informar)'] }
+};
+
+// [código, categoria, nome, descrição, escopo, variantes[[rótulo, 'novo'|'edicao', ref|null]], opção, vídeo?, observação]
+const RAW = [
+  ['01','rs','Post estático','Uma mensagem visual para publicação no feed ou nos Stories.','Uma peça em um formato. Entrega em JPG ou PNG.',[['Novo','novo',200],['Edição de layout existente','edicao',100]],'sq'],
+  ['02','rs','Post carrossel/sequencial','Sequência com capa, desenvolvimento e encerramento.','Uma publicação de até 5 telas, formato uniforme.',[['Novo, até 5 telas','novo',350],['Novo, 6 a 10 telas','novo',null],['Atualização','edicao',null]],'sq2'],
+  ['03','rs','Post comemorativo/data','Peça para uma data, aniversário ou celebração.','Uma peça por ocasião, em um formato.',[['Novo','novo',250],['Atualização em modelo aprovado','edicao',null]],'sq'],
+  ['04','rs','Post conceito/campanha','Mensagem central e linguagem visual de uma ação.','Uma peça principal com conceito. Desdobramentos não incluídos.',[['Novo','novo',500],['Adaptações ou novas mensagens','edicao',null]],'sq'],
+  ['05','rs','Post + vídeo/motion simples','Post estático e vídeo derivados do mesmo conceito.','Kit: 1 post em 1:1 ou 4:5 e 1 motion. Captação presencial excluída.',[['Novo, kit até 15 s','novo',750],['Novo, kit 16 a 30 s','novo',null],['Novo, kit 31 a 60 s','novo',null],['Edição','edicao',null]],'vid',true],
+  ['07','rs','Capa de redes sociais','Capa de um perfil ou página, com recortes e áreas seguras.','Uma capa por rede. Entrega em JPG ou PNG.',[['Novo','novo',250],['Atualização ou conjunto de redes','edicao',null]],'rede'],
+  ['08','dg','WhatsApp Card','Card para comunicado, convite ou divulgação comercial.','Um card em um formato; 9:16 para Status como adaptação.',[['Novo','novo',200],['Edição ou adaptação adicional','edicao',null]],'sq'],
+  ['09','dg','Capa WhatsApp','Arte para o campo de capa do ambiente utilizado.','Uma capa. Não confundir com foto de perfil, card ou Status.',[['Novo','novo',200],['Atualização','edicao',null]],null],
+  ['10','dg','E-mail marketing','Layout de cabeçalho, conteúdo, chamada para ação e rodapé.','Um e-mail visual. Não inclui HTML, disparo, automação ou base.',[['Novo, até 5 blocos','novo',450],['Edição, até 5 blocos','edicao',200],['6 a 10 blocos ou HTML responsivo','novo',null]],null],
+  ['11','dg','Assinatura de e-mail','Identificação com nome, cargo, contatos e marca.','Modelo HTML simples para até 3 pessoas, testado em 2 ambientes.',[['Novo, modelo HTML','novo',300],['Pessoas extras ou instalação','edicao',null]],null],
+  ['12','dg','Banner para site','Peça estática para uma área definida do site.','Um banner em uma dimensão. Implantação no site não incluída.',[['Novo, 1 dimensão','novo',250],['Mobile, animação ou atualização','edicao',null]],null],
+  ['13','dg','Post + banner site','Duas aplicações de uma mesma mensagem.','Kit: 1 post e 1 banner no tamanho do site.',[['Novo, kit de 2 peças','novo',350],['Versões adicionais','edicao',null]],'sq2'],
+  ['14','dg','Impresso + E-mail + WhatsApp','Um conceito adaptado para três canais.','Kit: impresso até 2 faces, e-mail até 5 blocos e 1 card.',[['Novo, kit de 3 layouts','novo',700],['HTML ou peças extras','edicao',null]],null],
+  ['15','ap','Apresentação comercial','Serviços, diferenciais e proposta de valor, com conteúdo fornecido.','Slides em 16:9. Entrega em PDF e editável acordado.',[['Novo, até 10 slides','novo',1200],['Edição, até 5 slides alterados','edicao',400],['Novo, 11 a 20 slides','novo',null],['Novo, acima de 20 slides','novo',null]],null],
+  ['16','ap','Apresentação para webinar','Apoio visual para palestra, treinamento ou transmissão.','Slides em 16:9. Transmissão e gravação excluídas.',[['Novo, até 10 slides','novo',1000],['Novo, 11 a 20 slides','novo',null],['Novo, 21 a 30 slides','novo',null],['Novo, acima de 30 slides','novo',null],['Edição','edicao',null]],null],
+  ['17','ap','Apresentação institucional','História, atuação, estrutura e serviços da empresa.','Slides em 16:9. A B&M Log aprova os dados.',[['Novo, até 10 slides','novo',1200],['Novo, mais de 10 slides','novo',null],['Edição','edicao',null]],null],
+  ['18','ap','PDF/apresentação','Documento diagramado para leitura e envio digital.','Páginas com links clicáveis quando previstos. Redação integral não incluída.',[['Novo, até 6 páginas','novo',700],['Novo, 7 a 12 páginas','novo',null],['Novo, 13 a 20 páginas','novo',null],['Edição','edicao',null]],'doc'],
+  ['19','vd','Vídeo motion simples','Textos, imagens, transições e animação simples.','Um vídeo por faixa de duração final, MP4 Full HD. Filmagem excluída.',[['Novo, até 15 s','novo',600],['Novo, 16 a 30 s','novo',800],['Novo, 31 a 60 s','novo',1200],['Edição, até 15 s','edicao',200],['Edição, 16 a 30 s','edicao',300],['Edição, 31 a 60 s','edicao',450]],'vid',true],
+  ['20','vd','Vídeo institucional','Narrativa institucional com conceito, roteiro e montagem visual.','Um formato final em Full HD. Captação, fotografia e locução excluídas.',[['Novo, até 60 s','novo',1800],['Novo, 61 a 120 s','novo',2800],['Novo, bloco adicional até 60 s','novo',900],['Edição, até 60 s','edicao',700],['Edição, 61 a 120 s','edicao',1100],['Edição, bloco adicional até 60 s','edicao',400]],'tv',true],
+  ['21','vd','Vídeo para TV interna','Avisos, segurança e comunicação para as telas internas.','Um card ou vídeo. Plataforma e equipamentos excluídos.',[['Novo, card estático','novo',250],['Novo, motion até 15 s','novo',600],['Novo, motion 16 a 30 s','novo',null],['Novo, motion 31 a 60 s','novo',null]],'tv',true],
+  ['22','vd','TV + posts','Uma mensagem adaptada para TV e redes sociais.','Kit estático: 1 card TV 16:9 e 2 posts.',[['Novo, kit estático','novo',500],['Versão com vídeo ou edição','edicao',null]],null],
+  ['23','vd','TV + site + Canva','Adaptação de um conceito para três aplicações.','Kit: 1 card TV, 1 banner site e 1 template Canva editável.',[['Novo, kit de 3 entregáveis','novo',650],['Versão animada ou atualização','edicao',null]],null],
+  ['24','im','Flyer','Divulgação objetiva de serviço, evento ou ação.','Sem dobra. Impressão excluída.',[['Novo, frente e verso','novo',350],['Uma face ou atualização','edicao',null]],'pap'],
+  ['25','im','Folder','Apresentação de serviços organizada em painéis.','Gabarito e compensação das dobras conforme a gráfica.',[['Novo, até 6 faces (2 dobras)','novo',650],['Novo, 4 faces (1 dobra)','novo',null],['Novo, 8 faces (3 dobras)','novo',null],['Edição','edicao',null]],'fdr'],
+  ['26','im','Cartão de visita','Modelo de identificação profissional com contatos.','Frente e verso para 1 pessoa, conforme gabarito.',[['Novo, modelo para 1 pessoa','novo',250],['Personalizações ou edição','edicao',null]],null],
+  ['27','im','Cartão comemorativo','Mensagem de homenagem, agradecimento ou celebração.','Até 2 faces, sem dobra.',[['Novo, até 2 faces','novo',250],['4 faces ou adaptação digital','edicao',null]],null],
+  ['28','im','Cartão de Natal','Mensagem e composição natalinas.','Até 2 faces sem dobra; tamanho conforme envelope.',[['Novo, até 2 faces','novo',300],['4 faces ou personalizações','edicao',null]],null],
+  ['29','im','Porta-rascunho','Aplicação gráfica no suporte para folhas.','Uma arte conforme gabarito do fabricante. Fabricação excluída.',[['Novo, 1 gabarito','novo',300],['Faces extras ou edição','edicao',null]],null],
+  ['30','im','Tag','Identificação, mensagem de presente ou comunicação promocional.','Frente e verso, formato conforme fabricante.',[['Novo, frente e verso','novo',200],['Modelos adicionais ou edição','edicao',null]],null],
+  ['31','im','Selo','Elemento gráfico de aniversário, campanha ou identificação.','Um desenho. PNG transparente; vetor quando acordado.',[['Novo','novo',250],['Adaptações ou edição','edicao',null]],null],
+  ['32','br','Camiseta','Aplicação institucional ou estampa de campanha.','Arte para frente e costas de 1 modelo. Confecção excluída.',[['Novo, frente e costas','novo',300],['Mangas ou variações','edicao',null]],null],
+  ['33','br','Caneca','Arte institucional ou temática em gabarito de impressão.','Um modelo, conforme fornecedor.',[['Novo','novo',250],['Personalização por nome','edicao',null]],null],
+  ['34','br','Caderno','Projeto visual da capa e contracapa.','A5, A4 ou medida do fornecedor. Miolo é adicional.',[['Novo, capa e contracapa','novo',400],['Miolo personalizado ou extras','edicao',null]],null],
+  ['35','br','Calendário de mesa','Organização das datas e criação visual mensal.','13 lâminas: capa e 12 meses. Impressão e montagem excluídas.',[['Novo, capa + 12 lâminas','novo',1200],['Lâmina anual ou versos','edicao',null]],null],
+  ['36','br','Adesivo','Arte para identificação ou divulgação institucional.','Um modelo e uma dimensão, conforme gabarito.',[['Novo','novo',250],['Variações ou edição','edicao',null]],null],
+  ['37','ev','Stand/booth','Comunicação gráfica de um espaço de exposição.','Até 5 superfícies. Arquitetura, 3D, estrutura e montagem excluídas.',[['Novo, até 5 superfícies','novo',2000],['Outras quantidades ou edição','edicao',null],['Versão em outro idioma (feira internacional)','novo',null]],null,false,'Versão em outro idioma inclui tradução e revisão por profissional nativo, orçadas à parte.'],
+  ['39','ev','Visual de stand','Linguagem visual principal do espaço.','1 peça principal e até 2 adaptações.',[['Novo','novo',1200],['Aplicações adicionais','edicao',null]],null],
+  ['40','ev','Material para feira','Material para apresentar serviços no evento.','Referência: 1 flyer frente e verso.',[['Novo, flyer frente e verso','novo',350],['Outros materiais ou kit','edicao',null]],null],
+  ['41','ev','Banner','Comunicação física para exposição.','Uma arte em uma dimensão. Lona e impressão excluídas.',[['Novo','novo',400],['Variações ou atualização','edicao',null]],'ori'],
+  ['42','ev','Backdrop','Painel de fundo institucional, de marcas ou temático.','Uma arte em uma dimensão.',[['Novo','novo',600],['Variações ou atualização','edicao',null]],null],
+  ['43','ev','Mobile de teto','Peça suspensa de comunicação.','Uma arte de até 2 faces. Fabricação e instalação excluídas.',[['Novo, até 2 faces','novo',400],['Conjunto de peças ou edição','edicao',null]],null],
+  ['44','rh','Arte/comunicado RH','Aviso de benefícios, prazos, atividades ou orientações.','Uma peça em um formato.',[['Novo','novo',200],['Atualização ou adaptações','edicao',null]],'rhf'],
+  ['45','rh','Fundo de tela','Wallpaper institucional ou de campanha.','Uma arte em uma resolução.',[['Novo','novo',200],['Resoluções extras ou edição','edicao',null]],'tela'],
+  ['46','rh','Cartão de boas-vindas','Recepção de novo colaborador.','Um modelo e uma personalização, até 2 faces.',[['Novo','novo',200],['4 faces ou pessoas extras','edicao',null]],null],
+  ['47','rh','Comunicação interna','Mensagem organizada para canais internos.','Um comunicado com até 2 formatos. Distribuição não incluída.',[['Novo, até 2 formatos','novo',300],['Edição ou formatos extras','edicao',null]],null],
+  ['48','rh','Campanha interna/RH','Conceito e sequência de mensagens para uma ação de RH.','Conceito e 3 peças estáticas. Conteúdo validado pelo RH.',[['Novo, conceito + 3 peças','novo',1000],['Kit ampliado ou edição','edicao',null]],null],
+  ['49','cp','Campanha institucional','Posicionamento, serviços ou diferenciais.','Conceito, mensagem principal e 4 peças estáticas.',[['Novo, conceito + 4 peças','novo',1800],['Vídeos, pesquisa ou ampliação','edicao',null]],null],
+  ['50','cp','Campanha comemorativa','Aniversário, conquista ou marco institucional.','Conceito e 3 peças estáticas para uma ocasião.',[['Novo, conceito + 3 peças','novo',1000],['Kit ampliado ou edição','edicao',null]],null],
+  ['51','cp','Campanha de data especial','Ação relacionada a uma data específica.','Conceito e 2 peças estáticas.',[['Novo, conceito + 2 peças','novo',700],['Peças adicionais ou edição','edicao',null]],null],
+  ['52','cp','Campanha interna','Cultura, processos, reconhecimento ou segurança.','Conceito e 4 peças estáticas em canais internos.',[['Novo, conceito + 4 peças','novo',1200],['Kit ampliado ou edição','edicao',null]],null],
+  ['53','cp','Campanha promocional','Oferta ou ação comercial com período definido.','Conceito e 3 peças. A B&M Log informa condições e validade.',[['Novo, conceito + 3 peças','novo',1000],['Kit ampliado ou edição','edicao',null]],null],
+  ['A01','lg','Kit de segurança e prevenção','Reforçar condutas seguras.','Por tema: cartaz, card, TV e roteiro de DDS. Conteúdo técnico validado pela área responsável.',[['Novo, por tema','novo',1200]],null],
+  ['A02','lg','Campanha para motoristas e operação','Reconhecimento, cuidados e rotinas em canais acessíveis.','Conceito, 4 cards e 1 motion até 30 s.',[['Novo','novo',1800]],null],
+  ['A03','lg','Manual de integração','Cultura, contatos, condutas e orientações de entrada.','PDF de até 12 páginas, com texto-base aprovado.',[['Novo, até 12 páginas','novo',1200]],null],
+  ['A04','lg','Manual de integração – atualização','Informações de ingresso atualizadas.','Até 4 páginas alteradas em arquivo existente.',[['Edição, até 4 páginas','edicao',400]],null],
+  ['A05','lg','Kit de mudança de processo','O que mudou, quando e como executar.','Comunicado, infográfico simples e 5 slides.',[['Novo','novo',1000]],null],
+  ['A06','lg','Kit de recrutamento','Vaga, requisitos e proposta de trabalho com clareza.','3 peças estáticas para 1 vaga.',[['Novo, 1 vaga','novo',600]],null],
+  ['A07','lg','Sustentabilidade e responsabilidade social','Ações reais e indicadores fornecidos pela empresa.','Carrossel de 5 telas e PDF de 2 páginas.',[['Novo','novo',800]],null],
+  ['A08','lg','Tutorial de rastreamento','Uso dos canais existentes e menos dúvidas recorrentes.','Vídeo explicativo de 31 a 60 s, sem desenvolvimento de sistema.',[['Novo','novo',1400]],null],
+  ['A09','lg','Estudo de caso logístico','Capacidade demonstrada por resultados autorizados.','Texto até 800 palavras, PDF de 4 páginas e 1 entrevista remota.',[['Novo','novo',1200]],null],
+  ['A10','lg','Ficha comercial de serviço','Diferenciais, aplicações e condições operacionais.','PDF de 2 páginas para 1 serviço.',[['Novo, 1 serviço','novo',400]],null],
+  ['A11','lg','Landing page comercial','Concentrar oferta e captar contatos.','1 página responsiva, até 6 seções. Domínio, hospedagem e CRM excluídos.',[['Novo','novo',1800]],null],
+  ['A12','lg','Landing page – atualização','Atualizar conteúdo e oferta.','Até 2 seções de página existente.',[['Edição, até 2 seções','edicao',400]],null],
+  ['A13','lg','E-mail – implementação e disparo','Distribuir conteúdo à base aprovada.','1 campanha, montagem e 1 disparo em plataforma existente.',[['Novo, 1 campanha','novo',700]],null],
+  ['A14','lg','Kit de comunicação para filiais','Padronizar a marca e agilizar comunicação local.','Matriz com 6 modelos editáveis.',[['Novo, 6 modelos','novo',1200]],null],
+  ['A15','lg','Kit para filiais – localização','Endereço, contatos e informações da unidade.','Adaptação dos 6 modelos para 1 filial.',[['Edição, 1 filial','edicao',300]],null],
+  ['A16','lg','Cobertura editorial remota de evento','Aproveitar o evento em conteúdo.','5 publicações e 1 vídeo até 30 s, com material fornecido.',[['Novo','novo',1000]],null],
+  ['A17','lg','Tratamento de fotografias fornecidas','Melhorar acabamento de imagens.','Lote de 10 imagens: cor, luz e enquadramento.',[['Edição, lote de 10','edicao',300]],null]
+];
+
+const SERVICOS = RAW.map(r => ({
+  cod: r[0], cat: r[1], nome: r[2], desc: r[3], escopo: r[4],
+  variantes: r[5].map(v => ({ rotulo: v[0], mod: v[1], ref: v[2], bm: v[2] == null ? null : Math.round(v[2] * 85) / 100 })),
+  opcao: r[6] ? OP[r[6]] : null, video: !!r[7], nota: r[8] || ''
+}));
+const SV = Object.fromEntries(SERVICOS.map(s => [s.cod, s]));
+const SOBREPOSICOES = [['48', '52'], ['37', '39']];
+
+</script>
+<script>
+/* Portal B&M Log — prévia navegável (dados em memória, login e e-mails simulados) */
+const LOGO = `<svg viewBox="0 0 1996 265" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Propaga" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;"><g transform="matrix(1,0,0,1,-918.613755,-340.581164)"><g transform="matrix(2.342013,0,0,2.717841,557.409411,-2406.767057)"><g transform="matrix(7.704962,0,0,6.639506,205.25041,1085.828513)"><path d="M0,-8.295C0.124,-8.49 0.274,-8.646 0.445,-8.76C0.601,-8.863 0.768,-8.926 0.942,-8.947C1.027,-8.958 1.113,-8.958 1.198,-8.948C1.372,-8.926 1.539,-8.863 1.696,-8.759C1.867,-8.646 2.016,-8.49 2.14,-8.295L2.166,-8.254L2.198,-8.198L6.279,-1.133C6.377,-0.909 6.427,-0.691 6.427,-0.485C6.426,-0.159 6.295,0.135 6.053,0.347C5.99,0.401 5.92,0.45 5.837,0.495C5.741,0.547 5.632,0.589 5.51,0.62C5.401,0.647 5.286,0.663 5.154,0.668L-2.957,0.669L-3.024,0.667C-3.145,0.663 -3.261,0.647 -3.377,0.618C-3.492,0.589 -3.598,0.548 -3.703,0.491C-3.778,0.451 -3.849,0.402 -3.919,0.342C-4.155,0.134 -4.286,-0.16 -4.286,-0.486C-4.286,-0.688 -4.238,-0.901 -4.144,-1.12L-0.056,-8.2L0,-8.295ZM8.376,-2.16L4.219,-9.369L4.112,-9.548C3.811,-10.021 3.432,-10.412 2.986,-10.707C2.531,-11.009 2.011,-11.202 1.482,-11.267C1.209,-11.3 0.932,-11.3 0.658,-11.267C0.129,-11.202 -0.391,-11.008 -0.845,-10.707C-1.291,-10.412 -1.67,-10.022 -1.972,-9.547L-6.038,-2.511L-6.23,-2.177L-6.247,-2.139C-6.495,-1.598 -6.622,-1.041 -6.622,-0.483C-6.622,0.524 -6.209,1.44 -5.438,2.116C-5.25,2.279 -5.042,2.422 -4.805,2.552C-4.539,2.695 -4.25,2.807 -3.935,2.887C-3.669,2.953 -3.39,2.992 -3.092,3.003L5.106,3.005L5.249,3.002C5.532,2.992 5.81,2.953 6.092,2.883C6.391,2.807 6.679,2.695 6.963,2.542C7.184,2.422 7.391,2.278 7.6,2.098C8.349,1.441 8.762,0.523 8.762,-0.487C8.762,-1.041 8.636,-1.597 8.376,-2.16" style="fill:rgb(255,27,0);fill-rule:nonzero;"/></g><g transform="matrix(7.704962,0,0,6.639506,949.737971,1043.72442)"><path d="M0,4.637L2.782,4.62C3.13,4.62 3.374,4.276 3.258,3.948L1.696,-0.453C1.538,-0.797 1.177,-0.709 1.08,-0.453L-0.487,3.952C-0.604,4.287 -0.355,4.637 0,4.637M6.761,9.179L5.528,9.179C5.275,9.179 5.053,9.025 4.974,8.796L4.341,7.043C4.288,6.896 4.149,6.798 3.993,6.798L-1.206,6.792C-1.364,6.792 -1.504,6.891 -1.556,7.039L-2.177,8.797C-2.257,9.025 -2.48,9.179 -2.732,9.179L-3.965,9.179C-4.153,9.179 -4.33,9.091 -4.441,8.944C-4.553,8.792 -4.58,8.598 -4.516,8.423L0.167,-4.168C0.251,-4.392 0.472,-4.542 0.719,-4.542L2.061,-4.542C2.308,-4.542 2.53,-4.392 2.613,-4.168L7.314,8.423C7.378,8.6 7.35,8.794 7.238,8.944C7.129,9.091 6.951,9.179 6.761,9.179" style="fill:rgb(255,27,0);fill-rule:nonzero;"/></g><g transform="matrix(7.704962,0,0,6.639506,735.332774,1044.300065)"><path d="M0,4.593L2.782,4.576C3.13,4.576 3.374,4.236 3.258,3.91L1.696,-0.449C1.538,-0.79 1.177,-0.702 1.08,-0.449L-0.487,3.914C-0.604,4.246 -0.355,4.593 0,4.593M6.761,9.092L5.528,9.092C5.275,9.092 5.053,8.94 4.974,8.713L4.341,6.977C4.288,6.831 4.149,6.734 3.993,6.734L-1.206,6.728C-1.364,6.727 -1.504,6.826 -1.556,6.973L-2.177,8.713C-2.257,8.94 -2.48,9.092 -2.732,9.092L-3.965,9.092C-4.153,9.092 -4.33,9.005 -4.441,8.86C-4.553,8.709 -4.58,8.517 -4.516,8.344L0.167,-4.13C0.251,-4.351 0.472,-4.499 0.719,-4.499L2.061,-4.499C2.308,-4.499 2.53,-4.351 2.613,-4.13L7.314,8.343C7.378,8.518 7.35,8.711 7.238,8.859C7.129,9.005 6.951,9.092 6.761,9.092" style="fill:rgb(255,27,0);fill-rule:nonzero;"/></g><g transform="matrix(7.704962,0,0,6.639506,456.962528,1067.89554)"><path d="M0,-2.523C0,-1.417 -0.346,-0.551 -1.026,0.051C-1.725,0.667 -2.736,0.98 -4.032,0.98L-5.749,0.98C-6.023,0.98 -6.245,0.761 -6.245,0.492L-6.245,-5.466C-6.245,-5.728 -6.03,-5.94 -5.763,-5.94L-4.032,-5.94C-2.733,-5.94 -1.721,-5.633 -1.023,-5.026C-0.344,-4.44 0,-3.598 0,-2.523M-0.31,2.606C-0.39,2.449 -0.328,2.262 -0.177,2.172C1.436,1.213 2.286,-0.381 2.286,-2.461C2.286,-4.18 1.678,-5.607 0.527,-6.589C-0.599,-7.551 -2.227,-8.059 -4.184,-8.059L-7.868,-8.059C-8.223,-8.059 -8.51,-7.772 -8.51,-7.417L-8.51,4.893C-8.51,5.246 -8.221,5.536 -7.867,5.536L-6.887,5.536C-6.533,5.536 -6.245,5.248 -6.245,4.894L-6.245,3.24C-6.245,3.182 -6.198,3.135 -6.14,3.135L-4.184,3.135C-3.704,3.135 -3.238,3.104 -2.796,3.044C-2.752,3.038 -2.71,3.061 -2.691,3.101L-1.665,5.231C-1.577,5.416 -1.387,5.536 -1.182,5.536L0.306,5.536C0.493,5.536 0.664,5.439 0.763,5.278C0.86,5.12 0.867,4.919 0.783,4.754L-0.31,2.606Z" style="fill:rgb(255,27,0);fill-rule:nonzero;"/></g><g transform="matrix(7.704962,0,0,6.639506,542.829702,1108.278341)"><path d="M0,-14.673C-4.038,-14.673 -7.318,-11.385 -7.318,-7.337C-7.318,-3.287 -4.038,0 0,0C4.037,0 7.316,-3.287 7.316,-7.337C7.316,-11.385 4.037,-14.673 0,-14.673M0,-12.516C2.852,-12.516 5.165,-10.195 5.165,-7.337C5.165,-4.478 2.852,-2.158 0,-2.158C-2.852,-2.158 -5.165,-4.478 -5.165,-7.337C-5.165,-10.195 -2.852,-12.516 0,-12.516" style="fill:rgb(255,27,0);"/></g><g transform="matrix(7.704962,0,0,6.639506,350.725747,1050.659384)"><path d="M0,2.667C-0.698,3.285 -1.71,3.599 -3.006,3.599L-5.06,3.599C-5.148,3.599 -5.22,3.528 -5.22,3.441L-5.22,-2.902C-5.22,-3.149 -5.017,-3.349 -4.767,-3.349L-3.006,-3.349C-1.709,-3.349 -0.696,-3.04 0.004,-2.432C0.673,-1.851 1.026,-0.981 1.026,0.082C1.026,1.193 0.681,2.063 0,2.667M1.553,-3.989C0.427,-4.949 -1.202,-5.457 -3.158,-5.457L-6.785,-5.457C-6.963,-5.457 -7.124,-5.388 -7.248,-5.277C-7.269,-5.261 -7.287,-5.243 -7.303,-5.222C-7.414,-5.098 -7.483,-4.937 -7.483,-4.759L-7.483,7.726C-7.483,7.946 -7.305,8.124 -7.085,8.124L-5.843,8.124C-5.5,8.124 -5.22,7.844 -5.22,7.501L-5.22,6.049C-5.22,5.876 -5.079,5.735 -4.906,5.735L-3.158,5.735C-1.202,5.735 0.427,5.227 1.553,4.267C2.704,3.285 3.312,1.858 3.312,0.139C3.312,-1.579 2.704,-3.006 1.553,-3.989" style="fill:rgb(255,27,0);fill-rule:nonzero;"/></g><g transform="matrix(7.704962,0,0,6.639506,630.743314,1031.133925)"><path d="M0,8.553L0.027,8.553C0.018,8.56 0.008,8.564 0,8.571L0,8.553ZM0.099,5.862L0.099,0.375C0.099,0.077 0.27,-0.179 0.517,-0.308L2.313,-0.308C3.562,-0.308 4.565,-0.026 5.276,0.515C5.292,0.528 5.309,0.539 5.324,0.553C5.993,1.157 6.346,2.058 6.346,3.16C6.346,3.84 6.222,4.431 5.983,4.932C5.824,5.201 5.626,5.442 5.386,5.647C4.672,6.255 3.627,6.568 2.313,6.568L0.637,6.568C0.327,6.481 0.099,6.199 0.099,5.862M6.873,-1.047C5.746,-2.008 4.118,-2.516 2.163,-2.516L-1.403,-2.516C-1.536,-2.516 -1.66,-2.479 -1.769,-2.419C-1.873,-2.383 -1.956,-2.31 -2.008,-2.215C-2.105,-2.088 -2.164,-1.933 -2.164,-1.762L-2.164,10.321C-2.164,10.734 -1.826,11.069 -1.409,11.069L-0.662,11.069C-0.243,11.069 0.099,10.73 0.099,10.315L0.099,8.993C0.099,8.822 0.24,8.682 0.413,8.682L2.163,8.682C4.118,8.682 5.746,8.174 6.873,7.213C8.023,6.231 8.631,4.803 8.631,3.083C8.631,1.364 8.023,-0.064 6.873,-1.047" style="fill:rgb(255,27,0);fill-rule:nonzero;"/></g><g transform="matrix(7.704962,0,0,6.639506,901.025662,1058.322037)"><path d="M0,0.436C-0.778,0.43 -3.351,0.434 -4.231,0.434C-4.585,0.426 -4.797,0.6 -4.847,1.005C-4.902,2.355 -4.975,2.589 -3.415,2.591C-2.951,2.592 -2.376,2.585 -1.939,2.595C-1.518,2.604 -1.806,2.935 -1.922,3.122C-5.184,7.803 -12.559,4.481 -11.181,-1.083C-10.104,-5.431 -4.156,-6.354 -1.799,-2.556C-1.474,-1.974 -0.944,-2.184 -0.281,-2.146C0.334,-2.162 0.898,-2.015 0.572,-2.665C-2.589,-9.898 -13.351,-7.749 -13.504,0.115C-13.517,7.703 -3.473,10.334 0.248,3.726C0.7,2.907 1.003,1.98 1.108,1.016C1.123,0.869 1.131,0.703 1.047,0.592C0.901,0.378 0.317,0.451 0.042,0.436L0,0.436Z" style="fill:rgb(255,27,0);"/></g></g></g></svg>`;
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const BRL = v => v == null ? 'A cotar' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const pad = n => String(n).padStart(2, '0');
+const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const br = s => { if (!s) return '—'; const [y, m, d] = s.slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+const brdt = s => { const d = new Date(s); return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const store = {
+  get(k, f) { try { const v = localStorage.getItem('bml5:' + k); return v ? JSON.parse(v) : f; } catch { return f; } },
+  set(k, v) { try { localStorage.setItem('bml5:' + k, JSON.stringify(v)); } catch { } },
+  clear() { try { Object.keys(localStorage).filter(k => k.startsWith('bml5:')).forEach(k => localStorage.removeItem(k)); } catch { } }
+};
+
+/* ---------- ícones ---------- */
+const P = {
+  doc: 'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M8.5 13h7M8.5 17h5',
+  list: 'M5 4h14v16H5zM8.5 8.5h7M8.5 12h7M8.5 15.5h4',
+  coin: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM14.8 9.2c-.5-.8-1.5-1.3-2.8-1.3-1.6 0-2.8.8-2.8 2s1.2 1.7 2.8 2.1 2.9.9 2.9 2.1-1.3 2-2.9 2c-1.3 0-2.4-.5-2.9-1.4M12 6.3v1.6M12 16.1v1.6',
+  chart: 'M4 20h16M6.5 17v-5M10.5 17V7M14.5 17v-8M18.5 17v-3',
+  folder: 'M3.5 6.5a1 1 0 0 1 1-1h5l2 2.2h8a1 1 0 0 1 1 1v9.8a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z',
+  drive: 'M8.6 4h6.8l5.6 9.7-3.4 5.8H6.4L3 13.7zM8.6 4l5.6 9.7H3M15.4 4 9.8 13.7l-3.4 5.8M21 13.7h-6.8l3.4 5.8',
+  help: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 17h.01',
+  lock: 'M6.5 11h11v9h-11zM8.8 11V8a3.2 3.2 0 0 1 6.4 0v3',
+  users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.8 20c.6-3.4 3.2-5.5 6.2-5.5s5.6 2.1 6.2 5.5M16 4.3a3.5 3.5 0 0 1 0 6.4M18.2 14.8c1.6.8 2.7 2.6 3 5.2',
+  plus: 'M12 5v14M5 12h14',
+  trash: 'M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13M10.5 10.5v6M13.5 10.5v6',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v5.5M12 7.8h.01',
+  warn: 'M12 3.5 2.5 20h19zM12 10v4.5M12 17.3h.01',
+  chev: 'M6 15l6-6 6 6',
+  ext: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5',
+  expand: 'M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5',
+  mail: 'M3.5 5.5h17v13h-17zM3.5 6l8.5 7 8.5-7',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  check: 'M5 12.5l4.5 4.5L19 7.5'
+};
+const ic = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P[n]}"/></svg>`;
+
+/* ---------- pessoas e perfis (Anexo A2 da minuta) ---------- */
+const USERS = {
+  debora: { id: 'debora', nome: 'Débora', email: 'demorabmlog@gmail.com', org: 'Marketing B&M Log', perfil: 'Solicitante' },
+  mariana: { id: 'mariana', nome: 'Mariana Fontora', email: 'financeiro@bmlog.com.br', org: 'Financeiro B&M Log', perfil: 'Financeiro do cliente' },
+  marcelo: { id: 'marcelo', nome: 'Marcelo Brum', email: 'marcelo@propaga.com', org: 'Atendimento Propaga', perfil: 'Atendimento' },
+  marisa: { id: 'marisa', nome: 'Marisa Coelho', email: 'marisa@propaga.com', org: 'Financeiro Propaga', perfil: 'Financeiro Propaga' },
+  marco: { id: 'marco', nome: 'Marco Chaves', email: 'marco@propaga.com', org: 'Diretor · Propaga', perfil: 'Administrador' }
+};
+const CAN = {
+  nova: u => ['debora', 'marco'].includes(u),
+  relatorios: u => u !== 'debora',
+  usuarios: u => u === 'marco',
+  receber: u => ['marcelo', 'marco'].includes(u),
+  cotar: u => ['marcelo', 'marco'].includes(u),
+  aceitar: u => u === 'mariana',         // aceite de orçamento (itens fora do preço de catálogo) — a confirmar
+  aprovar: u => ['debora', 'marco'].includes(u),
+  faturar: u => ['marisa', 'marco'].includes(u),
+  cancelar: u => ['debora', 'marco'].includes(u)
+};
+const NOTIFICA = ['debora', 'mariana', 'marcelo', 'marisa'];
+
+/* ---------- fluxo do pedido (minuta, cláusulas 5, 7, 8, 9) ---------- */
+const FLOW = [
+  ['enviada', 'Enviada'], ['validacao', 'Em validação'], ['aceite', 'Orçamento p/ aceite'], ['producao', 'Em produção'],
+  ['apresentacao', 'Em apresentação'], ['aprovada', 'Aprovada'], ['entregue', 'Entregue'], ['faturada', 'Faturada'], ['paga', 'Paga']
+];
+const ST = Object.fromEntries([...FLOW, ['rascunho', 'Rascunho'], ['cancelada', 'Cancelada']]);
+const stBadge = s => {
+  const cls = { aceite: 'b-warn', validacao: 'b-warn', apresentacao: 'b-brand', aprovada: 'b-ok', entregue: 'b-ok', faturada: 'b-ok', paga: 'b-ok', cancelada: 'b-crit', rascunho: 'b-mute' }[s] || '';
+  return `<span class="badge ${cls}">${ST[s]}</span>`;
+};
+
+/* ---------- datas: 5 dias úteis (America/Sao_Paulo, feriados nacionais) ---------- */
+const FERIADOS = ['2026-10-12', '2026-11-02', '2026-11-15', '2026-11-20', '2026-12-25', '2027-01-01', '2027-02-08', '2027-02-09', '2027-03-26', '2027-04-21', '2027-05-01', '2027-05-27'];
+function addUteis(base, n) {
+  const d = new Date(base); let c = 0;
+  while (c < n) { d.setDate(d.getDate() + 1); const w = d.getDay(); if (w && w < 6 && !FERIADOS.includes(iso(d))) c++; }
+  return d;
+}
+
+/* ---------- cálculo (cláusula 4) ---------- */
+function unit(it) { const v = SV[it.sid]?.variantes[it.vi]; if (!v) return null; return v.bm != null ? v.bm : (it.cotado ?? null); }
+function totals(itens) {
+  let total = 0, pend = 0;
+  itens.forEach(it => { const u = unit(it); if (u == null) pend++; else total += Math.round(u * it.qty * 100) / 100; });
+  return { total: Math.round(total * 100) / 100, pend };
+}
+const itemLabel = it => { const s = SV[it.sid]; const v = s.variantes[it.vi]; return { nome: s.nome, cod: s.cod, var: v.rotulo, mod: v.mod === 'novo' ? 'Novo' : 'Edição' }; };
+const itemSpecs = it => [it.opt, it.canal, it.audio].filter(Boolean).join(' · ');
+
+/* ---------- dados de exemplo ---------- */
+function seed() {
+  const ev = (t, user, label, key, note) => ({ t, user, label, key: !!key, note: note || '' });
+  return [
+    {
+      id: 'BML-2026-0001', titulo: 'Aniversário de 27 anos', solicitante: 'debora', area: 'Matriz · Itajaí/SC', email: 'marketing@bmlog.com.br',
+      objetivo: 'Celebrar os 27 anos com clientes e colaboradores', publico: PUB_A, status: 'paga', rounds: 1, versao: 2, recebido: true,
+      itens: [{ sid: '50', vi: 0, qty: 1, opt: '', obs: '' }, { sid: '31', vi: 0, qty: 1, opt: '', obs: 'Versões em laranja e em branco.' }],
+      drive: { link: 'https://drive.google.com/drive/folders/1bmlog-27anos', conferido: true, verificado: true },
+      obs: 'Usar a linha do tempo da empresa como fio condutor. Datas e marcos validados pela diretoria.',
+      prazo: { desejada: '2026-08-28', inicio: '2026-08-12', primeira: '2026-08-19', final: '2026-08-27', entrega: '2026-08-26' },
+      criado: '2026-08-11T10:12:00', catVersion: '1.0', exemplo: true,
+      events: [
+        ev('2026-08-11T10:12:00', 'debora', 'Solicitação enviada', 1, 'Conferido pelo remetente: briefing, arquivos e permissões.'),
+        ev('2026-08-11T10:12:30', 'sistema', 'Notificação enviada a Débora, Mariana, Marcelo e Marisa'),
+        ev('2026-08-11T14:40:00', 'marcelo', 'Recebido e verificado pela Propaga', 1),
+        ev('2026-08-12T09:05:00', 'marcelo', 'Cronograma confirmado; produção iniciada', 1, 'Todos os itens com preço do catálogo vigente (contrato assinado).'),
+        ev('2026-08-19T17:00:00', 'marcelo', 'Versão 1 disponibilizada para aprovação'),
+        ev('2026-08-20T10:30:00', 'debora', 'Ajustes solicitados (rodada 1 de 2)', 0, 'Aumentar o selo na peça principal.'),
+        ev('2026-08-22T16:10:00', 'marcelo', 'Versão 2 disponibilizada para aprovação'),
+        ev('2026-08-24T09:15:00', 'debora', 'Conteúdo aprovado na versão 2', 1),
+        ev('2026-08-26T15:00:00', 'marcelo', 'Arquivos finais entregues em 04 Aprovados', 1),
+        ev('2026-08-26T16:45:00', 'debora', 'Recebido e verificado pelo solicitante', 1),
+        ev('2026-09-01T10:00:00', 'marisa', 'Faturamento registrado'),
+        ev('2026-09-15T10:00:00', 'marisa', 'Pagamento registrado', 1)
+      ]
+    },
+    {
+      id: 'BML-2026-0002', titulo: 'Integração de novos colaboradores', solicitante: 'debora', area: 'Matriz · Itajaí/SC', email: 'marketing@bmlog.com.br',
+      objetivo: 'Padronizar a recepção de quem entra na empresa', publico: PUB_S, status: 'producao', rounds: 0, versao: 0,
+      itens: [{ sid: 'A03', vi: 0, qty: 1, opt: '', obs: 'Texto-base do RH na pasta 02 Materiais.' }, { sid: '46', vi: 0, qty: 1, opt: '', obs: '' }],
+      drive: { link: 'https://drive.google.com/drive/folders/1bmlog-integracao', conferido: true, verificado: true },
+      obs: 'Tom acolhedor e direto. Incluir contatos de RH e segurança do trabalho.',
+      prazo: { desejada: '2026-10-09', inicio: '2026-09-29', primeira: '2026-10-06', final: '2026-10-14', entrega: '' },
+      criado: '2026-09-25T15:30:00', catVersion: '1.0', exemplo: true,
+      events: [
+        ev('2026-09-25T15:30:00', 'debora', 'Solicitação enviada', 1, 'Conferido pelo remetente: briefing, arquivos e permissões.'),
+        ev('2026-09-25T15:30:30', 'sistema', 'Notificação enviada a Débora, Mariana, Marcelo e Marisa'),
+        ev('2026-09-26T09:10:00', 'marcelo', 'Recebido e verificado pela Propaga', 1),
+        ev('2026-09-29T08:50:00', 'marcelo', 'Cronograma confirmado; produção iniciada', 1, 'Todos os itens com preço do catálogo vigente (contrato assinado).')
+      ]
+    },
+    {
+      id: 'BML-2026-0003', titulo: 'Comunicado de benefícios 2027', solicitante: 'debora', area: 'Filial · Curitiba/PR', email: 'marketing@bmlog.com.br',
+      objetivo: 'Informar mudanças no plano de benefícios', publico: PUB_S, status: 'aceite', rounds: 0, versao: 0,
+      itens: [{ sid: '44', vi: 0, qty: 2, opt: 'A4 para mural', obs: '' }, { sid: '44', vi: 0, qty: 1, opt: 'TV 16:9', obs: '' }, { sid: '10', vi: 2, qty: 1, opt: '', obs: 'Precisa de HTML para o disparo interno.', cotado: 510 }],
+      drive: { link: 'https://drive.google.com/drive/folders/1bmlog-beneficios', conferido: true, verificado: true },
+      obs: 'Conteúdo validado pelo RH. Não citar valores dos benefícios.',
+      prazo: { desejada: '2026-10-15', inicio: '2026-10-05', primeira: '2026-10-09', final: '2026-10-16', entrega: '' },
+      criado: '2026-09-30T09:00:00', catVersion: '1.0', exemplo: true,
+      events: [
+        ev('2026-09-30T09:00:00', 'debora', 'Solicitação enviada', 1, 'Conferido pelo remetente: briefing, arquivos e permissões.'),
+        ev('2026-09-30T09:00:30', 'sistema', 'Notificação enviada a Débora, Mariana, Marcelo e Marisa'),
+        ev('2026-09-30T13:20:00', 'marcelo', 'Recebido e verificado pela Propaga', 1),
+        ev('2026-10-01T10:15:00', 'marcelo', 'Orçamento registrado: E-mail marketing, 6 a 10 blocos ou HTML responsivo', 0, 'Valor disponível nos Relatórios.'),
+        ev('2026-10-01T10:20:00', 'marcelo', 'Cronograma confirmado; orçamento enviado para aceite')
+      ]
+    },
+    {
+      id: 'BML-2026-0004', titulo: 'Kit de segurança: uso de EPI no armazém', solicitante: 'debora', area: 'Filial · Guarulhos/SP', email: 'marketing@bmlog.com.br',
+      objetivo: 'Reduzir ocorrências por falta de EPI', publico: PUB_S, status: 'enviada', rounds: 0, versao: 0,
+      itens: [{ sid: 'A01', vi: 0, qty: 1, opt: '', obs: 'Tema: EPI. Conteúdo técnico validado pelo SESMT.' }, { sid: '21', vi: 2, qty: 1, opt: '16:9 horizontal', canal: 'TVs internas B&M Log', audio: 'Sem áudio, com legendas', obs: '' }],
+      drive: { link: 'https://drive.google.com/drive/folders/1bmlog-epi', conferido: true, verificado: false },
+      obs: 'Fotos do armazém na pasta 02 Materiais. Evitar imagens com pessoas identificáveis.',
+      prazo: { desejada: '2026-10-20', inicio: '', primeira: '', final: '', entrega: '' },
+      criado: '2026-10-01T17:40:00', catVersion: '1.0', exemplo: true,
+      events: [
+        ev('2026-10-01T17:40:00', 'debora', 'Solicitação enviada', 1, 'Conferido pelo remetente: briefing, arquivos e permissões.'),
+        ev('2026-10-01T17:40:30', 'sistema', 'Notificação enviada a Débora, Mariana, Marcelo e Marisa')
+      ]
+    }
+  ];
+}
+const AREAS = ['Matriz · Itajaí/SC', 'Filial · São Bento do Sul/SC', 'Filial · São Paulo/SP', 'Filial · Santos/SP', 'Filial · Guarulhos/SP', 'Filial · Curitiba/PR', 'Filial · São José dos Pinhais/PR', 'Filial · Caxias do Sul/RS', 'Todas as unidades'];
+const PUB_P = 'Empresários importadores e exportadores (40 a 65 anos)';
+const PUB_S = 'Colaboradores da matriz e das filiais';
+const PUB_A = 'Ambos os públicos';
+const PUBLICOS = [[PUB_P, 'Principal · ' + PUB_P], [PUB_S, 'Secundário · ' + PUB_S], [PUB_A, PUB_A]];
+const CANAIS = ['TVs internas B&M Log', 'Redes sociais da B&M Log (solicitação expressa)'];
+const AUDIOS = ['Sem áudio, com legendas', 'Trilha licenciada', 'Áudio fornecido pela B&M Log', 'Locução (cotada à parte)'];
+
+function novoRascunho() {
+  return {
+    titulo: 'Campanha de segurança operacional', area: '', email: 'marketing@bmlog.com.br', objetivo: 'Reforçar boas práticas na operação',
+    publico: PUB_S,
+    itens: [
+      { sid: '21', vi: 2, qty: 1, opt: '16:9 horizontal', canal: 'TVs internas B&M Log', audio: 'Sem áudio, com legendas', obs: '' },
+      { sid: '24', vi: 0, qty: 1, opt: 'A5', obs: '' }
+    ],
+    drive: { link: '', conferido: false },
+    obs: 'Objetivo: reforçar a prevenção e a atenção nas rotinas operacionais.\n\nMensagem: segurança em cada etapa da operação.\n\nMateriais adicionais: informar aqui filmagem, fotografia, impressão, fabricação ou montagem necessárias.',
+    prazo: { desejada: '', urgente: false }, conferido: false, salvo: null
+  };
+}
+
+/* ---------- estado ---------- */
+const S = {
+  user: store.get('user', null),
+  orders: store.get('orders', null) || seed(),
+  draft: store.get('draft', null) || novoRascunho(),
+  open: store.get('open', {}),
+  errors: {}, filtro: { q: '', st: 'todas' }, cat: { q: '', c: 'todas' }, rel: 'mes',
+  auth: { modo: 'escolha', etapa: 1, pw: '', quem: 'debora' }, menu: false
+};
+const persist = () => { store.set('orders', S.orders); store.set('draft', S.draft); store.set('open', S.open); };
+const toast = msg => { const w = $('#toasts'); const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; w.append(t); setTimeout(() => t.remove(), 4200); };
+const nomeDe = id => id === 'sistema' ? 'Sistema' : (USERS[id]?.nome || id);
+
+/* ---------- roteamento por hash ---------- */
+const ROUTES = {
+  nova: ['Nova solicitação', 'doc'], solicitacoes: ['Solicitações', 'list'], valores: ['Valores B&M Log', 'coin'],
+  relatorios: ['Relatórios', 'chart'], contrato: ['Contrato', 'folder'], drive: ['Arquivos no Drive', 'drive'],
+  usuarios: ['Usuários', 'users'], ajuda: ['Ajuda', 'help']
+};
+function route() {
+  const h = (location.hash || '').slice(1);
+  if (h.startsWith('BML-')) return { view: 'pedido', id: h };
+  if (ROUTES[h]) return { view: h };
+  return { view: CAN.nova(S.user) ? 'nova' : 'solicitacoes' };
+}
+const go = h => { if (location.hash === '#' + h) render(); else location.hash = h; };
+window.addEventListener('hashchange', () => { S.menu = false; render(); window.scrollTo(0, 0); });
+
+/* ================= RENDER ================= */
+function render() {
+  const app = $('#app');
+  if (!S.user) { app.innerHTML = viewAuth(); bindAuth(); return; }
+  const r = route();
+  const views = { nova: viewNova, solicitacoes: viewLista, pedido: () => viewPedido(r.id), valores: viewValores, relatorios: viewRelatorios, contrato: viewContrato, drive: viewDrive, usuarios: viewUsuarios, ajuda: viewAjuda };
+  let body = views[r.view]();
+  app.innerHTML = shell(r, body);
+  bindShell();
+  if (r.view === 'nova') bindNova();
+  if (r.view === 'pedido') bindPedido(r.id);
+  if (r.view === 'solicitacoes' || r.view === 'valores' || r.view === 'relatorios') bindFiltros(r.view);
+}
+
+function shell(r, body) {
+  const u = USERS[S.user];
+  const items = ['nova', 'solicitacoes', 'valores', 'relatorios', 'contrato', 'drive', ...(CAN.usuarios(S.user) ? ['usuarios'] : []), 'ajuda'];
+  const nav = items.filter(k => k !== 'nova' || CAN.nova(S.user)).map(k => {
+    const locked = k === 'relatorios' && !CAN.relatorios(S.user);
+    const cur = r.view === k || (r.view === 'pedido' && k === 'solicitacoes');
+    return `<a href="#${k}" class="${locked ? 'locked' : ''}" ${cur ? 'aria-current="page"' : ''}>${ic(ROUTES[k][1])}<span>${ROUTES[k][0]}</span>${locked ? ic('lock', 'lock') + '<span class="sr">(sem acesso)</span>' : ''}</a>`;
+  }).join('');
+  const crumbTitle = r.view === 'pedido' ? r.id : ROUTES[r.view][0];
+  const crumbParent = r.view === 'pedido' ? '<a href="#solicitacoes">Solicitações</a> / ' : (r.view === 'nova' ? 'Solicitações / ' : '');
+  return `
+  <div class="shell">
+    <aside class="side ${S.menu ? 'open' : ''}" id="side" aria-label="Menu principal">
+      <div class="brand">${LOGO}<span>Portal B&amp;M Log</span></div>
+      <nav class="nav">${nav}</nav>
+      <div class="side-user"><div class="avatar">${esc(u.nome[0])}</div><div><b>${esc(u.nome)}</b><span>${esc(u.org)}</span></div><button id="sair" type="button">Sair</button></div>
+    </aside>
+    <div class="main">
+      <div class="top">
+        <button class="menu-btn" id="menuBtn" type="button" aria-label="Abrir menu" aria-expanded="${S.menu}">${ic('menu')}</button>
+        <div class="crumb">${crumbParent}<b>${esc(crumbTitle)}</b></div>
+        <div class="spacer"></div>
+        <label class="demo" for="verComo"><span>Demonstração · ver como</span>
+          <select id="verComo">${Object.values(USERS).map(x => `<option value="${x.id}" ${x.id === S.user ? 'selected' : ''}>${esc(x.nome.split(' ')[0])} · ${esc(x.perfil)}</option>`).join('')}</select>
+        </label>
+      </div>
+      <main class="content" id="conteudo">${body}</main>
+    </div>
+  </div>`;
+}
+function bindShell() {
+  $('#verComo').onchange = e => { S.user = e.target.value; store.set('user', S.user); S.errors = {}; const r = route(); if (r.view === 'nova' && !CAN.nova(S.user)) go('solicitacoes'); else render(); toast(`Visualizando como ${USERS[S.user].nome} (${USERS[S.user].perfil}).`); };
+  $('#sair').onclick = () => { S.user = null; store.set('user', null); S.auth = { modo: 'escolha', etapa: 1, pw: '', quem: 'debora' }; location.hash = ''; render(); };
+  $('#menuBtn').onclick = () => { S.menu = !S.menu; $('#side').classList.toggle('open', S.menu); $('#menuBtn').setAttribute('aria-expanded', S.menu); };
+}
+
+/* ---------- acesso: primeiro acesso por convite e login ---------- */
+function viewAuth() {
+  const a = S.auth;
+  let box = '';
+  if (a.modo === 'escolha') {
+    box = `<div><h2>Entrar no portal</h2><p class="muted small" style="margin-top:6px">Esta prévia simula o acesso. Escolha um caminho.</p></div>
+      <div class="who">
+        <button type="button" data-auth="convite">${ic('mail')}<span><b>Primeiro acesso pelo convite</b><small>Fluxo da Débora ao abrir o link recebido por e-mail</small></span></button>
+        <button type="button" data-auth="login">${ic('lock')}<span><b>Já tenho senha</b><small>E-mail, senha e código do aplicativo autenticador</small></span></button>
+      </div>
+      <div class="lbl" style="margin-top:6px">Ou entrar direto como</div>
+      <div class="who">${Object.values(USERS).map(u => `<button type="button" data-entrar="${u.id}"><div class="avatar">${u.nome[0]}</div><span><b>${esc(u.nome)}</b><small>${esc(u.perfil)} · ${esc(u.org)}</small></span></button>`).join('')}</div>`;
+  } else if (a.modo === 'convite') {
+    const steps = `<div class="steps" aria-hidden="true">${[1, 2, 3].map(i => `<i class="${i <= a.etapa ? 'on' : ''}"></i>`).join('')}</div>`;
+    if (a.etapa === 1) box = `${steps}<div><span class="lbl muted">Etapa 1 de 3</span><h2>Crie sua senha</h2><p class="muted small" style="margin-top:6px">Convite enviado por Marco Chaves para <b>${USERS.debora.email}</b>. O link vale por 72 horas e funciona uma única vez.</p></div>
+      <div class="field"><label for="pw1">Nova senha</label><input class="input" id="pw1" type="password" autocomplete="new-password" value="${esc(a.pw)}"></div>
+      <ul class="pw-rules" id="pwRules"></ul>
+      <div class="field"><label for="pw2">Repita a senha</label><input class="input" id="pw2" type="password" autocomplete="new-password"><span class="err" id="pwErr"></span></div>
+      <button class="btn btn-primary" id="pwNext" type="button">Continuar</button>`;
+    if (a.etapa === 2) box = `${steps}<div><span class="lbl muted">Etapa 2 de 3</span><h2>Ative a verificação em duas etapas</h2><p class="muted small" style="margin-top:6px">Abra o Google Authenticator ou o Microsoft Authenticator e leia o código abaixo. A minuta exige esse segundo fator para todos os usuários.</p></div>
+      <div class="row" style="align-items:flex-start;gap:18px"><div class="qr" aria-label="Código QR de exemplo">${qr()}</div><p class="small muted" style="max-width:24ch">Sem câmera? Digite a chave no aplicativo:<br><b class="num" style="color:var(--fg)">PBML 7Q4K X2RT 9WZE</b></p></div>
+      <div class="field"><label for="otp">Código de 6 dígitos</label><input class="input num" id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000"><span class="err" id="otpErr"></span></div>
+      <button class="btn btn-primary" id="otpNext" type="button">Confirmar código</button>`;
+    if (a.etapa === 3) box = `${steps}<div><span class="lbl muted">Etapa 3 de 3</span><h2>Acesso liberado</h2></div>
+      <div class="note ok">${ic('check')}<span>Senha criada e verificação em duas etapas ativa. Você tem acesso ao <b>Portal B&amp;M Log</b> como solicitante.</span></div>
+      <button class="btn btn-primary" data-entrar="debora" type="button">Entrar no portal</button>`;
+  } else {
+    box = `<div><h2>Entrar</h2><p class="muted small" style="margin-top:6px">Use o e-mail cadastrado pelo administrador.</p></div>
+      <div class="field"><label for="lgEmail">E-mail</label><input class="input" id="lgEmail" type="email" autocomplete="username" value="${USERS.debora.email}"></div>
+      <div class="field"><label for="lgPw">Senha</label><input class="input" id="lgPw" type="password" autocomplete="current-password" value="demonstracao"></div>
+      <div class="field"><label for="lgOtp">Código do aplicativo autenticador</label><input class="input num" id="lgOtp" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code"><span class="err" id="lgErr"></span></div>
+      <button class="btn btn-primary" id="lgGo" type="button">Entrar</button>
+      <button class="btn btn-quiet btn-sm" id="esqueci" type="button">Esqueci minha senha</button>`;
+  }
+  const back = a.modo !== 'escolha' ? `<button class="btn btn-quiet btn-sm" data-auth="escolha" type="button" style="justify-self:start">Voltar</button>` : '';
+  return `<div class="auth">
+    <section class="auth-side">${LOGO.replace('<svg', '<svg class="logo"')}
+      <div style="display:grid;gap:14px"><span class="badge b-brand plain" style="justify-self:start">Portal B&amp;M Log</span>
+      <h1>Solicitações, valores e entregas no mesmo lugar.</h1>
+      <p>Área exclusiva da B&amp;M Log para pedir serviços à Propaga, acompanhar cada etapa e consultar o contrato vigente.</p></div>
+      <p class="fine">Prévia de demonstração. Nenhum dado é enviado e nenhum e-mail sai deste ambiente.</p>
+    </section>
+    <section class="auth-main"><div class="auth-box">${back}${box}</div></section>
+  </div><div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+function qr() { let s = ''; let x = 7; for (let i = 0; i < 121; i++) { x = (x * 73 + 41) % 997; const r = Math.floor(i / 11), c = i % 11; const corner = (r < 3 && c < 3) || (r < 3 && c > 7) || (r > 7 && c < 3); s += `<i class="${corner ? ((r % 2 || c % 2) && !(r === 1 && c === 1) && !(r === 1 && c === 9) && !(r === 9 && c === 1) ? '' : 'o') : (x % 3 ? 'o' : '')}"></i>`; } return s; }
+function bindAuth() {
+  document.querySelectorAll('[data-auth]').forEach(b => b.onclick = () => { S.auth = { ...S.auth, modo: b.dataset.auth, etapa: 1 }; render(); });
+  document.querySelectorAll('[data-entrar]').forEach(b => b.onclick = () => { S.user = b.dataset.entrar; store.set('user', S.user); location.hash = CAN.nova(S.user) ? 'nova' : 'solicitacoes'; render(); toast(`Bem-vindo(a), ${USERS[S.user].nome.split(' ')[0]}.`); });
+  const pw1 = $('#pw1');
+  if (pw1) {
+    const rules = [['8 caracteres ou mais', v => v.length >= 8], ['Uma letra maiúscula', v => /[A-Z]/.test(v)], ['Um número', v => /\d/.test(v)], ['Um símbolo', v => /[^A-Za-z0-9]/.test(v)]];
+    const upd = () => { S.auth.pw = pw1.value; $('#pwRules').innerHTML = rules.map(([t, f]) => `<li class="${f(pw1.value) ? 'ok' : ''}">${t}</li>`).join(''); };
+    pw1.oninput = upd; upd();
+    $('#pwNext').onclick = () => {
+      const ok = rules.every(([, f]) => f(pw1.value)); const same = pw1.value === $('#pw2').value;
+      $('#pwErr').textContent = !ok ? 'A senha ainda não cumpre todos os requisitos acima.' : (!same ? 'As duas senhas não são iguais. Digite novamente.' : '');
+      $('#pw2').setAttribute('aria-invalid', !(ok && same));
+      if (ok && same) { S.auth.etapa = 2; render(); }
+    };
+  }
+  const otp = $('#otp');
+  if (otp) $('#otpNext').onclick = () => { if (/^\d{6}$/.test(otp.value)) { S.auth.etapa = 3; render(); } else { $('#otpErr').textContent = 'Digite os 6 números exibidos no aplicativo. Nesta prévia, qualquer sequência de 6 dígitos funciona.'; otp.setAttribute('aria-invalid', 'true'); } };
+  const lg = $('#lgGo');
+  if (lg) {
+    lg.onclick = () => {
+      const email = $('#lgEmail').value.trim().toLowerCase(); const u = Object.values(USERS).find(x => x.email === email);
+      if (!u) { $('#lgErr').textContent = 'Este e-mail não tem acesso ao portal. Confira o endereço ou fale com a Propaga.'; return; }
+      if (!/^\d{6}$/.test($('#lgOtp').value)) { $('#lgErr').textContent = 'Digite o código de 6 dígitos do aplicativo autenticador.'; $('#lgOtp').setAttribute('aria-invalid', 'true'); return; }
+      S.user = u.id; store.set('user', u.id); location.hash = CAN.nova(u.id) ? 'nova' : 'solicitacoes'; render();
+    };
+    $('#esqueci').onclick = () => toast('Enviamos um link de redefinição para o e-mail cadastrado (simulado).');
+  }
+}
+
+/* ---------- NOVA SOLICITAÇÃO ---------- */
+const SECS = [['dados', 'Dados da solicitação'], ['servicos', 'Serviços e composições'], ['drive', 'Arquivos no Drive compartilhado'], ['obs', 'Observações para a Propaga'], ['prazo', 'Prazo'], ['resumo', 'Resumo antes do envio']];
+function sec(i, extraHead, body) {
+  const [k, t] = SECS[i]; const closed = S.open[k] === false;
+  return `<section class="card sec ${closed ? 'closed' : ''}" id="sec-${k}" aria-labelledby="h-${k}">
+    <header data-tog="${k}"><span class="step">${pad(i + 1)}</span><h2 id="h-${k}">${t}</h2>${extraHead ? `<div class="hx">${extraHead}</div>` : ''}
+      <button class="tog" type="button" aria-expanded="${!closed}" aria-controls="b-${k}" aria-label="${closed ? 'Expandir' : 'Recolher'} ${t}">${ic('chev')}</button></header>
+    <div class="body" id="b-${k}">${body}</div></section>`;
+}
+const fld = (id, label, ctrl, req = true) => `<div class="field"><label for="${id}">${label}${req ? ' <span class="req" aria-hidden="true">*</span>' : ''}</label>${ctrl}<span class="err" id="${id}-err">${esc(S.errors[id] || '')}</span></div>`;
+const inp = (id, val, attrs = '') => `<input class="input" id="${id}" name="${id}" value="${esc(val)}" ${S.errors[id] ? 'aria-invalid="true"' : ''} aria-describedby="${id}-err" ${attrs}>`;
+const sel = (id, val, opts, ph) => `<select class="input" id="${id}" name="${id}" ${S.errors[id] ? 'aria-invalid="true"' : ''} aria-describedby="${id}-err">${ph ? `<option value="">${ph}</option>` : ''}${opts.map(o => { const [v, l] = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(v)}" ${String(v) === String(val) ? 'selected' : ''}>${esc(l)}</option>`; }).join('')}</select>`;
+
+function viewNova() {
+  const d = S.draft;
+  const prim = addUteis(new Date(), 5);
+  return `<div class="page-head"><h1>Solicitar serviços à Propaga</h1><p>Organize o briefing, escolha os serviços e confira valores e prazo antes de enviar.</p></div>
+  <form id="fNova" novalidate>
+  ${sec(0, '', `<div class="grid g3">
+      ${fld('titulo', 'Título da solicitação', inp('titulo', d.titulo, 'maxlength="120"'))}
+      ${fld('solicitante', 'Solicitante', `<input class="input" id="solicitante" value="${esc(USERS[S.user].nome)}" readonly>`, false)}
+      ${fld('area', 'Unidade (matriz / filial)', sel('area', d.area, AREAS, 'Selecione'))}
+      ${fld('email', 'E-mail de contato', inp('email', d.email, 'type="email" autocomplete="email"'))}
+      ${fld('objetivo', 'Objetivo', inp('objetivo', d.objetivo, 'maxlength="160"'))}
+      ${fld('publico', 'Público da solicitação', sel('publico', d.publico, PUBLICOS, 'Selecione'))}
+    </div>`)}
+  ${sec(1, `<button type="button" class="btn btn-ghost btn-sm" id="addSvc" >${ic('plus')}Adicionar serviço</button>`,
+    `<div id="itens" style="display:grid;gap:12px">${itensHTML()}</div>
+     <span class="err" id="itens-err">${esc(S.errors.itens || '')}</span>
+     <p class="hint">${ic('info').replace('<svg', '<svg style="width:15px;height:15px;vertical-align:-3px"')} Os campos mudam conforme o serviço: faixa de duração, telas, páginas, faces, dobras ou lâminas.</p>`)}
+  ${sec(2, '', `<div class="split">
+      <div class="note">${ic('drive')}<span>Crie uma pasta para esta solicitação no Drive compartilhado da B&amp;M Log com as subpastas <b>01 Briefing</b>, <b>02 Materiais</b>, <b>03 Provas</b> e <b>04 Aprovados</b>. Compartilhe com o grupo da Propaga, nunca com link público.</span></div>
+      <div style="display:grid;gap:10px">
+        ${fld('driveLink', 'Link da pasta compartilhada', `<div class="row" style="flex-wrap:nowrap">${inp('driveLink', d.drive.link, 'type="url" placeholder="https://drive.google.com/drive/folders/…"')}<a class="btn btn-line btn-sm" id="abrirPasta" href="${esc(d.drive.link || 'https://drive.google.com')}" target="_blank" rel="noopener">${ic('ext')}Abrir</a></div>`)}
+        <div class="chips">${['01 Briefing', '02 Materiais', '03 Provas', '04 Aprovados'].map(x => `<span class="chip">${ic('folder')}${x}</span>`).join('')}</div>
+      </div></div>
+      <label class="check"><input type="checkbox" id="driveOk" ${d.drive.conferido ? 'checked' : ''} aria-describedby="driveOk-err"> Conferi os arquivos e as permissões de acesso.</label>
+      <span class="err" id="driveOk-err">${esc(S.errors.driveOk || '')}</span>
+      <p class="hint">A Propaga confirma o acesso depois do envio. O link informado não comprova a permissão.</p>`)}
+  ${sec(3, `<button type="button" class="btn btn-quiet btn-sm" id="ampliar">${ic('expand')}Ampliar campo</button>`,
+    `<label class="sr" for="obs">Observações gerais para a Propaga</label>
+     <textarea class="input" id="obs" maxlength="30000" style="min-height:360px">${esc(d.obs)}</textarea>
+     <div class="row small muted" style="justify-content:space-between"><span>Filmagem, fotografia, impressão, fabricação e montagem são avaliadas e orçadas à parte, antes de qualquer contratação.</span><span><span id="obsCount" class="num">${d.obs.length.toLocaleString('pt-BR')}</span> / 30.000 · <span id="autosave">${d.salvo ? 'Rascunho salvo às ' + d.salvo : 'Rascunho automático ativo'}</span></span></div>`)}
+  ${sec(4, '', `<div class="grid g3">
+      ${fld('desejada', 'Data desejada', inp('desejada', d.prazo.desejada, `type="date" min="${iso(new Date())}"`))}
+      <div class="field"><span class="lbl">Prazo padrão</span><div class="input" style="display:flex;align-items:center" aria-live="polite">5 dias úteis · 1ª apresentação ${br(iso(prim))}</div></div>
+      <div class="field" style="align-content:end"><label class="check"><input type="checkbox" id="urgente" ${d.prazo.urgente ? 'checked' : ''}> Pedido urgente (cronograma individual)</label></div>
+    </div>
+    <div id="prazoAviso"></div>
+    <div class="note">${ic('info')}<span>O prazo conta a partir do briefing completo, dos materiais acessíveis e do aceite de escopo, preço e prazo. Projetos complexos ou com muitas peças recebem cronograma confirmado pela Propaga. Feriados nacionais já considerados.</span></div>`)}
+  ${sec(5, `<span class="badge b-ok">Catálogo v${CAT_VERSION.id} · ${CAT_VERSION.status}</span>`, `<div id="resumo">${resumoHTML()}</div>`)}
+  </form>
+  <div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+function itensHTML() {
+  const d = S.draft;
+  if (!d.itens.length) return `<div class="empty card">Nenhum serviço adicionado. Use “Adicionar serviço” para começar.</div>`;
+  const dup = SOBREPOSICOES.filter(([a, b]) => d.itens.some(i => i.sid === a) && d.itens.some(i => i.sid === b));
+  return d.itens.map((it, i) => {
+    const s = SV[it.sid]; const v = s.variantes[it.vi]; const u = unit(it);
+    const id = k => `it${i}-${k}`;
+    const opt = s.opcao ? fld(id('opt'), s.opcao.k, sel(id('opt'), it.opt, s.opcao.o, 'Selecione')) : '';
+    const vid = s.video ? fld(id('canal'), 'Canal', sel(id('canal'), it.canal || CANAIS[0], CANAIS)) + fld(id('audio'), 'Áudio / legendas', sel(id('audio'), it.audio || AUDIOS[0], AUDIOS)) : '';
+    return `<div class="svc" data-i="${i}">
+      <h3>Serviço ${i + 1}</h3>
+      <div class="stack">
+        <div class="grid g4">
+          ${fld(id('cat'), 'Categoria', sel(id('cat'), s.cat, CATEGORIAS.map(c => [c.id, c.nome])))}
+          ${fld(id('sid'), 'Serviço', sel(id('sid'), it.sid, SERVICOS.filter(x => x.cat === s.cat).map(x => [x.cod, `${x.cod} · ${x.nome}`])))}
+          ${fld(id('vi'), 'Modalidade e faixa', sel(id('vi'), it.vi, s.variantes.map((x, j) => [j, x.rotulo])))}
+          ${fld(id('qty'), 'Quantidade', inp(id('qty'), it.qty, 'type="number" min="1" max="99" inputmode="numeric"'))}
+        </div>
+        ${opt || vid ? `<div class="grid g4">${opt}${vid}</div>` : ''}
+        <div class="note ${u == null ? 'warn' : ''}">${ic(u == null ? 'warn' : 'info')}<div style="display:grid;gap:4px;min-width:0">
+          ${u == null ? '<b class="small">Item sob orçamento: a Propaga avalia o escopo e envia o orçamento antes do aceite.</b>' : ''}
+          <span class="scope">${esc(s.escopo)} Criação e ativos gerados pela Propaga incluídos.${s.video ? ' Vídeos destinam-se às TVs internas; redes sociais dependem de solicitação expressa.' : ''}</span>
+          ${s.nota ? `<span class="small" style="color:var(--warn);font-weight:600">${esc(s.nota)}</span>` : ''}
+        </div></div>
+        <details class="more" ${it.obs ? 'open' : ''}><summary>Observação deste serviço</summary>
+          <label class="sr" for="${id('obs')}">Observação do serviço ${i + 1}</label>
+          <textarea class="input" id="${id('obs')}" rows="3" maxlength="3000" placeholder="Orientações específicas para este item">${esc(it.obs)}</textarea></details>
+      </div>
+      <button type="button" class="icon-btn" data-del="${i}" aria-label="Remover serviço ${i + 1}">${ic('trash')}</button>
+    </div>`;
+  }).join('') + dup.map(([a, b]) => `<div class="note warn">${ic('warn')}<span>Os itens ${a} (${esc(SV[a].nome)}) e ${b} (${esc(SV[b].nome)}) se sobrepõem no catálogo. Confirme se precisa dos dois para não contratar o mesmo escopo duas vezes.</span></div>`).join('');
+}
+
+function resumoHTML() {
+  const d = S.draft; const t = totals(d.itens);
+  const rows = d.itens.map(it => { const l = itemLabel(it); const u = unit(it); return `<tr><td class="num">${it.qty}×</td><td><b>${esc(l.nome)}</b><div class="small muted">${esc(l.cod)} · ${esc(l.var)}${itemSpecs(it) ? ' · ' + esc(itemSpecs(it)) : ''}</div></td><td>${u == null ? '<span class="badge b-warn">Sob orçamento</span>' : '<span class="small muted">Catálogo</span>'}</td></tr>`; }).join('');
+  const prim = addUteis(new Date(), 5);
+  const errs = Object.entries(S.errors).filter(([, v]) => v);
+  const pode = d.conferido;
+  return `${d.itens.length ? `<div class="tbl-wrap"><table><thead><tr><th>Qtd.</th><th>Serviço</th><th>Preço</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="empty card">Adicione ao menos um serviço na seção 02.</div>'}
+   <div class="note">${ic('info')}<span><b>Prazo:</b> 5 dias úteis após a validação do briefing e o aceite (1ª apresentação prevista para ${br(iso(prim))}, se aceito hoje).</span></div>
+   <div class="note">${ic('coin')}<span>Os preços ficam no menu <a href="#valores">Valores B&amp;M Log</a> e nos Relatórios.${t.pend ? ` ${t.pend > 1 ? 'Itens sob orçamento recebem' : 'O item sob orçamento recebe'} valor da Propaga antes do aceite.` : ''}</span></div>
+   ${errs.length ? `<div class="note crit" role="alert" id="errBox">${ic('warn')}<div><b>Antes de enviar, corrija:</b><ul style="margin:4px 0 0;padding-left:18px">${errs.map(([k, v]) => `<li><a href="#" data-goto="${k}">${esc(v)}</a></li>`).join('')}</ul></div></div>` : ''}
+   <div class="split" style="align-items:center">
+     <label class="check"><input type="checkbox" id="conferido" ${d.conferido ? 'checked' : ''}> Conferi os serviços, os materiais e as informações.</label>
+     <div class="small muted" style="display:grid;gap:4px">
+       <span>${ic('mail').replace('<svg', '<svg style="width:15px;height:15px;vertical-align:-3px"')} Aviso individual para Débora, Mariana, Marcelo e Marisa, com link de acesso.</span>
+       <span>Conferência, recebimento pela Propaga e aprovações ficam registrados no acompanhamento.</span></div>
+   </div>
+   <div class="actions"><button type="button" class="btn btn-line" id="salvar">Salvar rascunho</button><button type="button" class="btn btn-primary" id="enviar" ${pode ? '' : 'disabled aria-disabled="true"'}>Enviar solicitação</button></div>`;
+}
+
+function bindNova() {
+  const d = S.draft; const f = $('#fNova');
+  const refreshResumo = () => { $('#resumo').innerHTML = resumoHTML(); bindResumo(); };
+  const refreshItens = () => { $('#itens').innerHTML = itensHTML(); refreshResumo(); };
+  const autosave = () => { d.salvo = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); persist(); const a = $('#autosave'); if (a) a.textContent = 'Rascunho salvo às ' + d.salvo; };
+  let tm; const soon = () => { clearTimeout(tm); tm = setTimeout(autosave, 700); };
+  document.querySelectorAll('[data-tog]').forEach(h => h.onclick = e => { if (e.target.closest('button:not(.tog), a, input')) return; const k = h.dataset.tog; S.open[k] = S.open[k] === false; persist(); const s = $('#sec-' + k); s.classList.toggle('closed'); h.querySelector('.tog').setAttribute('aria-expanded', !s.classList.contains('closed')); });
+  const clearErr = k => { if (S.errors[k]) { delete S.errors[k]; const e = $('#' + k + '-err'); if (e) e.textContent = ''; const el = $('#' + k); if (el) el.removeAttribute('aria-invalid'); } };
+  f.addEventListener('input', e => {
+    const t = e.target, id = t.id;
+    if (['titulo', 'objetivo', 'email'].includes(id)) { d[id] = t.value; clearErr(id); }
+    if (id === 'driveLink') { d.drive.link = t.value.trim(); $('#abrirPasta').href = d.drive.link || 'https://drive.google.com'; clearErr(id); }
+    if (id === 'obs') { d.obs = t.value; $('#obsCount').textContent = t.value.length.toLocaleString('pt-BR'); }
+    const m = id.match(/^it(\d+)-(qty|obs)$/);
+    if (m) { const it = d.itens[+m[1]]; if (m[2] === 'qty') { it.qty = Math.max(1, Math.min(99, parseInt(t.value, 10) || 1)); refreshResumo(); } else it.obs = t.value; }
+    soon();
+  });
+  f.addEventListener('change', e => {
+    const t = e.target, id = t.id;
+    if (['area', 'publico'].includes(id)) { d[id] = t.value; clearErr(id); }
+    if (id === 'desejada') { d.prazo.desejada = t.value; clearErr(id); prazoAviso(); }
+    if (id === 'urgente') { d.prazo.urgente = t.checked; prazoAviso(); }
+    if (id === 'driveOk') { d.drive.conferido = t.checked; clearErr(id); }
+    if (id === 'conferido') { d.conferido = t.checked; refreshResumo(); }
+    const m = id.match(/^it(\d+)-(cat|sid|vi|opt|canal|audio)$/);
+    if (m) {
+      const it = d.itens[+m[1]]; const k = m[2];
+      if (k === 'cat') { const first = SERVICOS.find(x => x.cat === t.value); Object.assign(it, { sid: first.cod, vi: 0, opt: '', canal: undefined, audio: undefined }); }
+      else if (k === 'sid') Object.assign(it, { sid: t.value, vi: 0, opt: '', canal: undefined, audio: undefined });
+      else if (k === 'vi') it.vi = +t.value;
+      else it[k] = t.value;
+      if (SV[it.sid].video) { it.canal = it.canal || CANAIS[0]; it.audio = it.audio || AUDIOS[0]; }
+      if (['cat', 'sid', 'vi'].includes(k)) { refreshItens(); $('#' + `it${m[1]}-${k}`)?.focus(); } else refreshResumo();
+      if (k === 'canal' && t.value !== CANAIS[0]) toast('Publicação em redes sociais exige solicitação expressa e verificação de direitos de uso.');
+    }
+    soon();
+  });
+  $('#itens').addEventListener('click', e => { const b = e.target.closest('[data-del]'); if (!b) return; d.itens.splice(+b.dataset.del, 1); refreshItens(); soon(); toast('Serviço removido.'); });
+  $('#addSvc').onclick = () => { d.itens.push({ sid: '01', vi: 0, qty: 1, opt: '', obs: '' }); clearErr('itens'); refreshItens(); soon(); const n = d.itens.length - 1; $(`#it${n}-cat`)?.focus(); };
+  $('#ampliar').onclick = () => {
+    const m = document.createElement('div'); m.className = 'modal-bg';
+    m.innerHTML = `<div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTit"><header><h2 id="mTit">Observações para a Propaga</h2><span class="small muted" style="margin-left:auto"><span id="mCount">${d.obs.length.toLocaleString('pt-BR')}</span> / 30.000</span></header><textarea class="input" id="mObs" maxlength="30000" aria-labelledby="mTit">${esc(d.obs)}</textarea><footer><button class="btn btn-primary" id="mOk" type="button">Concluir</button></footer></div>`;
+    document.body.append(m); const ta = $('#mObs'); ta.focus();
+    ta.oninput = () => { $('#mCount').textContent = ta.value.length.toLocaleString('pt-BR'); };
+    const close = () => { d.obs = ta.value; $('#obs').value = d.obs; $('#obsCount').textContent = d.obs.length.toLocaleString('pt-BR'); autosave(); m.remove(); $('#ampliar').focus(); };
+    $('#mOk').onclick = close; m.onkeydown = e => { if (e.key === 'Escape') close(); }; m.onclick = e => { if (e.target === m) close(); };
+  };
+  const ta = $('#obs'); const grow = () => { ta.style.height = 'auto'; ta.style.height = Math.max(360, ta.scrollHeight + 2) + 'px'; }; ta.addEventListener('input', grow); grow();
+  prazoAviso(); bindResumo();
+}
+function prazoAviso() {
+  const d = S.draft, box = $('#prazoAviso'); if (!box) return;
+  const prim = iso(addUteis(new Date(), 5));
+  if (d.prazo.urgente) box.innerHTML = `<div class="note warn">${ic('warn')}<span>Pedido urgente: a Propaga confirma um cronograma individual. Urgência não significa aceite automático nem acréscimo sem aprovação.</span></div>`;
+  else if (d.prazo.desejada && d.prazo.desejada < prim) box.innerHTML = `<div class="note warn">${ic('warn')}<span>A data desejada (${br(d.prazo.desejada)}) é anterior à primeira apresentação possível no prazo padrão (${br(prim)}). Marque o pedido como urgente ou ajuste a data.</span></div>`;
+  else box.innerHTML = '';
+}
+function bindResumo() {
+  $('#conferido').onchange = e => { S.draft.conferido = e.target.checked; $('#enviar').disabled = !e.target.checked; if (e.target.checked) $('#enviar').removeAttribute('aria-disabled'); else $('#enviar').setAttribute('aria-disabled', 'true'); persist(); };
+  $('#salvar').onclick = () => { S.draft.salvo = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); persist(); toast('Rascunho salvo. Ele fica disponível quando você voltar.'); const a = $('#autosave'); if (a) a.textContent = 'Rascunho salvo às ' + S.draft.salvo; };
+  $('#enviar').onclick = enviar;
+  document.querySelectorAll('[data-goto]').forEach(a => a.onclick = e => { e.preventDefault(); const k = a.dataset.goto; const el = $('#' + k) || $('#addSvc'); const s = el.closest('.sec'); if (s?.classList.contains('closed')) s.querySelector('header').click(); el.focus(); });
+}
+function validar() {
+  const d = S.draft, e = {};
+  if (!d.titulo.trim()) e.titulo = 'Informe o título da solicitação.';
+  if (!d.area) e.area = 'Selecione a unidade: matriz, filial ou todas.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) e.email = 'Informe um e-mail de contato válido, como nome@bmlog.com.br.';
+  if (!d.objetivo.trim()) e.objetivo = 'Descreva o objetivo em uma frase.';
+  if (!d.publico) e.publico = 'Selecione o público da solicitação.';
+  if (!d.itens.length) e.itens = 'Adicione ao menos um serviço.';
+  d.itens.forEach((it, i) => { const s = SV[it.sid]; if (s.opcao && !it.opt) e[`it${i}-opt`] = `Serviço ${i + 1}: escolha ${s.opcao.k.toLowerCase()}.`; });
+  if (!/^https:\/\/drive\.google\.com\/(drive\/(u\/\d+\/)?folders\/|file\/d\/)[\w-]+/.test(d.drive.link)) e.driveLink = 'Cole o link de uma pasta do Google Drive (drive.google.com/drive/folders/…).';
+  if (!d.drive.conferido) e.driveOk = 'Confirme que conferiu os arquivos e as permissões no Drive.';
+  if (!d.prazo.desejada) e.desejada = 'Informe a data desejada.';
+  return e;
+}
+function enviar() {
+  S.errors = validar();
+  if (Object.keys(S.errors).length) { render(); setTimeout(() => { $('#errBox')?.scrollIntoView({ block: 'center' }); $('#errBox a')?.focus(); }, 30); return; }
+  const d = S.draft; const n = S.orders.length + 1; const id = `BML-2026-${String(n).padStart(4, '0')}`; const now = new Date().toISOString();
+  S.orders.unshift({
+    id, titulo: d.titulo, solicitante: S.user, area: d.area, email: d.email, objetivo: d.objetivo, publico: d.publico, status: 'enviada', rounds: 0, versao: 0,
+    itens: JSON.parse(JSON.stringify(d.itens)), drive: { link: d.drive.link, conferido: true, verificado: false }, obs: d.obs,
+    prazo: { desejada: d.prazo.desejada, urgente: d.prazo.urgente, inicio: '', primeira: '', final: '', entrega: '' }, criado: now, catVersion: CAT_VERSION.id,
+    events: [
+      { t: now, user: S.user, label: 'Solicitação enviada', key: true, note: 'Conferido pelo remetente: briefing, arquivos e permissões.' },
+      { t: now, user: 'sistema', label: 'Notificação enviada a Débora, Mariana, Marcelo e Marisa', note: 'Envio simulado nesta prévia.' }
+    ]
+  });
+  S.draft = novoRascunho(); S.draft.titulo = ''; S.draft.objetivo = ''; S.draft.itens = []; S.draft.obs = ''; S.errors = {};
+  persist(); go(id); setTimeout(() => toast(`Solicitação ${id} enviada. Os responsáveis foram avisados por e-mail (simulado).`), 50);
+}
+
+/* ---------- LISTA ---------- */
+function visiveis() { return S.orders.filter(o => S.user !== 'debora' || o.solicitante === 'debora'); }
+function viewLista() {
+  const f = S.filtro; const q = f.q.toLowerCase();
+  const list = visiveis().filter(o => (f.st === 'todas' || (f.st === 'abertas' ? !['paga', 'cancelada', 'entregue', 'faturada'].includes(o.status) : o.status === f.st)) && (!q || (o.id + o.titulo + o.area).toLowerCase().includes(q)));
+  const acao = o => ({ enviada: CAN.receber(S.user) && 'Registrar recebimento', validacao: CAN.cotar(S.user) && 'Cotar e confirmar cronograma', aceite: CAN.aceitar(S.user) && 'Aceitar orçamento', apresentacao: CAN.aprovar(S.user) && 'Aprovar ou pedir ajustes', entregue: (CAN.faturar(S.user) && 'Registrar faturamento') || (S.user === 'debora' && !o.recebido && 'Confirmar recebimento') }[o.status] || '');
+  return `<div class="page-head"><h1>Solicitações</h1><p>${S.user === 'debora' ? 'Seus pedidos à Propaga e a etapa de cada um.' : 'Todos os pedidos da B&M Log, com a etapa atual e o que depende de você.'}</p></div>
+  <div class="toolbar"><label class="sr" for="fq">Buscar</label><input class="input" id="fq" placeholder="Buscar por protocolo, título ou área" value="${esc(f.q)}">
+    <label class="sr" for="fst">Situação</label>${sel('fst', f.st, [['todas', 'Todas as situações'], ['abertas', 'Em andamento'], ...FLOW, ['cancelada', 'Cancelada']])}
+    ${CAN.nova(S.user) ? `<a class="btn btn-primary btn-sm" href="#nova" style="margin-left:auto">${ic('plus')}Nova solicitação</a>` : ''}</div>
+  <div class="tbl-wrap"><table><thead><tr><th>Protocolo</th><th>Solicitação</th><th>Situação</th><th>Data desejada</th><th>Sua ação</th></tr></thead><tbody>
+  ${list.map(o => { const a = acao(o); return `<tr class="click" data-open="${o.id}"><td class="num"><a href="#${o.id}">${o.id}</a></td><td><b>${esc(o.titulo)}</b><div class="small muted">${esc(o.area)} · ${o.itens.length} ${o.itens.length > 1 ? 'itens' : 'item'}${o.exemplo ? ' · exemplo' : ''}</div></td><td>${stBadge(o.status)}</td><td class="num">${br(o.prazo.desejada)}</td><td>${a ? `<span class="badge b-brand plain">${a}</span>` : '<span class="small muted">—</span>'}</td></tr>`; }).join('') || `<tr><td colspan="5"><div class="empty">Nenhuma solicitação com esses filtros.</div></td></tr>`}
+  </tbody></table></div><div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+function bindFiltros(v) {
+  if (v === 'solicitacoes') {
+    $('#fq').oninput = e => { S.filtro.q = e.target.value; const p = e.target.selectionStart; render(); const el = $('#fq'); el.focus(); el.setSelectionRange(p, p); };
+    $('#fst').onchange = e => { S.filtro.st = e.target.value; render(); };
+    document.querySelectorAll('[data-open]').forEach(r => r.onclick = e => { if (!e.target.closest('a')) go(r.dataset.open); });
+  }
+  if (v === 'valores') {
+    $('#cq').oninput = e => { S.cat.q = e.target.value; const p = e.target.selectionStart; render(); const el = $('#cq'); el.focus(); el.setSelectionRange(p, p); };
+    document.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => { S.cat.c = b.dataset.cat; render(); });
+  }
+  if (v === 'relatorios' && CAN.relatorios(S.user)) {
+    document.querySelectorAll('[data-per]').forEach(b => b.onclick = () => { S.rel = b.dataset.per; S.relPedido = ''; render(); });
+    $('#rpSel').onchange = e => { S.relPedido = e.target.value; render(); };
+    document.querySelectorAll('[data-exp]').forEach(b => b.onclick = () => toast(`Exportação em ${b.dataset.exp} disponível na versão final.`));
+  }
+}
+
+/* ---------- DETALHE DO PEDIDO ---------- */
+function viewPedido(id) {
+  const o = S.orders.find(x => x.id === id);
+  if (!o || (S.user === 'debora' && o.solicitante !== 'debora')) return `<div class="card lockpage"><h1>Solicitação não encontrada</h1><p class="muted">Ela não existe ou não está disponível para o seu perfil.</p><a class="btn btn-line" href="#solicitacoes">Voltar às solicitações</a></div>`;
+  const t = totals(o.itens); const idx = FLOW.findIndex(f => f[0] === o.status);
+  const flow = o.status === 'cancelada' ? '<span class="badge b-crit">Cancelada</span>' : `<div class="flow" aria-label="Etapas">${FLOW.map(([k, l], i) => `<span class="${i < idx ? 'done' : i === idx ? 'now' : ''}" ${i === idx ? 'aria-current="step"' : ''}>${l}</span>`).join('')}</div>`;
+  const rows = o.itens.map((it, i) => { const l = itemLabel(it); const u = unit(it); const cot = SV[it.sid].variantes[it.vi].bm == null; return `<tr><td class="num">${it.qty}×</td><td><b>${esc(l.nome)}</b><div class="small muted">${esc(l.cod)} · ${esc(l.var)}${itemSpecs(it) ? ' · ' + esc(itemSpecs(it)) : ''}</div>${it.obs ? `<div class="small" style="margin-top:3px">${esc(it.obs)}</div>` : ''}</td>
+    <td>${u == null ? (o.status === 'validacao' && CAN.cotar(S.user) ? `<label class="sr" for="cot${i}">Orçamento do item ${i + 1} (preço final B&amp;M)</label><input class="input num" id="cot${i}" data-cot="${i}" inputmode="decimal" placeholder="R$ 0,00" style="width:120px">` : '<span class="badge b-warn">Sob orçamento</span>') : (cot ? '<span class="badge b-ok">Orçamento registrado</span>' : '<span class="small muted">Catálogo</span>')}</td></tr>`; }).join('');
+  return `<div class="page-head"><div class="row"><span class="badge plain num">${o.id}</span>${stBadge(o.status)}${o.exemplo ? '<span class="badge plain b-mute">Exemplo</span>' : ''}</div><h1>${esc(o.titulo)}</h1><p>${esc(o.objetivo)}</p></div>
+  <div class="detail"><div style="display:grid;gap:16px;min-width:0">
+    <section class="card panel"><h2>Etapa</h2>${flow}</section>
+    <section class="card panel"><h2>Serviços</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Qtd.</th><th>Serviço</th><th>Preço</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <p class="small muted">Catálogo v${esc(o.catVersion)} gravado neste pedido. Os preços ficam em <a href="#valores">Valores B&amp;M Log</a>${CAN.relatorios(S.user) ? ' e o total deste pedido em <button type="button" class="linkbtn" data-act="verValores">Relatórios</button>' : ''}.</p></section>
+    <section class="card panel"><h2>Briefing</h2><dl class="kv">
+      <dt>Solicitante</dt><dd>${esc(nomeDe(o.solicitante))} · ${esc(o.email)}</dd><dt>Unidade</dt><dd>${esc(o.area)}</dd><dt>Público</dt><dd>${esc(o.publico)}</dd>
+      <dt>Drive</dt><dd><a href="${esc(o.drive.link)}" target="_blank" rel="noopener">${esc(o.drive.link)}</a><div style="margin-top:4px">${o.drive.verificado ? '<span class="badge b-ok">Acesso verificado pela Propaga</span>' : '<span class="badge b-warn">Acesso a verificar</span>'}</div></dd>
+      <dt>Observações</dt><dd style="white-space:pre-wrap">${esc(o.obs) || '—'}</dd></dl></section>
+    <section class="card panel"><h2>Prazos</h2><dl class="kv">
+      <dt>Data desejada</dt><dd class="num">${br(o.prazo.desejada)}${o.prazo.urgente ? ' · <span class="badge b-warn">Urgente</span>' : ''}</dd><dt>Início confirmado</dt><dd class="num">${br(o.prazo.inicio)}</dd>
+      <dt>1ª apresentação</dt><dd class="num">${br(o.prazo.primeira)}</dd><dt>Previsão final</dt><dd class="num">${br(o.prazo.final)}</dd><dt>Entrega efetiva</dt><dd class="num">${br(o.prazo.entrega)}</dd>
+      <dt>Rodadas de ajuste</dt><dd class="num">${o.rounds || 0} de 2 incluídas</dd></dl></section>
+  </div>
+  <aside style="display:grid;gap:16px;min-width:0">
+    <section class="card panel"><h2>O que falta</h2>${acoesHTML(o)}</section>
+    <section class="card panel"><h2>Histórico</h2><p class="small muted" style="margin-top:-6px">Registros permanentes, com usuário, data e hora.</p>
+      <ol class="timeline">${[...o.events].reverse().map(e => `<li class="${e.key ? 'key' : ''}"><div><b>${esc(e.label)}</b><div class="meta">${esc(nomeDe(e.user))} · ${brdt(e.t)}</div>${e.note ? `<div class="tnote">${esc(e.note)}</div>` : ''}</div></li>`).join('')}</ol></section>
+  </aside></div><div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+function acoesHTML(o) {
+  const u = S.user; const quem = { enviada: 'Atendimento Propaga (Marcelo)', validacao: 'Atendimento Propaga (Marcelo)', aceite: 'Financeiro B&M Log (Mariana)', producao: 'Propaga', apresentacao: 'Débora', aprovada: 'Atendimento Propaga', entregue: 'Débora e Financeiro Propaga', faturada: 'Financeiro Propaga', paga: '—', cancelada: '—' }[o.status];
+  const b = [];
+  const hasPend = totals(o.itens).pend > 0;
+  if (o.status === 'enviada' && CAN.receber(u)) b.push(`<button class="btn btn-primary" data-act="receber" type="button">Registrar recebimento e verificação</button><p class="small muted">Confirma que o briefing está completo e que o acesso ao Drive foi testado.</p>`);
+  if (o.status === 'validacao' && CAN.cotar(u)) b.push(`${hasPend ? `<div class="note warn">${ic('warn')}<span>Registre o orçamento dos itens “sob orçamento” na tabela de serviços. O valor aparece só nos Relatórios.</span></div>` : ''}
+    <div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:8px">${[['inicio', 'Início'], ['primeira', '1ª apres.'], ['final', 'Previsão final']].map(([k, l]) => `<div class="field"><label for="pz-${k}">${l}</label><input class="input" type="date" id="pz-${k}" value="${o.prazo[k] || ''}"></div>`).join('')}</div>
+    <button class="btn btn-primary" data-act="paraAceite" type="button">${hasPend || o.itens.some(it => SV[it.sid].variantes[it.vi].bm == null) ? 'Confirmar cronograma e enviar orçamento' : 'Confirmar cronograma e iniciar produção'}</button><span class="err" id="actErr"></span>`);
+  if (o.status === 'aceite') b.push(CAN.aceitar(u) ? `<div class="note">${ic('info')}<span>Este pedido tem item fora do preço de catálogo. Confira o orçamento no relatório do pedido antes de aceitar.</span></div><button class="btn btn-line btn-sm" data-act="verValores" type="button">${ic('chart')}Ver valores deste pedido</button><button class="btn btn-primary" data-act="aceitar" type="button">Aceitar orçamento e prazo</button>` : `<p class="small muted">O pedido tem item sob orçamento. A produção começa depois do aceite do orçamento pelo Financeiro da B&amp;M Log. Itens com preço de catálogo seguem o contrato assinado e não precisam de aceite.</p>`);
+  if (o.status === 'producao' && CAN.receber(u)) b.push(`<button class="btn btn-primary" data-act="versao" type="button">Disponibilizar versão ${o.versao + 1} para aprovação</button><p class="small muted">Os arquivos ficam em 03 Provas no Drive.</p>`);
+  if (o.status === 'apresentacao' && CAN.aprovar(u)) b.push(`<div class="field"><label for="ajusteTxt">Lista consolidada de ajustes</label><textarea class="input" id="ajusteTxt" rows="3" placeholder="Reúna todos os ajustes desta versão em uma única lista"></textarea></div>
+    <div class="row"><button class="btn btn-primary" data-act="aprovar" type="button">Aprovar versão ${o.versao}</button><button class="btn btn-line" data-act="ajustes" type="button" ${o.rounds >= 2 ? 'disabled' : ''}>Pedir ajustes (${o.rounds}/2)</button></div>
+    ${o.rounds >= 2 ? `<p class="small" style="color:var(--warn)">As duas rodadas incluídas foram usadas. Novos ajustes podem ser alteração de escopo; fale com o Atendimento.</p>` : ''}<span class="err" id="actErr"></span>`);
+  if (o.status === 'aprovada' && CAN.receber(u)) b.push(`<button class="btn btn-primary" data-act="entregar" type="button">Entregar arquivos finais</button><p class="small muted">Os arquivos ficam em 04 Aprovados no Drive.</p>`);
+  if (o.status === 'entregue' && u === 'debora' && !o.recebido) b.push(`<button class="btn btn-primary" data-act="recebido" type="button">Confirmar recebimento e verificação</button>`);
+  if (o.status === 'entregue' && CAN.faturar(u)) b.push(`<button class="btn btn-primary" data-act="faturar" type="button">Registrar faturamento</button>`);
+  if (o.status === 'faturada' && CAN.faturar(u)) b.push(`<button class="btn btn-primary" data-act="pagar" type="button">Registrar pagamento</button>`);
+  const cancelavel = (['enviada', 'validacao', 'aceite'].includes(o.status) && CAN.cancelar(u)) || (['producao', 'apresentacao', 'aprovada'].includes(o.status) && u === 'marco');
+  return `<p class="small"><span class="muted">Próximo passo com:</span> <b>${quem}</b></p>${b.length ? `<div class="act-box">${b.join('')}</div>` : `<p class="small muted">Nenhuma ação sua nesta etapa.</p>`}
+    ${cancelavel ? `<div class="act-box"><div id="cancelBox"><button class="btn btn-quiet btn-sm" data-act="cancelarPedir" type="button">Cancelar solicitação</button></div></div>` : ''}`;
+}
+function bindPedido(id) {
+  const o = S.orders.find(x => x.id === id); if (!o) return;
+  const log = (label, key, note) => o.events.push({ t: new Date().toISOString(), user: S.user, label, key: !!key, note: note || '' });
+  const done = msg => { persist(); render(); toast(msg); };
+  document.querySelectorAll('[data-cot]').forEach(inp => inp.onchange = () => {
+    const v = parseFloat(inp.value.replace(/\./g, '').replace(',', '.')); const it = o.itens[+inp.dataset.cot];
+    if (v > 0) { it.cotado = Math.round(v * 100) / 100; log(`Orçamento registrado: ${SV[it.sid].nome}, ${SV[it.sid].variantes[it.vi].rotulo}`, 0, 'Valor disponível nos Relatórios.'); done('Orçamento registrado. O valor aparece nos Relatórios.'); }
+  });
+  document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const a = b.dataset.act;
+    if (a === 'verValores') { S.relPedido = o.id; return go('relatorios'); }
+    if (a === 'receber') { o.status = 'validacao'; o.drive.verificado = true; log('Recebido e verificado pela Propaga', 1, 'Briefing completo e acesso ao Drive testado.'); return done('Recebimento registrado.'); }
+    if (a === 'paraAceite') {
+      const pz = k => $('#pz-' + k).value;
+      if (totals(o.itens).pend) { $('#actErr').textContent = 'Ainda há itens sem orçamento registrado.'; return; }
+      if (!pz('inicio') || !pz('primeira') || !pz('final')) { $('#actErr').textContent = 'Preencha as três datas do cronograma.'; return; }
+      Object.assign(o.prazo, { inicio: pz('inicio'), primeira: pz('primeira'), final: pz('final') });
+      const temOrc = o.itens.some(it => SV[it.sid].variantes[it.vi].bm == null);
+      if (temOrc) { o.status = 'aceite'; log('Cronograma confirmado; orçamento enviado para aceite'); return done('Orçamento enviado para aceite do Financeiro B&M Log.'); }
+      o.status = 'producao'; log('Cronograma confirmado; produção iniciada', 1, 'Todos os itens com preço do catálogo vigente (contrato assinado).'); return done('Cronograma confirmado. O pedido entrou em produção.');
+    }
+    if (a === 'aceitar') { o.status = 'producao'; log('Orçamento e prazo aceitos', 1); return done('Aceite registrado. O pedido entrou em produção.'); }
+    if (a === 'versao') { o.versao++; o.status = 'apresentacao'; log(`Versão ${o.versao} disponibilizada para aprovação`); return done(`Versão ${o.versao} disponível para a Débora.`); }
+    if (a === 'aprovar') { o.status = 'aprovada'; log(`Conteúdo aprovado na versão ${o.versao}`, 1); return done('Aprovação registrada.'); }
+    if (a === 'ajustes') { const txt = $('#ajusteTxt').value.trim(); if (!txt) { $('#actErr').textContent = 'Descreva os ajustes antes de enviar.'; return; } o.rounds++; o.status = 'producao'; log(`Ajustes solicitados (rodada ${o.rounds} de 2)`, 0, txt); return done('Ajustes enviados à Propaga.'); }
+    if (a === 'entregar') { o.status = 'entregue'; o.prazo.entrega = iso(new Date()); log('Arquivos finais entregues em 04 Aprovados', 1); return done('Entrega registrada.'); }
+    if (a === 'recebido') { o.recebido = true; log('Recebido e verificado pelo solicitante', 1); return done('Recebimento confirmado.'); }
+    if (a === 'faturar') { o.status = 'faturada'; log('Faturamento registrado'); return done('Faturamento registrado.'); }
+    if (a === 'pagar') { o.status = 'paga'; log('Pagamento registrado', 1); return done('Pagamento registrado.'); }
+    if (a === 'cancelarPedir') { $('#cancelBox').innerHTML = `<div class="field"><label for="motivo">Motivo do cancelamento</label><textarea class="input" id="motivo" rows="2"></textarea><span class="err" id="motErr"></span></div><div class="row"><button class="btn btn-line btn-sm" data-act2="sim" type="button">Confirmar cancelamento</button><button class="btn btn-quiet btn-sm" data-act2="nao" type="button">Manter pedido</button></div>`; $('#motivo').focus();
+      $('[data-act2="nao"]').onclick = () => render();
+      $('[data-act2="sim"]').onclick = () => { const m = $('#motivo').value.trim(); if (!m) { $('#motErr').textContent = 'Informe o motivo. Ele fica no histórico.'; return; } o.status = 'cancelada'; log('Solicitação cancelada', 1, m); done('Solicitação cancelada. O histórico foi preservado.'); };
+    }
+  });
+}
+
+/* ---------- VALORES ---------- */
+function viewValores() {
+  const q = S.cat.q.toLowerCase(); const c = S.cat.c;
+  const list = SERVICOS.filter(s => (c === 'todas' || s.cat === c) && (!q || (s.cod + s.nome + s.desc).toLowerCase().includes(q)));
+  const groups = CATEGORIAS.map(cat => ({ cat, itens: list.filter(s => s.cat === cat.id) })).filter(g => g.itens.length);
+  return `<div class="page-head"><h1>Valores B&amp;M Log</h1><p>Preços finais com o desconto de parceria de 15% já aplicado. “A cotar” significa que a Propaga envia orçamento antes do aceite.</p>
+    <div class="row"><span class="badge b-ok">Catálogo v${CAT_VERSION.id} · ${CAT_VERSION.data} · ${CAT_VERSION.status}</span><span class="small muted">${SERVICOS.length} serviços</span></div></div>
+  <div class="toolbar"><label class="sr" for="cq">Buscar serviço</label><input class="input" id="cq" placeholder="Buscar serviço" value="${esc(S.cat.q)}"></div>
+  <div class="chips" style="margin-bottom:20px">${[['todas', 'Todas'], ...CATEGORIAS.map(x => [x.id, x.nome])].map(([id, n]) => `<button type="button" class="chip" data-cat="${id}" aria-pressed="${c === id}">${esc(n)}</button>`).join('')}</div>
+  ${groups.map(g => `<div class="cat-group"><h2>${esc(g.cat.nome)} <span class="small muted" style="font-family:var(--f-body);font-weight:500">${g.itens.length}</span></h2><div class="card">
+    ${g.itens.map(s => `<div class="svc-card"><span class="cod">${s.cod}</span><div style="display:grid;gap:4px;min-width:0"><b>${esc(s.nome)}</b><span class="small muted">${esc(s.desc)} ${esc(s.escopo)}</span>${s.nota ? `<span class="small" style="color:var(--warn);font-weight:600">${esc(s.nota)}</span>` : ''}</div>
+      <div class="vlist">${s.variantes.map(v => `<div><span>${esc(v.rotulo)}</span><b class="${v.bm == null ? 'muted' : ''}">${BRL(v.bm)}</b></div>`).join('')}</div></div>`).join('')}
+  </div></div>`).join('') || '<div class="empty card">Nenhum serviço encontrado.</div>'}
+  <div class="note">${ic('info')}<span>Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte. Duas rodadas de ajustes consolidados por entrega.</span></div>
+  <div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+/* ---------- RELATÓRIOS ---------- */
+function viewRelatorios() {
+  if (!CAN.relatorios(S.user)) return `<div class="card lockpage">${ic('lock').replace('<svg', '<svg style="width:28px;height:28px;color:var(--muted)"')}<h1>Relatórios</h1><p class="muted">Seu perfil não gera relatórios. Pela minuta, relatórios ficam com o Financeiro da B&amp;M Log, o Atendimento e o Financeiro da Propaga. Os preços de cada serviço estão em Valores B&amp;M Log.</p><a class="btn btn-line" href="#valores">Ver Valores B&amp;M Log</a></div><div id="toasts" class="toast-wrap"></div>`;
+  const per = S.rel; const now = new Date();
+  const ini = per === 'semana' ? new Date(now - 7 * 864e5) : per === 'mes' ? new Date(now.getFullYear(), now.getMonth() - 1, now.getDate()) : new Date(now.getFullYear(), 0, 1);
+  const rp = S.relPedido && S.orders.some(o => o.id === S.relPedido) ? S.relPedido : '';
+  const os = rp ? S.orders.filter(o => o.id === rp) : S.orders.filter(o => new Date(o.criado) >= ini);
+  const ot = rp ? totals(os[0].itens) : null;
+  const soma = f => os.filter(f).reduce((a, o) => a + totals(o.itens).total, 0);
+  const aceitos = ['producao', 'apresentacao', 'aprovada', 'entregue', 'faturada', 'paga'];
+  const pend = os.reduce((a, o) => a + (o.status !== 'cancelada' ? totals(o.itens).pend : 0), 0);
+  const k = [
+    ['Enviadas', os.filter(o => o.status !== 'rascunho').length, `${os.filter(o => o.status === 'cancelada').length} cancelada(s)`],
+    ['Valor aceito', BRL(soma(o => aceitos.includes(o.status))), 'Pedidos com aceite de escopo e preço'],
+    ['Valor entregue', BRL(soma(o => ['entregue', 'faturada', 'paga'].includes(o.status))), `Faturado: ${BRL(soma(o => ['faturada', 'paga'].includes(o.status)))}`],
+    ['Pendências de orçamento', pend, 'Itens sem preço não contam como R$ 0']
+  ];
+  return `<div class="page-head"><h1>Relatórios</h1><p>Somente preços finais B&amp;M Log. Situações diferentes não são somadas como uma única despesa.</p></div>
+  <div class="toolbar"><div class="chips">${[['semana', 'Últimos 7 dias'], ['mes', 'Últimos 30 dias'], ['ano', 'Ano']].map(([id, n]) => `<button type="button" class="chip" data-per="${id}" aria-pressed="${!rp && per === id}">${n}</button>`).join('')}</div>
+    <label class="sr" for="rpSel">Pedido</label>${sel('rpSel', rp, [['', 'Todos os pedidos do período'], ...S.orders.map(o => [o.id, `${o.id} · ${o.titulo}`])])}
+    <div class="row" style="margin-left:auto"><button class="btn btn-quiet btn-sm" data-exp="PDF" type="button">Exportar PDF</button><button class="btn btn-quiet btn-sm" data-exp="planilha" type="button">Exportar planilha</button></div></div>
+  ${rp ? `<div class="total-box" style="margin-bottom:16px"><div><div class="lbl">${esc(os[0].id)} · ${esc(os[0].titulo)}</div><div class="small muted">${stBadge(os[0].status)} ${ot.pend ? `· ${ot.pend} ${ot.pend > 1 ? 'itens' : 'item'} sob orçamento` : '· todos os itens com preço'}</div></div><div class="v">${BRL(ot.total)}${ot.pend ? '<span class="small muted" style="font-family:var(--f-body);font-weight:500"> + sob orçamento</span>' : ''}</div></div>` : ''}
+  <div class="kpis">${k.map(([a, b, c]) => `<div class="card kpi"><span class="k">${a}</span><span class="v">${b}</span><span class="s">${c}</span></div>`).join('')}</div>
+  <div class="tbl-wrap"><table><thead><tr><th>Protocolo</th><th>Serviço</th><th>Modalidade</th><th class="r">Qtd.</th><th class="r">Unitário</th><th class="r">Subtotal</th><th>Área</th><th>Situação</th><th>Catálogo</th></tr></thead><tbody>
+  ${os.flatMap(o => o.itens.map(it => { const l = itemLabel(it); const u = unit(it); return `<tr><td class="num"><a href="#${o.id}">${o.id}</a></td><td>${esc(l.nome)}<div class="small muted">${esc(l.var)}</div></td><td>${l.mod}</td><td class="r">${it.qty}</td><td class="r">${u == null ? '<span class="badge b-warn">Sob orçamento</span>' : BRL(u)}</td><td class="r">${u == null ? '—' : BRL(Math.round(u * it.qty * 100) / 100)}</td><td>${esc(o.area)}</td><td>${stBadge(o.status)}</td><td class="num">v${esc(o.catVersion)}</td></tr>`; })).join('') || '<tr><td colspan="9"><div class="empty">Sem pedidos no período.</div></td></tr>'}
+  </tbody></table></div>
+  <p class="small muted" style="margin-top:10px">Faturamento e pagamento aparecem apenas quando registrados pelo Financeiro da Propaga.</p>
+  <div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+/* ---------- CONTRATO ---------- */
+function viewContrato() {
+  const cl = [['Valores e desconto', 'Preço de referência aprovado × 0,85, arredondado por unidade. O portal mostra apenas o preço final, subtotais e total. Sem desconto adicional.'],
+    ['Autorização', 'Serviços com preço de catálogo seguem o contrato assinado: a produção começa quando a Propaga confirma o cronograma. Itens sob orçamento dependem do aceite do Financeiro da B&M Log.'],
+    ['Inclusões', 'Imagens e vídeos gerados pela Propaga incluídos. Filmagem, fotografia presencial, impressão, fabricação e montagem com orçamento separado.'],
+    ['Prazo', '5 dias úteis para a 1ª apresentação em serviços simples, após briefing completo e aceite. Complexos e urgentes com cronograma individual.'],
+    ['Ajustes', 'Duas rodadas consolidadas por entrega. Erros da Propaga não consomem rodadas. Silêncio ou e-mail não valem como aprovação.'],
+    ['Dados e Drive', 'Acesso por função, sem links públicos. Senhas nunca vão em briefing, comentário ou e-mail.']];
+  return `<div class="page-head"><h1>Contrato</h1><p>Contrato de serviços de comunicação por demanda entre Propaga e B&amp;M Log, com as regras de operação deste portal.</p>
+    <div class="row"><span class="badge b-ok">Contrato assinado · catálogo v${CAT_VERSION.id} vigente</span></div></div>
+  <div class="detail"><div style="display:grid;gap:16px;min-width:0">
+    <section class="card panel"><h2>Pontos principais</h2><dl class="kv">${cl.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl></section>
+    <section class="card panel"><h2>Documento assinado</h2><p class="small">A versão assinada fica preservada aqui, sem edição. Alterações geram nova versão.</p>
+      <div class="note warn">${ic('warn')}<span>[ARQUIVO PENDENTE] Anexar o PDF assinado e registrar a data de assinatura.</span></div></section>
+  </div><aside style="display:grid;gap:16px">
+    <section class="card panel"><h2>Versões</h2><ol class="timeline">
+      <li class="key"><div><b>Versão assinada</b><div class="meta">Data a registrar</div><div class="tnote">Vigente.</div></div></li>
+      <li><div><b>Minuta v1.0</b><div class="meta">Propaga · 01/10/2026</div><div class="tnote">Base da versão assinada.</div></div></li></ol></section>
+    <section class="card panel"><h2>Catálogo anexo</h2><p class="small">Catálogo v${CAT_VERSION.id} · ${CAT_VERSION.data} · ${SERVICOS.length} serviços</p><a class="btn btn-line btn-sm" href="#valores">Ver valores</a></section>
+  </aside></div><div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+/* ---------- DRIVE ---------- */
+function viewDrive() {
+  const os = visiveis().filter(o => o.status !== 'cancelada');
+  return `<div class="page-head"><h1>Arquivos no Drive</h1><p>Cada solicitação tem uma pasta no Drive compartilhado da B&amp;M Log. O portal guarda os links; os arquivos ficam no Drive.</p></div>
+  <div class="note" style="margin-bottom:16px">${ic('info')}<span>Estrutura padrão por protocolo: <b>01 Briefing</b>, <b>02 Materiais</b>, <b>03 Provas</b> e <b>04 Aprovados</b>. Envio direto pelo portal depende da integração autorizada com o Google Drive (próxima fase).</span></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Protocolo</th><th>Solicitação</th><th>Pasta</th><th>Acesso</th></tr></thead><tbody>
+  ${os.map(o => `<tr><td class="num"><a href="#${o.id}">${o.id}</a></td><td>${esc(o.titulo)}</td><td><a href="${esc(o.drive.link)}" target="_blank" rel="noopener" class="row" style="gap:6px;flex-wrap:nowrap">${ic('ext').replace('<svg', '<svg style="width:15px;height:15px"')}Abrir pasta</a></td><td>${o.drive.verificado ? '<span class="badge b-ok">Verificado pela Propaga</span>' : '<span class="badge b-warn">A verificar</span>'}</td></tr>`).join('')}
+  </tbody></table></div><div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+/* ---------- USUÁRIOS (admin) ---------- */
+function viewUsuarios() {
+  const st = { debora: 'Ativo · 2 etapas', mariana: 'Convite enviado', marcelo: 'Ativo · 2 etapas', marisa: 'Ativo · 2 etapas', marco: 'Ativo · 2 etapas' };
+  const perm = { debora: 'Solicita, acompanha, aprova conteúdo, vê valores dos próprios pedidos', mariana: 'Consulta pedidos e valores, gera relatórios, aceita orçamentos de itens fora do catálogo', marcelo: 'Verifica briefing e Drive, cota, confirma cronograma, entrega versões', marisa: 'Consulta pedidos e valores, registra faturamento e pagamento', marco: 'Acesso geral, catálogo e permissões' };
+  return `<div class="page-head"><h1>Usuários</h1><p>Somente o administrador cadastra pessoas. O convite chega por e-mail com um link de uso único para criar a senha e ativar a verificação em duas etapas.</p></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Pessoa</th><th>Perfil</th><th>Permissões</th><th>Situação</th><th></th></tr></thead><tbody>
+  ${Object.values(USERS).map(u => `<tr><td><b>${esc(u.nome)}</b><div class="small muted">${esc(u.email)}</div></td><td>${esc(u.perfil)}<div class="small muted">${esc(u.org)}</div></td><td class="small">${perm[u.id]}</td><td><span class="badge ${st[u.id].startsWith('Ativo') ? 'b-ok' : 'b-warn'}">${st[u.id]}</span></td><td>${u.id !== 'marco' ? `<button class="btn btn-quiet btn-sm" type="button" data-inv="${u.id}">Reenviar convite</button>` : ''}</td></tr>`).join('')}
+  </tbody></table></div>
+  
+  <div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+/* ---------- AJUDA ---------- */
+function viewAjuda() {
+  const faq = [['Por que alguns itens aparecem “a cotar”?', 'O catálogo não define preço para algumas faixas (por exemplo, vídeos mais longos ou mais páginas). A Propaga envia o valor antes do aceite e ele passa a constar no pedido.'],
+    ['Quando o prazo começa a contar?', 'Depois do briefing completo, dos materiais acessíveis no Drive e do aceite de escopo, preço e prazo.'],
+    ['Quantos ajustes estão incluídos?', 'Duas rodadas consolidadas por entrega. Reúna todos os pontos de uma versão em uma única lista.'],
+    ['Preciso de filmagem ou impressão. Como peço?', 'Descreva na seção Observações: necessidade, local, quantidade, especificações e data. A Propaga orça à parte antes de contratar.'],
+    ['Esqueci a senha ou troquei de celular.', 'Use “Esqueci minha senha” na tela de entrada. Para o aplicativo autenticador, fale com o Atendimento da Propaga.']];
+  return `<div class="page-head"><h1>Ajuda</h1><p>Dúvidas frequentes sobre o portal e o atendimento.</p></div>
+  <div class="card" style="padding:6px 20px">${faq.map(([q, a]) => `<details class="more" style="padding:12px 0;border-bottom:1px solid var(--line)"><summary style="font-size:0.95rem;color:var(--fg)">${q}</summary><p class="small" style="max-width:70ch">${a}</p></details>`).join('')}</div>
+  <div class="card panel" style="margin-top:16px"><h2>Atendimento Propaga</h2><p class="small">Marcelo Brum · <span class="num">marcelo@propaga.com</span></p></div>
+  <div class="card panel" style="margin-top:16px"><h2>Prévia de demonstração</h2><p class="small muted">Os pedidos que você cria nesta prévia ficam só neste navegador.</p><button class="btn btn-quiet btn-sm" id="resetDemo" type="button" style="justify-self:start">Restaurar dados de exemplo</button></div>
+  <div id="toasts" class="toast-wrap" aria-live="polite"></div>`;
+}
+
+/* ---------- utilitário de demonstração ---------- */
+document.addEventListener('click', e => {
+  if (e.target.closest('#resetDemo')) { store.clear(); S.orders = seed(); S.draft = novoRascunho(); S.open = {}; S.errors = {}; store.set('user', S.user); render(); toast('Dados de exemplo restaurados.'); return; }
+  const inv = e.target.closest('[data-inv]'); if (inv) toast(`Convite reenviado para ${USERS[inv.dataset.inv].email} (simulado).`);
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && S.menu) { S.menu = false; $('#side')?.classList.remove('open'); } });
+render();
+
+</script>
+</body></html>
