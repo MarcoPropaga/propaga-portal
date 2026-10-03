@@ -27,7 +27,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
       <aside className="print:hidden flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:p-5" aria-label="Menu principal">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-mkt-bmlog.svg" alt="mkt B&M Log" className="h-auto w-[190px]" />
+          <img src="/brand/selo-mkt-bmlog.png" alt="mkt B&M Log" width={88} height={88} className="size-[88px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
           <span className="mt-2 block text-sm text-[#A9CBD6]">{nomePortal}</span>
         </div>
         <nav className="flex flex-wrap gap-1 md:grid">
