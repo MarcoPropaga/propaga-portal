@@ -12,6 +12,7 @@ import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, moeda, SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
+import { ajustePecas, situacaoRelatorio, ultimaDecisao } from "@/lib/pecas";
 import type { Status } from "@/lib/tipos";
 
 interface Valores { protocolo: string; itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
@@ -79,7 +80,16 @@ function Conteudo() {
     : isoSP(dataDe(p.criadoEm)) >= inicio && (unidade === "todas" || p.unidade === unidade)), [pedidos, protocolo, inicio, unidade]);
 
   // Valor cobrado: integral, ou 50% se o pedido foi cancelado depois de apresentado (contrato).
-  const total = (p: PedidoDoc) => centavos((valores[p.protocolo]?.total ?? 0) * fatorCobranca(p));
+  // Valor cobrado: total × fator do pedido + ajustes por peça (−50% cancelada, +30% refação extra).
+  const unit = (p: PedidoDoc) => (valores[p.protocolo]?.itens ?? []).map((x) => x.unitario);
+  const total = (p: PedidoDoc) => centavos((valores[p.protocolo]?.total ?? 0) * fatorCobranca(p) + ajustePecas(p.pecas, unit(p)));
+  const pecasSel = sel.flatMap((p) => (p.pecas ?? []).map((x) => {
+    const u = x.item != null ? unit(p)[x.item] ?? null : null;
+    const canc = ultimaDecisao(x)?.tipo === "cancelada" && x.etapa !== "cliente";
+    const aj = u == null ? 0 : centavos((canc ? -0.5 * u : 0) + 0.3 * u * (x.extras30 || 0));
+    return { p, x, u, aj, sit: situacaoRelatorio(x) };
+  }));
+  const contaPecas = (k: string) => pecasSel.filter((y) => y.sit.chave === k).length;
   const soma = (f: (p: PedidoDoc) => boolean) => centavos(sel.filter(f).reduce((a, p) => a + total(p), 0));
   const validos = sel.filter((p) => p.status !== "cancelada");
   const cancelados50 = sel.filter((p) => p.status === "cancelada" && fatorCobranca(p) > 0);
@@ -104,7 +114,9 @@ function Conteudo() {
       it.varianteRotulo, String(it.qtd), n(v?.unitario), n(v?.subtotal), n(cobrado(v, f)),
       p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : f > 1 ? `${p.refacoesExtrasCobradas} refação(ões) extra: +${Math.round((f - 1) * 100)}%` : "",
       v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não"].map(q).join(";"));
-    const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo].join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const corpoPecas = pecasSel.map(({ p, x, u, aj, sit }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], "peça", x.nome,
+      sit.rotulo, "1", n(u), "", n(aj), x.extras30 ? `${x.extras30} refação(ões) extra: +30%` : "", ""].map(q).join(";"));
+    const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo, ...corpoPecas].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = `relatorio-${clienteId}-${hojeSP()}.csv`;
@@ -155,6 +167,30 @@ function Conteudo() {
                 <table className="w-full text-sm">
                   <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600"><tr><th className="px-3 py-2.5">Unidade</th><th className="px-3 py-2.5 text-right">Pedidos</th><th className="px-3 py-2.5 text-right">Valor</th></tr></thead>
                   <tbody>{porUnidade.map(([u, x]) => <tr key={u} className="border-t border-gray-200"><td className="px-3 py-2.5">{u}</td><td className="px-3 py-2.5 text-right tabular-nums">{x.n}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(x.v)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {pecasSel.length > 0 && (
+            <section className="grid gap-2 break-inside-avoid" aria-labelledby="h-pecas">
+              <h2 id="h-pecas" className="text-lg">Peças</h2>
+              <p className="text-sm text-gray-600">{contaPecas("concluida")} concluída(s) · {contaPecas("refacao")} em refação · {contaPecas("aguardando")} aguardando aprovação · {contaPecas("cancelada")} cancelada(s)</p>
+              <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
+                <table className="w-full min-w-[640px] text-sm">
+                  <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
+                    <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5 text-right">Ajuste no valor</th></tr>
+                  </thead>
+                  <tbody>
+                    {pecasSel.map(({ p, x, aj, sit }) => (
+                      <tr key={`${p.protocolo}-${x.id}`} className="border-t border-gray-200">
+                        <td className="whitespace-nowrap px-3 py-2.5">{p.protocolo}</td>
+                        <td className="px-3 py-2.5">{x.nome}<div className="text-xs text-gray-600">v{x.versoes.length ? x.versoes[x.versoes.length - 1].v : 1}{x.extras30 ? ` · ${x.extras30} refação(ões) extra` : ""}</div></td>
+                        <td className="px-3 py-2.5">{sit.rotulo}</td>
+                        <td className={`whitespace-nowrap px-3 py-2.5 text-right tabular-nums ${aj < 0 ? "text-gray-600" : aj > 0 ? "text-aviso-700" : ""}`}>{aj ? `${aj > 0 ? "+" : "−"} ${moeda(Math.abs(aj))}` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               </div>
             </section>

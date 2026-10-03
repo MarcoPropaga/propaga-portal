@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { paraValor, deValor } from "../apps-script/src/firestore";
 import { configurarProjeto, convidar, processarFila } from "../apps-script/src/servidor";
+import { resumoDiario } from "../apps-script/src/pecas";
+import { Firestore } from "../apps-script/src/firestore";
 import { CLIENTES } from "@/content/clientes";
 import type { Plataforma, RespostaHttp } from "../apps-script/src/plataforma";
 
@@ -36,7 +38,7 @@ function fake() {
         }
         if (url.includes("?pageSize=")) {
           const col = url.split("/documents/")[1].split("?")[0];
-          const out = [...docs.entries()].filter(([k]) => k.split("/").length === 2 && k.startsWith(col + "/"))
+          const out = [...docs.entries()].filter(([k]) => k.split("/").length === col.split("/").length + 1 && k.startsWith(col + "/"))
             .map(([k, d]) => ({ name: raiz + k, fields: d.fields, updateTime: d.updateTime }));
           return r(200, { documents: out });
         }
@@ -297,5 +299,110 @@ describe("ações do pedido (fila 'acao')", () => {
     const evs = [...f.docs.keys()].filter((k) => k.includes("/BML-2026-0001/eventos/")).map((k) => String(f.doc(k).rotulo));
     expect(evs.some((r) => /50%/.test(r))).toBe(true);
     expect(f.emails.map((e) => e.para).sort()).toEqual(["marcelo@propaga.com", "marisa@propaga.com"]);
+  });
+});
+
+describe("aprovação por peça (fila 'peca')", () => {
+  let f: ReturnType<typeof fake>;
+  let deb: string, adm: string, mcl: string, mri: string, seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `y${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const peca = (uid: string, acao: string, extra: Record<string, unknown> = {}) => fila("peca", uid, { protocolo: "BML-2026-0001", acao, ...extra });
+  const ped = () => f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+  const pc = (id: string) => ped().pecas.find((x: any) => x.id === id);
+  const link = (n: string) => `https://drive.google.com/file/d/${n}/view`;
+  const para = () => f.emails.map((e) => e.para).sort();
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidar(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    mri = convidar(f.p, { nome: "Mariane", email: "mariane@propaga.com", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    convidar(f.p, { nome: "Marisa Coelho", email: "marisa@propaga.com", papel: "financeiro_propaga" }, { uid: adm, nome: "Marco" });
+    fila("enviar", deb, {
+      titulo: "Campanha", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos",
+      itens: [{ cod: "01", variante: 0, qtd: 3, opcao: "4:5" }],
+      drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+    });
+    fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "aceitarPedido", cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" }, driveVerificado: true });
+    f.emails.length = 0;
+  });
+
+  it("ciclo: publicar → avaliar (aprova, refaz, cancela) → encaminhar → nova versão → revisão → Débora aprova → final → pronto para entrega", () => {
+    expect(peca(deb, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).mensagem).toMatch(/perfil/);
+    expect(peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }, { nome: "Post B", item: 0, link: link("b") }, { nome: "Post C", item: 0, link: link("c") }] }).status).toBe("ok");
+    expect(ped().status).toBe("apresentacao");
+    expect(para()).toEqual(["deborabmlog@gmail.com"]);
+
+    f.emails.length = 0;
+    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }] }).mensagem).toMatch(/Avalie todas/);
+    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: [] }, { id: "p3", tipo: "cancelada", nota: "Suspensa." }] }).mensagem).toMatch(/Liste os ajustes/);
+    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: ["Aumentar título", "Trocar foto"] }, { id: "p3", tipo: "cancelada", nota: "Campanha suspensa." }] }).status).toBe("ok");
+    expect([pc("p1").etapa, pc("p1").tarefa]).toEqual(["criativo", "final"]);   // aprovada vai direto à Mariane
+    expect([pc("p3").etapa, pc("p3").tarefa]).toEqual(["criativo", "ciencia"]); // cancelada também
+    expect(pc("p2").etapa).toBe("triagem");                                       // só a refação passa pelo Marcelo
+    expect(ped().rodadas).toBe(1);
+    expect(ped().status).toBe("producao");
+    expect(para()).toEqual(["marcelo@propaga.com", "mariane@propaga.com", "marisa@propaga.com"]);
+
+    f.emails.length = 0;
+    expect(peca(mcl, "encaminhar", { prazo: "2026-10-07", refacoes: [{ id: "p2", itens: ["Aumentar título", "Foto do caminhão azul"] }] }).status).toBe("ok");
+    expect([pc("p2").etapa, pc("p2").tarefa, pc("p2").orientacao.prazo]).toEqual(["criativo", "refazer", "2026-10-07"]);
+    expect(para()).toEqual(["mariane@propaga.com"]);
+
+    expect(peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 1 }).mensagem).toMatch(/Marque todos/);
+    expect(peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 2 }).status).toBe("ok");
+    expect(pc("p2").etapa).toBe("revisao");
+    expect(pc("p2").versoes).toHaveLength(2);
+
+    // devolver (ajuste interno) não conta refação
+    expect(peca(mcl, "devolver", { id: "p2", itens: ["Alinhar o logo"] }).status).toBe("ok");
+    expect([pc("p2").etapa, pc("p2").versoes.length, ped().rodadas]).toEqual(["criativo", 1, 1]);
+    peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 1 });
+    f.emails.length = 0;
+    expect(peca(mcl, "liberar", { ids: ["p2"] }).status).toBe("ok");
+    expect(pc("p2").etapa).toBe("cliente");
+    expect(ped().status).toBe("apresentacao");
+    expect(para()).toEqual(["deborabmlog@gmail.com"]);
+
+    peca(deb, "avaliar", { decisoes: [{ id: "p2", tipo: "aprovada" }] });
+    expect(ped().status).toBe("aprovada");
+    expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).mensagem).toMatch(/peças em andamento/);
+    peca(mri, "ciente", { id: "p3" });
+    peca(mri, "finalizar", { id: "p1" });
+    f.emails.length = 0;
+    expect(peca(mri, "finalizar", { id: "p2" }).resultado.pronto).toBe(true);
+    expect(f.emails.some((e) => e.para === "marcelo@propaga.com" && /pronto para entrega/.test(e.assunto))).toBe(true);
+    expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).status).toBe("ok");
+    // ações antigas por pedido ficam bloqueadas
+    expect(fila("acao", deb, { protocolo: "BML-2026-0001", acao: "aprovar" }).mensagem).toMatch(/Aprovações|disponível/);
+  });
+
+  it("resumo diário: uma vez por dia, só para quem tem pendência", () => {
+    peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
+    f.docs.delete("interno/resumos/dias/2026-10-02");
+    f.emails.length = 0;
+    const cfg = { p: f.p };
+    expect(resumoDiario(cfg.p, new Firestore(f.p, "propaga-portal"))).toBe(1);
+    expect(f.emails[0].para).toBe("deborabmlog@gmail.com");
+    expect(f.emails[0].assunto).toMatch(/pendências/);
+    expect(resumoDiario(cfg.p, new Firestore(f.p, "propaga-portal"))).toBe(0);
+  });
+
+  it("3ª refação: +30% só quando o Marcelo marca; criativo não avalia", () => {
+    peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
+    expect(peca(mri, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }] }).mensagem).toMatch(/perfil/);
+    for (let i = 0; i < 3; i++) {
+      peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "refacao", itens: [`Ajuste ${i}`] }] });
+      peca(mcl, "encaminhar", { prazo: "2026-10-07", refacoes: [{ id: "p1", itens: [`Ajuste ${i}`], cobrar30: true }] });
+      peca(mri, "enviarVersao", { id: "p1", link: link(`a${i}`), feitos: 1 });
+      peca(mcl, "liberar", { ids: ["p1"] });
+    }
+    expect(ped().rodadas).toBe(3);
+    expect(pc("p1").extras30).toBe(1); // só a 3ª conta
   });
 });

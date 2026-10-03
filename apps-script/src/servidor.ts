@@ -11,6 +11,7 @@ import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput } f
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { emailConvite, emailNovaSolicitacao } from "./emails";
 import { executarAcao } from "./acoes";
+import { executarPeca, resumoDiario } from "./pecas";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
 import { ErroUsuario, type Plataforma } from "./plataforma";
@@ -106,6 +107,7 @@ export function processarFila(p: Plataforma, limite = 20) {
       erro++;
     }
   }
+  try { resumoDiario(p, fs); } catch (e) { p.log(`Resumo diário falhou: ${(e as Error).message}`); }
   return { ok, erro };
 }
 
@@ -127,6 +129,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "acao":
       return executarAcao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
+    case "peca":
+      return executarPeca(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     default:
       throw new ErroUsuario("Esta ação ainda não está disponível.");
   }

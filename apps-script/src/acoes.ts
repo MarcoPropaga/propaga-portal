@@ -18,6 +18,7 @@ interface Pedido {
   itens: (ItemSolicitacao & { nome: string; sobOrcamento: boolean })[]; rodadas: number; versao: number;
   catalogoVersao: string; prazo: Record<string, unknown>; drive: Record<string, unknown>; recebidoPeloCliente?: boolean;
   refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
+  temPecas?: boolean; pecas?: { etapa: string }[];
 }
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
@@ -36,6 +37,14 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
   if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Este pedido não é seu.");
+
+  // Com peças publicadas, versões, ajustes e aprovação acontecem por peça (página Aprovações).
+  if (ped.temPecas && ["disponibilizarVersao", "pedirAjustes", "aprovar"].includes(acao))
+    throw new ErroUsuario("Este pedido é avaliado por peça. Use a página Aprovações.");
+  if (ped.temPecas && acao === "cancelar" && u.papel !== "admin")
+    throw new ErroUsuario("Cancele peça por peça na página Aprovações.");
+  if (ped.temPecas && acao === "entregar" && (ped.pecas ?? []).some((x) => x.etapa !== "concluida" && x.etapa !== "encerrada"))
+    throw new ErroUsuario("Ainda há peças em andamento. Registre a entrega quando todas estiverem com arquivo final ou canceladas.");
 
   let novo: Status;
   try {

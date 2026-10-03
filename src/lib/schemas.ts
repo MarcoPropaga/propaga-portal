@@ -78,3 +78,24 @@ export const acaoSchema = z.object({
   refacaoExtraCobrada: z.boolean().optional(),
 });
 export type AcaoInput = z.infer<typeof acaoSchema>;
+
+/* Aprovação por peça (fila tipo "peca"). Regras de quem pode e em que etapa ficam no servidor (pecas.ts). */
+const linkDrive = z.string().trim().regex(/^https:\/\/drive\.google\.com\//, "Cole um link do Google Drive.");
+const itensRefacao = z.array(z.string().trim().min(2).max(500)).min(1, "Liste ao menos um ajuste.").max(30);
+const protocolo = z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/, "Protocolo inválido.");
+const idPeca = z.string().regex(/^[\w-]{1,40}$/);
+export const pecaAcaoSchema = z.discriminatedUnion("acao", [
+  z.object({ acao: z.literal("publicar"), protocolo,
+    pecas: z.array(z.object({ nome: z.string().trim().min(2, "Dê um nome a cada peça.").max(80), item: z.number().int().min(0).nullable(), link: linkDrive })).min(1, "Inclua ao menos uma peça.").max(50) }),
+  z.object({ acao: z.literal("avaliar"), protocolo,
+    decisoes: z.array(z.object({ id: idPeca, tipo: z.enum(["aprovada", "refacao", "cancelada"]),
+      itens: z.array(z.string().trim().min(2).max(500)).max(30).optional(), nota: z.string().trim().max(2000).optional() })).min(1).max(50) }),
+  z.object({ acao: z.literal("encaminhar"), protocolo, prazo: data,
+    refacoes: z.array(z.object({ id: idPeca, itens: itensRefacao, cobrar30: z.boolean().optional() })).min(1).max(50) }),
+  z.object({ acao: z.literal("enviarVersao"), protocolo, id: idPeca, link: linkDrive, feitos: z.number().int().min(0), nota: z.string().trim().max(2000).optional() }),
+  z.object({ acao: z.literal("finalizar"), protocolo, id: idPeca }),
+  z.object({ acao: z.literal("ciente"), protocolo, id: idPeca }),
+  z.object({ acao: z.literal("liberar"), protocolo, ids: z.array(idPeca).min(1).max(50) }),
+  z.object({ acao: z.literal("devolver"), protocolo, id: idPeca, itens: itensRefacao }),
+]);
+export type PecaAcaoInput = z.infer<typeof pecaAcaoSchema>;
