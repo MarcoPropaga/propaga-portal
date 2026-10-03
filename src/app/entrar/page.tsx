@@ -40,10 +40,9 @@ export default function Entrar() {
 
   if (resolver) {
     return (
-      <TelaAcesso titulo="Código de verificação" subtitulo="Segunda etapa do acesso.">
+      <TelaAcesso titulo="Código de verificação" subtitulo="Segunda etapa do acesso." voltar={{ rotulo: "Voltar", onClick: () => { setResolver(null); setSenha(""); } }}>
         <DesafioTotp
-          aoConfirmar={async (c) => { await confirmarCodigo(resolver, c); router.replace("/inicio/"); }}
-          aoVoltar={() => { setResolver(null); setSenha(""); }} />
+          aoConfirmar={async (c) => { await confirmarCodigo(resolver, c); router.replace("/inicio/"); }} />
       </TelaAcesso>
     );
   }

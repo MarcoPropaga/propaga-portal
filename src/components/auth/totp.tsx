@@ -64,7 +64,7 @@ export function CadastroTotp({ usuario, aoConcluir }: { usuario: User; aoConclui
 }
 
 /** Pedido do código no login. */
-export function DesafioTotp({ aoConfirmar, aoVoltar }: { aoConfirmar: (codigo: string) => Promise<void>; aoVoltar: () => void }) {
+export function DesafioTotp({ aoConfirmar, aoVoltar }: { aoConfirmar: (codigo: string) => Promise<void>; aoVoltar?: () => void }) {
   const [codigo, setCodigo] = useState("");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -80,7 +80,7 @@ export function DesafioTotp({ aoConfirmar, aoVoltar }: { aoConfirmar: (codigo: s
       <Campo id="codigo2fa" rotulo="Código de 6 dígitos" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
         value={codigo} onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))} erro={erro} />
       <Botao type="submit" carregando={enviando}>Confirmar</Botao>
-      <Botao type="button" variante="discreto" onClick={aoVoltar}>Voltar</Botao>
+      {aoVoltar && <Botao type="button" variante="discreto" onClick={aoVoltar}>Voltar</Botao>}
       <p className="text-sm text-gray-600">Trocou de celular ou perdeu o aplicativo? Fale com o Atendimento da Propaga para liberar um novo cadastro.</p>
     </form>
   );

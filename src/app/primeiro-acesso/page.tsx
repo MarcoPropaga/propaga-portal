@@ -103,14 +103,15 @@ export default function PrimeiroAcesso() {
 
   if (etapa === "desafio" && resolver) {
     return (
-      <TelaAcesso titulo="Código de verificação" subtitulo="Senha atualizada. Confirme com o aplicativo autenticador.">
-        <DesafioTotp aoConfirmar={async (c) => { await confirmarCodigo(resolver, c); router.replace("/inicio/"); }} aoVoltar={() => router.replace("/entrar/")} />
+      <TelaAcesso titulo="Código de verificação" subtitulo="Senha atualizada. Confirme com o aplicativo autenticador." voltar={{ href: "/entrar/", rotulo: "Voltar para entrar" }}>
+        <DesafioTotp aoConfirmar={async (c) => { await confirmarCodigo(resolver, c); router.replace("/inicio/"); }} />
       </TelaAcesso>
     );
   }
 
   return (
-    <TelaAcesso titulo="Ative a verificação em duas etapas" subtitulo="Etapa 2 de 2 · protege seu acesso mesmo que a senha vaze.">
+    <TelaAcesso titulo="Ative a verificação em duas etapas" subtitulo="Etapa 2 de 2 · protege seu acesso mesmo que a senha vaze."
+      voltar={{ rotulo: "Voltar para entrar", onClick: async () => { await auth().signOut(); router.replace(`/entrar/?email=${encodeURIComponent(email)}`); } }}>
       {passos}
       {usuario && <CadastroTotp usuario={usuario} aoConcluir={aposCadastro} />}
     </TelaAcesso>

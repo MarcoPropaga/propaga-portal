@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
+import { BotaoVoltar } from "@/components/ui";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 
 const ITENS = [
@@ -43,6 +44,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
         </div>
       </aside>
       <main className="min-w-0 px-4 py-6 md:px-8 md:py-8 print:p-0">
+        {caminho !== "/inicio/" && caminho !== "/inicio" && <div className="mb-3"><BotaoVoltar /></div>}
         <h1 className="mb-6 text-3xl">{titulo}</h1>
         {children}
       </main>
