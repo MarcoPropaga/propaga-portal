@@ -73,6 +73,8 @@ describe("fluxo do pedido (decisão de 03/10: sem aceite do cliente)", () => {
     expect(podeExecutar("cancelar", "enviada", "solicitante", ctx)).toBe(true);
     expect(podeExecutar("cancelar", "producao", "solicitante", ctx)).toBe(false);
     expect(podeExecutar("cancelar", "producao", "atendimento", ctx)).toBe(false);
+    expect(podeExecutar("cancelar", "apresentacao", "solicitante", ctx)).toBe(true);
+    expect(podeExecutar("cancelar", "apresentacao", "atendimento", ctx)).toBe(false);
     expect(podeExecutar("cancelar", "aprovada", "admin", ctx)).toBe(true);
     expect(podeExecutar("cancelar", "entregue", "admin", ctx)).toBe(false);
   });

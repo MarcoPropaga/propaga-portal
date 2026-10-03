@@ -9,6 +9,7 @@ import { Casca } from "@/components/casca";
 import { Aviso } from "@/components/ui";
 import { brData, moeda } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
+import { REGRA_CANCELAMENTO } from "@/lib/fluxo";
 
 interface Cat {
   versao: string; data: string; status: string; categorias: { id: string; nome: string }[];
@@ -85,6 +86,7 @@ function Conteudo() {
           ))}
           {!grupos.length && <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-8 text-center text-gray-600">Nenhum serviço encontrado.</p>}
           <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte. Duas rodadas de ajustes consolidados por entrega.</p>
+          <p className="rounded border-l-4 border-alerta-700 bg-alerta-100 px-4 py-3 text-sm leading-relaxed"><b>Cancelamento:</b> {REGRA_CANCELAMENTO}</p>
         </>}
       </div>
     </Casca>

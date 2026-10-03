@@ -4,6 +4,8 @@
    - A Débora (Solicitante) envia; o Marcelo (Atendimento) aceita o pedido, confirma o cronograma e
      informa o valor dos itens "a cotar". O pedido entra direto em produção.
    - A Mariana (Financeiro do cliente) só consulta Relatórios; não executa ações.
+   - Só a Débora (Solicitante) aprova. Ela pode cancelar ao lado de "Pedir ajustes": o que foi
+     cancelado depois de apresentado é cobrado em 50% do valor (Marco, 03/10/2026).
    O servidor (Apps Script) aplica estas regras; o navegador só mostra os botões permitidos. */
 import type { Papel, Status } from "./tipos";
 
@@ -12,6 +14,16 @@ export type Acao =
   | "confirmarRecebimento" | "faturar" | "registrarPagamento" | "cancelar";
 
 export const MAX_RODADAS = 2;
+
+/** Cancelamento depois da apresentação: cobra esta fração do valor (contrato, Valores e Relatórios). */
+export const COBRANCA_CANCELADA_APRESENTADA = 0.5;
+export const REGRA_CANCELAMENTO = "Peça ou pedido cancelado depois de apresentado para aprovação é cobrado em 50% do seu valor. Cancelado antes da apresentação não é cobrado.";
+
+/** Fração do valor do pedido que entra na cobrança: 1 normal, 0,5 se cancelado após apresentação, 0 se cancelado antes. */
+export function fatorCobranca(p: { status: Status; versao?: number }): number {
+  if (p.status !== "cancelada") return 1;
+  return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
+}
 
 export interface Ctx { rodadas: number; recebidoPeloCliente?: boolean }
 interface Regra { de: Status[]; para: Status | null; papeis: Papel[]; rotulo: string }
@@ -48,8 +60,9 @@ export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx)
   if (!r.de.includes(status) || !r.papeis.includes(papel)) return false;
   if (acao === "pedirAjustes" && ctx.rodadas >= MAX_RODADAS) return false;
   if (acao === "confirmarRecebimento" && ctx.recebidoPeloCliente) return false;
-  // Solicitante e Atendimento só cancelam antes da produção; depois disso, só o admin.
-  if (acao === "cancelar" && papel !== "admin" && status !== "enviada") return false;
+  // Antes da produção: solicitante e atendimento cancelam. Em apresentação: o solicitante também
+  // (com cobrança de 50%). Nas demais etapas, só o admin.
+  if (acao === "cancelar" && papel !== "admin" && !(status === "enviada" || (status === "apresentacao" && papel === "solicitante"))) return false;
   return true;
 }
 

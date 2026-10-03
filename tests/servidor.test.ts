@@ -268,4 +268,16 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(ped().status).toBe("cancelada");
     expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
   });
+
+  it("solicitante cancela em apresentação: cobrança de 50% registrada e Financeiro Propaga avisado", () => {
+    expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 900 }], driveVerificado: true }).status).toBe("ok");
+    acao(mcl, "disponibilizarVersao", {});
+    f.emails.length = 0;
+    expect(acao(mcl, "cancelar", { nota: "x".repeat(5) }).mensagem).toMatch(/não está disponível/);
+    acao(deb, "cancelar", { nota: "Campanha suspensa." });
+    expect(ped().status).toBe("cancelada");
+    const evs = [...f.docs.keys()].filter((k) => k.includes("/BML-2026-0001/eventos/")).map((k) => String(f.doc(k).rotulo));
+    expect(evs.some((r) => /50%/.test(r))).toBe(true);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["marcelo@propaga.com", "marisa@propaga.com"]);
+  });
 });

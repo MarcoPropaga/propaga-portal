@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
-import { acoesDisponiveis, ETAPAS, MAX_RODADAS, REGRAS, VE_RELATORIOS, type Acao } from "@/lib/fluxo";
+import { acoesDisponiveis, ETAPAS, fatorCobranca, MAX_RODADAS, REGRAS, VE_RELATORIOS, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis, PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
 import { Protegido } from "@/components/auth/protegido";
@@ -90,6 +90,9 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
     <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-ink-900 bg-white p-4 md:p-5" aria-labelledby="form-acao-titulo">
       <h3 id="form-acao-titulo" className="text-base">{REGRAS[acao].rotulo}</h3>
       {AJUDA[acao] && <p className="text-sm text-gray-600">{AJUDA[acao]}</p>}
+      {acao === "cancelar" && (pedido.versao || 0) > 0 && (
+        <p className="rounded border-l-4 border-alerta-700 bg-alerta-100 px-3 py-2 text-sm leading-relaxed"><b>Atenção:</b> este pedido já foi apresentado para aprovação. Se for cancelado, será cobrado <b>50% do seu valor</b>, conforme o contrato.</p>
+      )}
 
       {acao === "aceitarPedido" && <>
         <fieldset className="grid gap-3 sm:grid-cols-3">
@@ -164,6 +167,7 @@ function Conteudo() {
   const acoes = s.papel ? acoesDisponiveis(pedido.status, s.papel as Papel, { rodadas: pedido.rodadas || 0, recebidoPeloCliente: pedido.recebidoPeloCliente })
     .filter(() => !(s.papel === "solicitante" && pedido.solicitanteUid !== s.usuario?.uid)) : [];
   const principais = acoes.filter((a) => a !== "cancelar");
+  const cancelarAoLado = pedido.status === "apresentacao";
   const idxAtual = ETAPAS.findIndex((e) => e.status === pedido.status);
   const p = pedido.prazo;
 
@@ -178,7 +182,7 @@ function Conteudo() {
         </div>
 
         {/* Etapas */}
-        {pedido.status === "cancelada" ? <Aviso>Este pedido foi cancelado. O motivo está no histórico.</Aviso> : (
+        {pedido.status === "cancelada" ? <Aviso>Este pedido foi cancelado{fatorCobranca(pedido) > 0 ? " depois de apresentado e é cobrado em 50% do seu valor, conforme o contrato" : ""}. O motivo está no histórico.</Aviso> : (
           <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Etapas do pedido">
             {ETAPAS.map((e, i) => (
               <li key={e.status} aria-current={i === idxAtual ? "step" : undefined}
@@ -195,7 +199,7 @@ function Conteudo() {
             <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Ações disponíveis">
               <span className="mr-auto text-sm font-semibold">Sua próxima ação{pedido.status === "apresentacao" ? ` · versão ${pedido.versao || 1}, rodada de ajustes ${pedido.rodadas || 0} de ${MAX_RODADAS}` : ""}</span>
               {principais.map((a, i) => <Botao key={a} variante={i === 0 ? "primario" : "linha"} onClick={() => setAcao(a)}>{REGRAS[a].rotulo}</Botao>)}
-              {acoes.includes("cancelar") && <Botao variante="discreto" onClick={() => setAcao("cancelar")}>Cancelar pedido</Botao>}
+              {acoes.includes("cancelar") && <Botao variante={cancelarAoLado ? "linha" : "discreto"} onClick={() => setAcao("cancelar")}>{cancelarAoLado ? "Cancelar" : "Cancelar pedido"}</Botao>}
             </section>
           )
         )}

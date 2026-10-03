@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { NOME_STATUS, VE_RELATORIOS } from "@/lib/fluxo";
+import { fatorCobranca, NOME_STATUS, REGRA_CANCELAMENTO, VE_RELATORIOS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
 import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
@@ -64,26 +64,32 @@ function Conteudo() {
   const sel = useMemo(() => (pedidos ?? []).filter((p) => protocolo ? p.protocolo === protocolo
     : isoSP(dataDe(p.criadoEm)) >= inicio && (unidade === "todas" || p.unidade === unidade)), [pedidos, protocolo, inicio, unidade]);
 
-  const total = (p: PedidoDoc) => valores[p.protocolo]?.total ?? 0;
+  // Valor cobrado: integral, ou 50% se o pedido foi cancelado depois de apresentado (contrato).
+  const total = (p: PedidoDoc) => centavos((valores[p.protocolo]?.total ?? 0) * fatorCobranca(p));
   const soma = (f: (p: PedidoDoc) => boolean) => centavos(sel.filter(f).reduce((a, p) => a + total(p), 0));
   const validos = sel.filter((p) => p.status !== "cancelada");
+  const cancelados50 = sel.filter((p) => p.status === "cancelada" && fatorCobranca(p) > 0);
+  const aFaturar = (p: PedidoDoc) => p.status === "entregue" || (p.status === "cancelada" && fatorCobranca(p) > 0);
   const pendentes = sel.filter((p) => p.status === "enviada").reduce((a, p) => a + (valores[p.protocolo]?.pendencias ?? 0), 0);
 
   const porUnidade = useMemo(() => {
     const m = new Map<string, { n: number; v: number }>();
-    for (const p of validos) { const x = m.get(p.unidade) ?? { n: 0, v: 0 }; x.n++; x.v = centavos(x.v + total(p)); m.set(p.unidade, x); }
+    for (const p of sel.filter((q) => fatorCobranca(q) > 0)) { const x = m.get(p.unidade) ?? { n: 0, v: 0 }; x.n++; x.v = centavos(x.v + total(p)); m.set(p.unidade, x); }
     return [...m.entries()].sort((a, b) => b[1].v - a[1].v);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel, valores]);
 
-  const linhas = sel.flatMap((p) => p.itens.map((it, i) => ({ p, it, v: valores[p.protocolo]?.itens[i] })));
+  const linhas = sel.flatMap((p) => p.itens.map((it, i) => ({ p, it, v: valores[p.protocolo]?.itens[i], f: fatorCobranca(p) })));
+  const cobrado = (v: { subtotal: number | null } | undefined, f: number) => (v?.subtotal == null ? null : centavos(v.subtotal * f));
 
   function exportarPlanilha() {
     const n = (v: number | null | undefined) => (v == null ? "" : v.toFixed(2).replace(".", ","));
     const q = (t: string) => `"${String(t ?? "").replace(/"/g, '""')}"`;
-    const cab = ["Protocolo", "Título", "Unidade", "Enviada em", "Etapa", "Código", "Serviço", "Modalidade e faixa", "Qtd.", "Unitário (R$)", "Subtotal (R$)", "Valor cotado"];
-    const corpo = linhas.map(({ p, it, v }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], it.cod, it.nome,
-      it.varianteRotulo, String(it.qtd), n(v?.unitario), n(v?.subtotal), v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não"].map(q).join(";"));
+    const cab = ["Protocolo", "Título", "Unidade", "Enviada em", "Etapa", "Código", "Serviço", "Modalidade e faixa", "Qtd.", "Unitário (R$)", "Subtotal (R$)", "Cobrado (R$)", "Observação", "Valor cotado"];
+    const corpo = linhas.map(({ p, it, v, f }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], it.cod, it.nome,
+      it.varianteRotulo, String(it.qtd), n(v?.unitario), n(v?.subtotal), n(cobrado(v, f)),
+      p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : "",
+      v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não"].map(q).join(";"));
     const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -95,7 +101,7 @@ function Conteudo() {
   return (
     <Casca titulo="Relatórios">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600 print:hidden">Somente preços finais {cliente.nome}. Pedidos cancelados não entram nos totais, e cada etapa é somada separadamente.</p>
+        <p className="max-w-[75ch] text-gray-600 print:hidden">Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor.</p>
         <p className="hidden text-sm print:block">{cliente.nome} · emitido em {brData(hojeSP())} · {protocolo || { "7": "últimos 7 dias", "30": "últimos 30 dias", ano: "ano corrente", tudo: "todo o período" }[periodo]}{unidade !== "todas" && !protocolo ? ` · ${unidade}` : ""}</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
@@ -121,9 +127,9 @@ function Conteudo() {
         {!pedidos && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {pedidos && <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <Kpi rotulo="Pedidos" valor={String(validos.length)} sub={`${sel.length - validos.length} cancelado(s)`} />
+            <Kpi rotulo="Pedidos" valor={String(validos.length)} sub={`${sel.length - validos.length} cancelado(s)${cancelados50.length ? `, ${cancelados50.length} com cobrança de 50%` : ""}`} />
             <Kpi rotulo="Em andamento" valor={moeda(soma((p) => ANDAMENTO.includes(p.status)))} sub={`${sel.filter((p) => ANDAMENTO.includes(p.status)).length} pedido(s) em produção ou aprovação`} />
-            <Kpi rotulo="Entregue a faturar" valor={moeda(soma((p) => p.status === "entregue"))} sub={`${sel.filter((p) => p.status === "entregue").length} pedido(s)`} />
+            <Kpi rotulo="Entregue a faturar" valor={moeda(soma(aFaturar))} sub={`${sel.filter((p) => p.status === "entregue").length} pedido(s)${cancelados50.length ? ` + ${cancelados50.length} cancelado(s) a 50%` : ""}`} />
             <Kpi rotulo="Faturado" valor={moeda(soma((p) => p.status === "faturada" || p.status === "paga"))} sub={`Pago: ${moeda(soma((p) => p.status === "paga"))}`} />
             <Kpi rotulo="Aguardando aceite" valor={moeda(soma((p) => p.status === "enviada"))} sub={pendentes ? `+ ${pendentes} item(ns) a cotar` : "Nenhum item a cotar pendente"} />
           </div>
@@ -149,13 +155,13 @@ function Conteudo() {
                     <th className="px-3 py-2.5 text-right">Subtotal</th><th className="px-3 py-2.5">Unidade</th><th className="px-3 py-2.5">Etapa</th></tr>
                 </thead>
                 <tbody>
-                  {linhas.map(({ p, it, v }, i) => (
-                    <tr key={`${p.protocolo}-${i}`} className={`border-t border-gray-200 ${p.status === "cancelada" ? "text-gray-600 line-through decoration-gray-200" : ""}`}>
+                  {linhas.map(({ p, it, v, f }, i) => (
+                    <tr key={`${p.protocolo}-${i}`} className={`border-t border-gray-200 ${p.status === "cancelada" && !f ? "text-gray-600 line-through decoration-gray-200" : p.status === "cancelada" ? "text-gray-600" : ""}`}>
                       <td className="whitespace-nowrap px-3 py-2.5"><a className="underline-offset-4 hover:underline" href={`/solicitacoes/pedido/?p=${encodeURIComponent(p.protocolo)}`}>{p.protocolo}</a></td>
                       <td className="px-3 py-2.5">{it.nome}<div className="text-gray-600">{it.varianteRotulo}{v?.orcado ? " · valor cotado" : ""}</div></td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{it.qtd}</td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{moeda(v?.unitario)}</td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{v?.subtotal == null ? "—" : moeda(v.subtotal)}</td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{v?.subtotal == null ? "—" : moeda(cobrado(v, f))}{p.status === "cancelada" && f > 0 && <div className="text-xs">50% de {moeda(v?.subtotal)}</div>}</td>
                       <td className="px-3 py-2.5">{p.unidade}</td>
                       <td className="px-3 py-2.5"><SeloStatus status={p.status} /></td>
                     </tr>
@@ -164,7 +170,7 @@ function Conteudo() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga.</p>
+            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {REGRA_CANCELAMENTO}</p>
           </section>
         </>}
       </div>
