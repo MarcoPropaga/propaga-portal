@@ -5,7 +5,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { brData, Painel } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
-import { MAX_RODADAS } from "@/lib/fluxo";
+import { MAX_RODADAS, REGRA_CANCELAMENTO } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 
 function Conteudo() {
@@ -19,6 +19,7 @@ function Conteudo() {
     ["Inclusões", "Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte."],
     ["Prazo", `${PRAZO_PADRAO_DIAS_UTEIS} dias úteis para a 1ª apresentação em serviços simples, contados do aceite do pedido com briefing completo e materiais acessíveis. Pedidos complexos ou urgentes recebem cronograma individual.`],
     ["Ajustes", `Até ${MAX_RODADAS} rodadas consolidadas por entrega. Erros da Propaga não consomem rodadas. Aprovação vale só quando registrada no portal.`],
+    ["Aprovação e cancelamento", `Só a solicitante aprova ou pede ajustes, sempre pelo portal. A peça aprovada entra nos relatórios como concluída. ${REGRA_CANCELAMENTO}`],
     ["Dados e Drive", "Acesso por função, sem links públicos. Senhas nunca vão em briefing, comentário ou e-mail."],
   ];
   return (

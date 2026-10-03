@@ -113,8 +113,9 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       break;
     case "cancelar":
       if (nota.length < 3) throw new ErroUsuario("Informe o motivo do cancelamento.");
-      rotulo = "Pedido cancelado";
-      avisar = ["solicitante", "atendimento"];
+      // Cancelado depois de apresentado: cobra 50% do valor (contrato). O Financeiro da Propaga é avisado.
+      if ((ped.versao || 0) > 0) { rotulo = "Pedido cancelado após apresentação · cobrança de 50% do valor"; avisar = ["solicitante", "atendimento", "financeiro_propaga"]; }
+      else { rotulo = "Pedido cancelado"; avisar = ["solicitante", "atendimento"]; }
       break;
   }
 
