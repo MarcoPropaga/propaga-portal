@@ -46,7 +46,8 @@ export function TelaAcesso({ titulo, subtitulo, children }: { titulo: string; su
   return (
     <main className="grid min-h-screen md:grid-cols-[1.1fr_1fr]">
       <section className="flex flex-col gap-5 bg-ink-900 p-6 text-paper md:gap-7 md:p-12">
-        <Logo />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/selo-mkt-bmlog.png" alt="mkt B&M Log" width={104} height={104} className="size-[88px] md:size-[104px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
         <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-marca-900">Portal de clientes</span>
         <p className="max-w-[16ch] font-display text-2xl font-semibold leading-tight md:text-4xl">Solicitações, valores e entregas no mesmo lugar.</p>
         <p className="hidden max-w-[46ch] text-[#A9CBD6] md:block">Área exclusiva para clientes da Propaga pedirem serviços, acompanharem cada etapa e consultarem o contrato vigente.</p>
