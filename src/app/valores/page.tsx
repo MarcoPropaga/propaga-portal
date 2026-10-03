@@ -9,7 +9,7 @@ import { Casca } from "@/components/casca";
 import { Aviso } from "@/components/ui";
 import { brData, moeda } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
-import { REGRA_CANCELAMENTO, REGRA_REFACAO } from "@/lib/fluxo";
+import { REGRA_CANCELAMENTO, REGRA_REFACAO, VE_VALORES } from "@/lib/fluxo";
 
 interface Cat {
   versao: string; data: string; status: string; categorias: { id: string; nome: string }[];
@@ -95,5 +95,5 @@ function Conteudo() {
 }
 
 export default function Valores() {
-  return <Protegido><Conteudo /></Protegido>;
+  return <Protegido papeis={VE_VALORES}><Conteudo /></Protegido>;
 }

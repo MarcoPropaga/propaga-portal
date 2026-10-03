@@ -112,3 +112,10 @@ describe("cobrança (Marco, 03/10)", () => {
     expect(fatorCobranca({ status: "cancelada", versao: 0 })).toBe(0);
   });
 });
+
+describe("perfil Criativo Propaga", () => {
+  it("não executa nenhuma ação no pedido", () => {
+    for (const st of ["enviada", "producao", "apresentacao", "aprovada", "entregue"] as const)
+      expect(acoesDisponiveis(st, "criativo", { rodadas: 0 })).toEqual([]);
+  });
+});

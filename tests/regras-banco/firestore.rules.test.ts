@@ -49,6 +49,12 @@ describe("regras do Firestore", () => {
     await assertFails(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-2")));
     await assertSucceeds(getDoc(doc(db("mariana", mariana), "clientes/bmlog/valores/BML-1")));
   });
+  it("Criativo Propaga lê pedidos, mas não vê preços nem valores", async () => {
+    const mariane = { papel: "criativo", propaga: true, firebase: { sign_in_second_factor: "totp" } };
+    await assertSucceeds(getDoc(doc(db("mariane", mariane), "clientes/bmlog/solicitacoes/BML-2")));
+    await assertFails(getDoc(doc(db("mariane", mariane), "clientes/bmlog/catalogo/1.0")));
+    await assertFails(getDoc(doc(db("mariane", mariane), "clientes/bmlog/valores/BML-1")));
+  });
   it("ninguém grava pedido direto pelo navegador", async () => {
     await assertFails(setDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-9"), { solicitanteUid: "debora" }));
     await assertFails(setDoc(doc(db("marco", marco), "clientes/bmlog/valores/BML-1"), { total: 1 }));

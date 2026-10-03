@@ -36,7 +36,7 @@ export type SolicitacaoInput = z.infer<typeof solicitacaoSchema>;
 
 /* Convite de usuário (somente admin). */
 export const PAPEIS_CLIENTE = ["solicitante", "financeiro_cliente"] as const;
-export const PAPEIS_PROPAGA = ["atendimento", "financeiro_propaga", "admin"] as const;
+export const PAPEIS_PROPAGA = ["atendimento", "financeiro_propaga", "criativo", "admin"] as const;
 
 export const conviteSchema = z
   .object({
