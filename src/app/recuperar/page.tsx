@@ -20,7 +20,7 @@ export default function Recuperar() {
   }
 
   return (
-    <TelaAcesso titulo="Recuperar senha" subtitulo="Enviamos um link para criar uma nova senha.">
+    <TelaAcesso titulo="Recuperar senha" subtitulo="Enviamos um link para criar uma nova senha." voltar={{ href: "/entrar/", rotulo: "Voltar para entrar" }}>
       {enviado ? (
         <Aviso tipo="ok">Se este e-mail tiver acesso ao portal, o link chega em instantes. Ele vale por 1 hora. Confira também a caixa de spam.</Aviso>
       ) : (
@@ -29,7 +29,6 @@ export default function Recuperar() {
           <Botao type="submit" carregando={enviando}>Enviar link</Botao>
         </form>
       )}
-      <a href="/entrar/" className="text-sm font-semibold text-marca-700 hover:underline">Voltar para entrar</a>
     </TelaAcesso>
   );
 }

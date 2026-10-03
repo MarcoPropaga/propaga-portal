@@ -25,7 +25,8 @@ export default function Ativar2fa() {
 
   if (!s.usuario || s.temSegundoFator) return <main className="grid min-h-screen place-items-center text-gray-600" aria-busy="true">Carregando…</main>;
   return (
-    <TelaAcesso titulo="Ative a verificação em duas etapas" subtitulo="Obrigatória para acessar o portal. Leva cerca de 1 minuto.">
+    <TelaAcesso titulo="Ative a verificação em duas etapas" subtitulo="Obrigatória para acessar o portal. Leva cerca de 1 minuto."
+      voltar={{ rotulo: "Voltar para entrar", onClick: async () => { await s.sair(); router.replace("/entrar/"); } }}>
       <CadastroTotp usuario={s.usuario} aoConcluir={aposCadastro} />
     </TelaAcesso>
   );

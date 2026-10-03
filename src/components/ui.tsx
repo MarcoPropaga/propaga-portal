@@ -42,7 +42,15 @@ export function Aviso({ tipo = "info", children }: { tipo?: "info" | "ok" | "err
 }
 
 /* Tela dividida do acesso: painel grafite com a marca + formulário. */
-export function TelaAcesso({ titulo, subtitulo, children }: { titulo: string; subtitulo?: ReactNode; children: ReactNode }) {
+/** Botão "Voltar" discreto, com seta. Usa o histórico do navegador quando não há destino fixo. */
+export function BotaoVoltar({ href, onClick, rotulo = "Voltar" }: { href?: string; onClick?: () => void; rotulo?: string }) {
+  const cls = "inline-flex min-h-11 w-fit items-center gap-2 rounded border border-[#C9D7DC] bg-white px-3 text-sm font-semibold text-ink-900 hover:border-marca-500 print:hidden";
+  const seta = <span aria-hidden="true">←</span>;
+  if (href && !onClick) return <a href={href} className={cls}>{seta}{rotulo}</a>;
+  return <button type="button" className={cls} onClick={onClick ?? (() => (history.length > 1 ? history.back() : location.assign("/inicio/")))}>{seta}{rotulo}</button>;
+}
+
+export function TelaAcesso({ titulo, subtitulo, children, voltar }: { titulo: string; subtitulo?: ReactNode; children: ReactNode; voltar?: { href?: string; onClick?: () => void; rotulo?: string } }) {
   return (
     <main className="grid min-h-screen md:grid-cols-[1.1fr_1fr]">
       <section className="flex flex-col gap-5 bg-ink-900 p-6 text-paper md:gap-7 md:p-12">
@@ -54,6 +62,7 @@ export function TelaAcesso({ titulo, subtitulo, children }: { titulo: string; su
       </section>
       <section className="grid place-items-center px-4 py-10 md:px-6">
         <div className="grid w-full max-w-[420px] gap-5">
+          {voltar && <BotaoVoltar {...voltar} />}
           <div className="grid gap-1.5">
             <h1 className="text-2xl">{titulo}</h1>
             {subtitulo && <p className="text-sm text-gray-600">{subtitulo}</p>}
