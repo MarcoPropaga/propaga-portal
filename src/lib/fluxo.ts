@@ -85,5 +85,11 @@ export function acoesDisponiveis(status: Status, papel: Papel, ctx: Ctx): Acao[]
   return (Object.keys(REGRAS) as Acao[]).filter((a) => podeExecutar(a, status, papel, ctx));
 }
 
-/** Quem acessa Relatórios (e portanto os valores por pedido). */
-export const VE_RELATORIOS: Papel[] = ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
+/** Quem acessa Relatórios. A Solicitante vê só os pedidos dela (Marco, 03/10). */
+export const VE_RELATORIOS: Papel[] = ["solicitante", "financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
+/** Quem vê os valores dentro do detalhe do pedido (a Solicitante não: valores só em Valores e Relatórios). */
+export const VE_VALORES_PEDIDO: Papel[] = ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
+/** Quem vê o menu Contrato (a Solicitante não, decisão de 03/10). */
+export const VE_CONTRATO: Papel[] = ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
+/** Quem vê Arquivos no Drive (os financeiros não, decisão de 03/10). */
+export const VE_ARQUIVOS: Papel[] = ["solicitante", "atendimento", "admin"];

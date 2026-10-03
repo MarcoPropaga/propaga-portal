@@ -3,13 +3,14 @@ import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
+import { VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS } from "@/lib/fluxo";
 
 const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] }[] = [
   { href: "/solicitacoes/", rotulo: "Solicitações", texto: "Acompanhe etapas, versões e entregas." },
   { href: "/valores/", rotulo: "Valores", texto: "Preços finais do catálogo vigente." },
-  { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"] },
-  { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado." },
-  { href: "/arquivos/", rotulo: "Arquivos no Drive", texto: "Pastas de cada pedido." },
+  { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: VE_RELATORIOS },
+  { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado.", papeis: VE_CONTRATO },
+  { href: "/arquivos/", rotulo: "Arquivos no Drive", texto: "Pastas de cada pedido.", papeis: VE_ARQUIVOS },
   { href: "/ajuda/", rotulo: "Ajuda", texto: "Dúvidas frequentes e contato." },
 ];
 

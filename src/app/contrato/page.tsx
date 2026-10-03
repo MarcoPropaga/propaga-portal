@@ -5,7 +5,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { brData, Painel } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
-import { REGRA_CANCELAMENTO, REGRA_REFACAO } from "@/lib/fluxo";
+import { REGRA_CANCELAMENTO, REGRA_REFACAO, VE_CONTRATO } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 
 function Conteudo() {
@@ -60,5 +60,5 @@ function Conteudo() {
 }
 
 export default function Contrato() {
-  return <Protegido><Conteudo /></Protegido>;
+  return <Protegido papeis={VE_CONTRATO}><Conteudo /></Protegido>;
 }
