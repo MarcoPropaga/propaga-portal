@@ -12,6 +12,7 @@ function Conteudo() {
   const s = useSessao();
   const c = CLIENTES[s.clienteId ?? Object.keys(CLIENTES)[0]];
   const assinado = !!c.contrato.assinadoEm;
+  const testes = !assinado && !!c.contrato.consideradoAssinadoParaTestes;
   const pontos: [string, string][] = [
     ["Valores", "Preço de referência aprovado com desconto de parceria de 15%, arredondado por unidade. O portal mostra só o preço final, subtotais e total."],
     ["Autorização", "Com o contrato assinado, os valores do catálogo já estão aprovados. A produção começa quando a Propaga aceita o pedido e confirma o cronograma. Itens “a cotar” recebem o valor da Propaga, conforme o contrato, nesse momento."],
@@ -24,8 +25,8 @@ function Conteudo() {
     <Casca titulo="Contrato">
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">Contrato de serviços de comunicação por demanda entre a Propaga e a {c.nome}, com as regras de operação deste portal.</p>
-        <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${assinado ? "bg-[#E3F2EA] text-[#1E7047]" : "bg-orange-100 text-orange-700"}`}>
-          {assinado ? `Contrato assinado em ${brData(c.contrato.assinadoEm!)}` : "Contrato assinado · registro do documento pendente"} · catálogo v{c.catalogoVersao} vigente
+        <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${assinado || testes ? "bg-[#E3F2EA] text-[#1E7047]" : "bg-orange-100 text-orange-700"}`}>
+          {assinado ? `Contrato assinado em ${brData(c.contrato.assinadoEm!)}` : testes ? "Contrato vigente · considerado assinado no período de testes finais" : "Contrato assinado · registro do documento pendente"} · catálogo v{c.catalogoVersao} vigente
         </span>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Painel titulo="Pontos principais">
@@ -42,7 +43,7 @@ function Conteudo() {
             </Painel>
             <Painel titulo="Versões">
               <ol className="grid gap-3 text-sm">
-                <li><b>Versão assinada</b><div className="text-gray-600">{assinado ? brData(c.contrato.assinadoEm!) : "Data a registrar"} · vigente</div></li>
+                <li><b>Versão assinada</b><div className="text-gray-600">{assinado ? brData(c.contrato.assinadoEm!) : testes ? "Considerada assinada nos testes finais" : "Data a registrar"} · vigente</div></li>
                 <li><b>Minuta v1.0</b><div className="text-gray-600">Propaga · {brData(c.contrato.minuta)} · base da versão assinada</div></li>
               </ol>
             </Painel>
