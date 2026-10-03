@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Outfit, Hanken_Grotesk } from "next/font/google";
+import { SessaoProvider } from "@/components/auth/sessao";
 import "./globals.css";
 
 const outfit = Outfit({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-outfit", display: "swap" });
@@ -14,7 +15,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${outfit.variable} ${hanken.variable}`}>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <SessaoProvider>{children}</SessaoProvider>
+      </body>
     </html>
   );
 }

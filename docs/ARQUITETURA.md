@@ -5,15 +5,28 @@ Portal de clientes da Propaga. Primeiro cliente: **B&M Log**. Prévia validada: 
 ## Decisões
 | Data | Decisão |
 |---|---|
-| 02/10 | Projeto Firebase **próprio** (`propaga-portal`), separado do Briefing Hub. Integração por função que cria o job. |
+| 02/10 | Projeto Firebase **próprio** (`propaga-portal`, organização propaga.com, Firestore em São Paulo), separado do Briefing Hub. |
+| 02/10 | **Plano gratuito (Spark), sem cartão.** Site estático no Firebase Hosting; "servidor" em **Google Apps Script** na conta da Propaga. |
+| 02/10 | Login com e-mail + senha + **verificação em duas etapas (TOTP)** via Identity Platform (limite de 3.000 usuários ativos/dia). |
 | 02/10 | Multi-cliente desde o início: tudo sob `/clientes/{clienteId}`. |
-| 02/10 | Valores **não** aparecem na solicitação, na lista nem no detalhe. Só em *Valores* (catálogo) e *Relatórios* (por pedido). |
+| 02/10 | Valores **não** aparecem na solicitação, na lista nem no detalhe. Só em *Valores* (catálogo) e *Relatórios*. |
 | 02/10 | Contrato assinado: pedido só com preço de catálogo vai direto para produção após o cronograma. Item *a cotar* exige aceite do Financeiro do cliente. |
-| 02/10 | Catálogo B&M Log v1.0: 68 serviços. Post+ e Booth China removidos; Stand ganhou "versão em outro idioma" (a cotar). Item 21 motion 16–60 s = a cotar. |
-| 02/10 | Unidades: Matriz Itajaí/SC + 7 filiais. Públicos: empresários importadores/exportadores 40–65 (principal) e colaboradores (secundário). |
+| 02/10 | Catálogo B&M Log v1.0: 68 serviços. Unidades: Matriz Itajaí/SC + 7 filiais. Públicos: empresários importadores/exportadores 40–65 (principal) e colaboradores (secundário). |
 
-## Stack
-Next.js 15 + TypeScript + Tailwind 4 · Firebase App Hosting (southamerica-east1) · Firestore · Firebase Auth com Identity Platform (senha + TOTP) · Cloud Functions · Secret Manager.
+## Como as peças conversam
+```
+Navegador (Next.js estático, Firebase Hosting)
+  ├─ Firebase Auth: senha + TOTP  ──────────────► claims {papel, clienteId | propaga}
+  ├─ Firestore: lê dados permitidos pelas regras
+  └─ Firestore: cria item em /fila  ─┐  (único tipo de escrita do navegador, além do rascunho)
+                                     │  + aviso opcional ao Web App (doPost)
+Google Apps Script (conta Propaga)   ▼
+  ├─ processarFila (gatilho de 1 min + aviso imediato)
+  │    valida de novo com src/lib (fluxo, preços, zod) e grava pedidos, valores, eventos
+  ├─ convidar: cria conta, define perfil (claims), gera link de senha, envia e-mail
+  └─ configurarProjeto: TOTP, política de senha, catálogos
+```
+O código de regras (`src/lib`) é o mesmo no navegador e no Apps Script: `apps-script/build.mjs` empacota tudo em um arquivo.
 
 ## Papéis (claims `papel`, `clienteId` ou `propaga`)
 | Papel | Pessoa (B&M Log) | Pode |
@@ -31,17 +44,15 @@ clientes/{c}/catalogo/{versao}       somente preço final (catalogoPublico)
 clientes/{c}/solicitacoes/{prot}     pedido (sem valores)
 clientes/{c}/solicitacoes/{prot}/eventos/{id}   histórico permanente
 clientes/{c}/valores/{prot}          valores do pedido (só Relatórios)
-clientes/{c}/rascunhos/{uid}         rascunho automático
-usuarios/{uid}                       perfil (escrita só pelo servidor)
-interno/catalogos/{c}-{versao}       catálogo com referência (só admin)
+clientes/{c}/rascunhos/{uid}         rascunho automático (único dado gravado direto pelo navegador)
+fila/{id}                            pedidos de ação do navegador → processados pelo Apps Script
+usuarios/{uid}                       cadastro (escrita só pelo servidor)
+interno/catalogos/versoes/{c}-{v}    catálogo com referência interna (ninguém lê pelo navegador)
 ```
 
-## Fluxo
-`enviada → validacao → (aceite, se houver item a cotar) → producao ⇄ apresentacao → aprovada → entregue → faturada → paga` · `cancelada` com motivo. Regras em `src/lib/fluxo.ts`, testadas em `tests/`.
-
 ## Segurança
-- Toda gravação de pedido, valor e evento passa por Cloud Function que aplica `fluxo.ts` e `precos.ts`.
-- Leitura exige 2FA (`sign_in_second_factor`).
-- Referência interna de preço nunca sai do servidor.
-- Convite: admin cria o usuário → e-mail com link de uso único (72 h) → criar senha → ativar autenticador.
-- Drive: só links + verificação manual nesta fase; sem credenciais no navegador.
+- Regras testadas no emulador (`npm run test:regras`): 2FA obrigatório, isolamento por cliente, solicitante só vê os próprios pedidos, valores só para Relatórios, nenhuma gravação de pedido pelo navegador, referência interna inacessível.
+- O servidor nunca confia no perfil enviado pelo navegador: lê `usuarios/{uid}` gravado por ele mesmo.
+- Convite: link de senha de uso único (validade de 1 hora, limite do Firebase); se expirar, a própria página gera outro.
+- Política de senha: 8+ caracteres, maiúscula, número e símbolo. Proteção contra enumeração de e-mails ligada.
+- Drive: só links + verificação manual nesta fase.
