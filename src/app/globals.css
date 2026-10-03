@@ -34,6 +34,10 @@ input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-vi
   outline-color: rgb(180 35 24 / 0.25); border-color: var(--color-alerta-700);
 }
 input::placeholder, textarea::placeholder { color: #7C949E; opacity: 1; }
+/* Fundo claro e texto azul petróleo em todo campo, mesmo com o navegador em modo escuro. */
+@layer base {
+  input, textarea, select { background-color: #fff; color: var(--color-ink-900); color-scheme: light; }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 @media print { @page { margin: 14mm; } body { background: #fff; } }
