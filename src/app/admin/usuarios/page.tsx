@@ -90,7 +90,7 @@ function Conteudo() {
 
         <section className="grid gap-3">
           <h2 className="text-lg">Pessoas com acesso</h2>
-          <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+          <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full text-sm">
               <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr><th className="px-3 py-2.5">Pessoa</th><th className="px-3 py-2.5">Perfil</th><th className="px-3 py-2.5">Empresa</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5"><span className="sr-only">Ações</span></th></tr>

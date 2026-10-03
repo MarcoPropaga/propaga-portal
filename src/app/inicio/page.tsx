@@ -4,7 +4,14 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 
-const MODULOS = ["Contrato", "Arquivos no Drive", "Ajuda"];
+const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] }[] = [
+  { href: "/solicitacoes/", rotulo: "Solicitações", texto: "Acompanhe etapas, versões e entregas." },
+  { href: "/valores/", rotulo: "Valores", texto: "Preços finais do catálogo vigente." },
+  { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"] },
+  { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado." },
+  { href: "/arquivos/", rotulo: "Arquivos no Drive", texto: "Pastas de cada pedido." },
+  { href: "/ajuda/", rotulo: "Ajuda", texto: "Dúvidas frequentes e contato." },
+];
 
 function Conteudo() {
   const s = useSessao();
@@ -28,13 +35,13 @@ function Conteudo() {
             <a href="/nova-solicitacao/" className="inline-flex min-h-11 w-fit items-center rounded bg-orange-500 px-5 font-semibold text-ink-900 hover:brightness-105">Nova solicitação</a>
           </section>
         )}
-        <section className="grid gap-3">
-          <h2 className="text-lg">Em implantação</h2>
-          <p className="text-sm text-gray-600">Os módulos abaixo entram no portal nas próximas etapas, já validados na prévia.</p>
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {MODULOS.map((m) => <li key={m} className="rounded border border-dashed border-[#D6D2CE] px-4 py-3 text-sm text-gray-600">{m}</li>)}
-          </ul>
-        </section>
+        <nav aria-label="Atalhos" className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {ATALHOS.filter((x) => !x.papeis || (s.papel && x.papeis.includes(s.papel))).map((x) => (
+            <a key={x.href} href={x.href} className="grid gap-0.5 rounded border border-gray-200 bg-white px-4 py-3 hover:border-ink-900">
+              <b>{x.rotulo}</b><span className="text-sm text-gray-600">{x.texto}</span>
+            </a>
+          ))}
+        </nav>
       </div>
     </Casca>
   );

@@ -60,7 +60,7 @@ function Conteudo() {
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {lista && (
-          <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+          <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full min-w-[720px] text-sm">
               <caption className="sr-only">Solicitações ({filtrada.length})</caption>
               <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">

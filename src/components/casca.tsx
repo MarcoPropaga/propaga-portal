@@ -11,7 +11,10 @@ const ITENS = [
   { href: "/solicitacoes/", rotulo: "Solicitações" },
   { href: "/valores/", rotulo: "Valores" },
   { href: "/relatorios/", rotulo: "Relatórios", papeis: ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"] },
+  { href: "/contrato/", rotulo: "Contrato" },
+  { href: "/arquivos/", rotulo: "Arquivos no Drive" },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
+  { href: "/ajuda/", rotulo: "Ajuda" },
 ];
 
 /** Estrutura das páginas internas: menu lateral grafite + conteúdo. */
