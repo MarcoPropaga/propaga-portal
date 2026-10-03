@@ -44,8 +44,9 @@ describe("regras do Firestore", () => {
     await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-1")));
     await assertFails(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-2")));
   });
-  it("valores só para quem acessa Relatórios", async () => {
-    await assertFails(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-1")));
+  it("valores: financeiros e Propaga veem tudo; solicitante só os próprios pedidos", async () => {
+    await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-1")));
+    await assertFails(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-2")));
     await assertSucceeds(getDoc(doc(db("mariana", mariana), "clientes/bmlog/valores/BML-1")));
   });
   it("ninguém grava pedido direto pelo navegador", async () => {

@@ -2,7 +2,7 @@
 /* Relatórios: valores por pedido, período, unidade e etapa. Somente perfis com acesso a valores
    (Financeiro do cliente, Atendimento, Financeiro Propaga e Admin). Exporta planilha (CSV) e PDF (impressão). */
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { fatorCobranca, NOME_STATUS, REGRA_CANCELAMENTO, REGRA_REFACAO, VE_RELATORIOS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
@@ -43,15 +43,29 @@ function Conteudo() {
   const [unidade, setUnidade] = useState("todas");
   const [protocolo, setProtocolo] = useState("");
 
+  const soMeus = s.papel === "solicitante";
+  const uid = s.usuario?.uid;
   useEffect(() => {
-    const a = onSnapshot(collection(db(), "clientes", clienteId, "solicitacoes"),
+    const col = collection(db(), "clientes", clienteId, "solicitacoes");
+    const a = onSnapshot(soMeus ? query(col, where("solicitanteUid", "==", uid)) : col,
       (q) => setPedidos(q.docs.map((d) => d.data() as PedidoDoc).sort((x, y) => dataDe(y.criadoEm).getTime() - dataDe(x.criadoEm).getTime())),
       () => setErro("Não foi possível carregar os pedidos."));
+    if (soMeus) return a;
     const b = onSnapshot(collection(db(), "clientes", clienteId, "valores"),
       (q) => setValores(Object.fromEntries(q.docs.map((d) => [d.id, d.data() as Valores]))),
       () => setErro("Não foi possível carregar os valores."));
     return () => { a(); b(); };
-  }, [clienteId]);
+  }, [clienteId, soMeus, uid]);
+
+  // Solicitante: lê os valores pedido a pedido (as regras só liberam os dos pedidos dela).
+  const chaves = soMeus ? (pedidos ?? []).map((p) => p.protocolo).join("|") : "";
+  useEffect(() => {
+    if (!soMeus || !chaves) return;
+    const fim = chaves.split("|").map((p) => onSnapshot(doc(db(), "clientes", clienteId, "valores", p),
+      (d) => { if (d.exists()) setValores((v) => ({ ...v, [p]: d.data() as Valores })); },
+      () => undefined));
+    return () => fim.forEach((f) => f());
+  }, [soMeus, chaves, clienteId]);
 
   const inicio = useMemo(() => {
     const hoje = new Date();
@@ -101,7 +115,7 @@ function Conteudo() {
   return (
     <Casca titulo="Relatórios">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600 print:hidden">Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor; refação extra cobrada soma 30% ao valor.</p>
+        <p className="max-w-[75ch] text-gray-600 print:hidden">{soMeus ? "Pedidos enviados por você. " : ""}Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor; refação extra cobrada soma 30% ao valor.</p>
         <p className="hidden text-sm print:block">{cliente.nome} · emitido em {brData(hojeSP())} · {protocolo || { "7": "últimos 7 dias", "30": "últimos 30 dias", ano: "ano corrente", tudo: "todo o período" }[periodo]}{unidade !== "todas" && !protocolo ? ` · ${unidade}` : ""}</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
 

@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
-import { acoesDisponiveis, ETAPAS, fatorCobranca, MAX_RODADAS, REGRA_REFACAO, REGRAS, VE_RELATORIOS, type Acao } from "@/lib/fluxo";
+import { acoesDisponiveis, ETAPAS, fatorCobranca, MAX_RODADAS, REGRA_REFACAO, REGRAS, VE_VALORES_PEDIDO, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis, PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
 import { Protegido } from "@/components/auth/protegido";
@@ -167,7 +167,7 @@ function Conteudo() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [valores, setValores] = useState<Valores | null>(null);
   const [acao, setAcao] = useState<Acao | null>(null);
-  const veValores = !!s.papel && VE_RELATORIOS.includes(s.papel);
+  const veValores = !!s.papel && VE_VALORES_PEDIDO.includes(s.papel);
 
   useEffect(() => {
     if (!protocolo) { setPedido(null); return; }

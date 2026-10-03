@@ -9,6 +9,7 @@ import { Casca } from "@/components/casca";
 import { Aviso } from "@/components/ui";
 import { SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
+import { VE_ARQUIVOS } from "@/lib/fluxo";
 
 const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
@@ -60,5 +61,5 @@ function Conteudo() {
 }
 
 export default function Arquivos() {
-  return <Protegido><Conteudo /></Protegido>;
+  return <Protegido papeis={VE_ARQUIVOS}><Conteudo /></Protegido>;
 }

@@ -43,7 +43,9 @@ service cloud.firestore {
       }
 
       match /valores/{protocolo} {
-        allow read: if veRelatorios(c);
+        // Solicitante: só os valores dos próprios pedidos (Relatórios dela).
+        allow read: if veRelatorios(c) || (membro(c) && papel() == 'solicitante'
+          && get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.solicitanteUid == request.auth.uid);
         allow write: if false;
       }
 

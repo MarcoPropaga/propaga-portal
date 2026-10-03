@@ -4,15 +4,16 @@ import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
+import { VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS } from "@/lib/fluxo";
 
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
   { href: "/valores/", rotulo: "Valores" },
-  { href: "/relatorios/", rotulo: "Relatórios", papeis: ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"] },
-  { href: "/contrato/", rotulo: "Contrato" },
-  { href: "/arquivos/", rotulo: "Arquivos no Drive" },
+  { href: "/relatorios/", rotulo: "Relatórios", papeis: VE_RELATORIOS as string[] },
+  { href: "/contrato/", rotulo: "Contrato", papeis: VE_CONTRATO as string[] },
+  { href: "/arquivos/", rotulo: "Arquivos no Drive", papeis: VE_ARQUIVOS as string[] },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
   { href: "/ajuda/", rotulo: "Ajuda" },
 ];
