@@ -10,7 +10,7 @@ const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
-  { href: "/valores/", rotulo: "Valores", papeis: VE_VALORES as string[] },
+  { href: "/valores/", rotulo: "Jobs Propaga", papeis: VE_VALORES as string[] },
   { href: "/relatorios/", rotulo: "Relatórios", papeis: VE_RELATORIOS as string[] },
   { href: "/contrato/", rotulo: "Contrato", papeis: VE_CONTRATO as string[] },
   { href: "/arquivos/", rotulo: "Arquivos no Drive", papeis: VE_ARQUIVOS as string[] },

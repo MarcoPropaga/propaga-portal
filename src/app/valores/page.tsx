@@ -44,7 +44,7 @@ function Conteudo() {
   }, [cat, busca, categoria]);
 
   return (
-    <Casca titulo={`Valores ${cliente.nome}`}>
+    <Casca titulo="Jobs Propaga">
       <div className="grid max-w-5xl gap-5">
         <p className="max-w-[75ch] text-gray-600">Preços finais por unidade, com o desconto de parceria de 15% já aplicado. “A cotar” significa que a Propaga define o valor conforme o contrato ao aceitar o pedido.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
