@@ -5,13 +5,17 @@ import { useSessao } from "./sessao";
 import type { Papel } from "@/lib/tipos";
 
 /** Libera a página só com sessão completa (senha + segundo fator) e, se indicado, perfil permitido. */
+// Só no ambiente local de testes: o emulador do Firebase não suporta autenticador (TOTP).
+// Em produção a variável não existe e as regras do banco continuam exigindo o segundo fator.
+const EMULADOR = process.env.NEXT_PUBLIC_USAR_EMULADOR === "true";
+
 export function Protegido({ papeis, children }: { papeis?: Papel[]; children: ReactNode }) {
   const s = useSessao();
   const router = useRouter();
   const bloqueio = s.carregando ? "carregando"
     : !s.usuario ? "/entrar/"
-    : !s.temSegundoFator ? "/ativar-2fa/"
-    : !s.entrouComSegundoFator ? "reentrar"
+    : !s.temSegundoFator && !EMULADOR ? "/ativar-2fa/"
+    : !s.entrouComSegundoFator && !EMULADOR ? "reentrar"
     : papeis && (!s.papel || !papeis.includes(s.papel)) ? "sem-permissao"
     : null;
 

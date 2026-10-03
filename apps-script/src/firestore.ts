@@ -65,6 +65,21 @@ export class Firestore {
     return json(this.p.http(`${this.base}:commit`, "post", { writes }), "gravar");
   }
 
+  /** Lista todos os documentos de uma coleção pequena (ex.: usuarios). */
+  listar(colecao: string): Doc[] {
+    const docs: Doc[] = [];
+    let token = "";
+    do {
+      const d = json<{ documents?: { name: string; fields?: Record<string, Valor>; updateTime: string }[]; nextPageToken?: string }>(
+        this.p.http(`${this.base}/${colecao}?pageSize=300${token ? `&pageToken=${encodeURIComponent(token)}` : ""}`, "get"), `listar ${colecao}`);
+      for (const x of d.documents || []) {
+        docs.push({ nome: x.name, caminho: x.name.split("/documents/")[1], dados: deCampos(x.fields || {}), atualizadoEm: x.updateTime });
+      }
+      token = d.nextPageToken || "";
+    } while (token);
+    return docs;
+  }
+
   /** Consulta simples em uma coleção de nível superior: campo == valor, ordenado. */
   consultar(colecao: string, campo: string, igual: unknown, ordenarPor: string, limite = 20): Doc[] {
     const corpo = {

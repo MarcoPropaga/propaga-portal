@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { paraValor, deValor } from "../apps-script/src/firestore";
 import { configurarProjeto, convidar, processarFila } from "../apps-script/src/servidor";
+import { CLIENTES } from "@/content/clientes";
 import type { Plataforma, RespostaHttp } from "../apps-script/src/plataforma";
 
 /* Simula Firestore REST + Identity Toolkit em memória. */
@@ -19,6 +20,7 @@ function fake() {
             const nome = w.update.name.replace(raiz, "");
             const atual = docs.get(nome);
             if (w.currentDocument?.updateTime && atual?.updateTime !== w.currentDocument.updateTime) return r(409, { error: "precondition" });
+            if (w.currentDocument?.exists === false && atual) return r(409, { error: "exists" });
             const fields = w.updateMask ? { ...(atual?.fields || {}), ...w.update.fields } : w.update.fields;
             docs.set(nome, { fields, updateTime: `t${++v}` });
           }
@@ -31,6 +33,12 @@ function fake() {
             && deValor(d.fields[q.where.fieldFilter.field.fieldPath] as any) === val)
             .map(([k, d]) => ({ document: { name: raiz + k, fields: d.fields, updateTime: d.updateTime } }));
           return r(200, out.length ? out : [{}]);
+        }
+        if (url.includes("?pageSize=")) {
+          const col = url.split("/documents/")[1].split("?")[0];
+          const out = [...docs.entries()].filter(([k]) => k.split("/").length === 2 && k.startsWith(col + "/"))
+            .map(([k, d]) => ({ name: raiz + k, fields: d.fields, updateTime: d.updateTime }));
+          return r(200, { documents: out });
         }
         const nome = url.split("/documents/")[1];
         const d = docs.get(nome);
@@ -109,5 +117,77 @@ describe("servidor Apps Script", () => {
     expect(f.doc("fila/a1").status).toBe("ok");
     expect(f.doc("fila/a2").mensagem).toMatch(/Somente o administrador/);
     expect(processarFila(f.p)).toEqual({ ok: 0, erro: 0 }); // nada pendente: não reprocessa
+  });
+});
+
+describe("nova solicitação (fila 'enviar')", () => {
+  let f: ReturnType<typeof fake>;
+  let deb: string, mar: string, adm: string;
+  const pedido = (extra: Record<string, unknown> = {}) => ({
+    titulo: "Campanha de segurança", unidade: "Filial · Guarulhos/SP", email: "marketing@bmlog.com.br",
+    objetivo: "Reduzir ocorrências", publico: "Colaboradores da matriz e das filiais",
+    itens: [
+      { cod: "21", variante: 0, qtd: 1, opcao: "16:9 horizontal", canal: CLIENTES.bmlog.canaisVideo[0], audio: CLIENTES.bmlog.audiosVideo[0] },
+      { cod: "01", variante: 0, qtd: 3, opcao: "4:5", canal: "não se aplica", obs: "  " },
+      { cod: "02", variante: 1, qtd: 1, opcao: "1:1" },
+    ],
+    drive: { link: "https://drive.google.com/drive/folders/abc123", conferido: true },
+    obs: "Observações", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true, ...extra,
+  });
+  let seq = 0;
+  const enfileirar = (uid: string, dados: unknown, clienteId = "bmlog") => {
+    const id = `e${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo: "enviar", uid, clienteId, status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    return id;
+  };
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidar(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mar = convidar(f.p, { nome: "Mariana Fontora", email: "financeiro@bmlog.com.br", papel: "financeiro_cliente", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    convidar(f.p, { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" });
+    f.emails.length = 0;
+  });
+
+  it("grava pedido, valores e eventos; numera o protocolo; avisa sem valores", () => {
+    const a = enfileirar(deb, pedido());
+    expect(processarFila(f.p)).toEqual({ ok: 1, erro: 0 });
+    expect(f.doc(`fila/${a}`).resultado).toEqual({ protocolo: "BML-2026-0001" });
+    const s = f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+    expect(s.status).toBe("enviada");
+    expect(s.solicitanteUid).toBe(deb);
+    expect(s.itens[0]).toMatchObject({ cod: "21", nome: "Vídeo para TV interna", sobOrcamento: false });
+    expect(s.itens[1].canal).toBeUndefined(); // não é vídeo: canal descartado
+    expect(s.itens[1].obs).toBeUndefined();    // observação vazia descartada
+    expect(s.itens[2].sobOrcamento).toBe(true); // carrossel 6 a 10 telas = a cotar
+    expect(JSON.stringify(s)).not.toMatch(/referencia|preco|unitario/);
+    const v = f.doc("clientes/bmlog/valores/BML-2026-0001");
+    expect(v.pendencias).toBe(1);
+    expect(v.total).toBeGreaterThan(0);
+    const evs = [...f.docs.keys()].filter((k) => k.startsWith("clientes/bmlog/solicitacoes/BML-2026-0001/eventos/"));
+    expect(evs).toHaveLength(2);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "financeiro@bmlog.com.br", "marcelo@propaga.com"]);
+    expect(f.emails[0].assunto).toBe("Nova solicitação BML-2026-0001 · Campanha de segurança");
+    expect(f.emails[0].html).not.toMatch(/R\$/);
+    expect(f.emails[0].html).toContain("sob orçamento");
+
+    enfileirar(deb, pedido());
+    processarFila(f.p);
+    expect(f.doc("clientes/bmlog/solicitacoes/BML-2026-0002")).toBeTruthy();
+  });
+
+  it("recusa perfil sem permissão, outro cliente e dados inválidos", () => {
+    const a = enfileirar(mar, pedido());
+    const b = enfileirar(deb, pedido(), "outro");
+    const c = enfileirar(deb, pedido({ itens: [{ cod: "21", variante: 0, qtd: 1, opcao: "16:9 horizontal" }] }));
+    const d = enfileirar(deb, pedido({ unidade: "Filial · Marte" }));
+    const e = enfileirar(deb, pedido({ prazo: { desejada: "2026-09-01", urgente: false } }));
+    expect(processarFila(f.p)).toEqual({ ok: 0, erro: 5 });
+    expect(f.doc(`fila/${a}`).mensagem).toMatch(/não envia solicitações/);
+    expect(f.doc(`fila/${b}`).mensagem).toMatch(/Cliente inválido/);
+    expect(f.doc(`fila/${c}`).mensagem).toMatch(/canal do vídeo/);
+    expect(f.doc(`fila/${d}`).mensagem).toMatch(/unidade/);
+    expect(f.doc(`fila/${e}`).mensagem).toMatch(/já passou/);
+    expect(f.emails).toHaveLength(0);
   });
 });

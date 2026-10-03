@@ -7,6 +7,7 @@ import { Logo } from "@/components/ui";
 
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
+  { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
 ];
 
