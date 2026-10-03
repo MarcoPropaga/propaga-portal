@@ -411,7 +411,7 @@ function Conteudo() {
             </div>
           ) : <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-6 text-center text-sm text-gray-600">Adicione ao menos um serviço na seção 02.</p>}
           <Nota><b>Prazo:</b> {PRAZO_PADRAO_DIAS_UTEIS} dias úteis após o aceite do pedido pela Propaga (1ª apresentação prevista para {brData(primeira)}, se aceito hoje).</Nota>
-          <Nota>Os preços ficam no menu Valores {cliente.nome} e nos Relatórios.{pendentes ? ` ${pendentes > 1 ? "Os itens a cotar recebem" : "O item a cotar recebe"} valor da Propaga conforme o contrato.` : ""}</Nota>
+          <Nota>Os preços ficam no menu Jobs Propaga e nos Relatórios.{pendentes ? ` ${pendentes > 1 ? "Os itens a cotar recebem" : "O item a cotar recebe"} valor da Propaga conforme o contrato.` : ""}</Nota>
 
           {listaErros.length > 0 && (
             <div ref={caixaErros} role="alert" className="rounded bg-alerta-100 px-4 py-3 text-sm text-alerta-700">
