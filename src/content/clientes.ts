@@ -18,7 +18,7 @@ export interface Cliente {
   /** Pares de serviços com escopo sobreposto: o portal alerta quando os dois estão no mesmo pedido. */
   sobreposicoes: [string, string][];
   /** Contrato assinado: data e link do PDF (Drive, acesso restrito). null = pendente. */
-  contrato: { assinadoEm: string | null; pdfUrl: string | null; minuta: string };
+  contrato: { assinadoEm: string | null; pdfUrl: string | null; minuta: string; consideradoAssinadoParaTestes?: boolean };
   /** Contato do atendimento Propaga mostrado em Ajuda. */
   atendimento: { nome: string; email: string };
 }
@@ -43,7 +43,8 @@ export const CLIENTES: Record<string, Cliente> = {
     canaisVideo: ["TVs internas B&M Log", "Redes sociais da B&M Log (solicitação expressa)"],
     audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela B&M Log", "Locução (cotada à parte)"],
     sobreposicoes: [["48", "52"], ["37", "39"]],
-    contrato: { assinadoEm: null, pdfUrl: null, minuta: "2026-10-01" },
+    // Decisão de 03/10/2026: considerado assinado durante os testes finais; registrar data e PDF depois.
+    contrato: { assinadoEm: null, pdfUrl: null, minuta: "2026-10-01", consideradoAssinadoParaTestes: true },
     atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
   },
 };
