@@ -12,9 +12,9 @@ export const moeda = (v: number | null | undefined) =>
   v == null ? "A cotar" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const COR: Partial<Record<Status, string>> = {
-  enviada: "bg-orange-100 text-orange-700",
+  enviada: "bg-marca-100 text-marca-900",
   producao: "bg-[#E8EEF7] text-[#24456B]",
-  apresentacao: "bg-[#FFF1D6] text-[#7A4B00]",
+  apresentacao: "bg-aviso-100 text-aviso-700",
   aprovada: "bg-[#E3F2EA] text-[#1E7047]",
   entregue: "bg-[#E3F2EA] text-[#1E7047]",
   faturada: "bg-[#E3F2EA] text-[#1E7047]",

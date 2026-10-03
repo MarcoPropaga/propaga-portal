@@ -35,13 +35,13 @@ const SUBPASTAS = ["01 Briefing", "02 Materiais", "03 Provas", "04 Aprovados"];
 
 /* ---------- peças de interface ---------- */
 const cx = "min-h-11 w-full rounded border bg-white px-3";
-const borda = (erro?: string) => (erro ? "border-orange-700 ring-1 ring-orange-700" : "border-[#D6D2CE]");
+const borda = (erro?: string) => (erro ? "border-alerta-700 ring-1 ring-alerta-700" : "border-[#C9D7DC]");
 
 function Rotulo({ id, children, obrigatorio = true }: { id: string; children: ReactNode; obrigatorio?: boolean }) {
-  return <label htmlFor={id} className="text-sm font-semibold">{children}{obrigatorio && <span className="text-orange-700" aria-hidden="true"> *</span>}</label>;
+  return <label htmlFor={id} className="text-sm font-semibold">{children}{obrigatorio && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>;
 }
 function Erro({ id, erro }: { id: string; erro?: string }) {
-  return erro ? <p id={`${id}-erro`} className="text-sm font-medium text-orange-700">{erro}</p> : null;
+  return erro ? <p id={`${id}-erro`} className="text-sm font-medium text-alerta-700">{erro}</p> : null;
 }
 function Selecao({ id, rotulo, valor, opcoes, vazio: ph, erro, onChange, obrigatorio }: {
   id: string; rotulo: string; valor: string | number; opcoes: [string | number, string][]; vazio?: string; erro?: string;
@@ -72,14 +72,14 @@ function Texto({ id, rotulo, valor, erro, onChange, obrigatorio = true, ...p }: 
   );
 }
 function Nota({ tipo = "info", children }: { tipo?: "info" | "alerta"; children: ReactNode }) {
-  return <div className={`rounded px-4 py-3 text-sm leading-relaxed ${tipo === "alerta" ? "bg-orange-100 text-[#7A1A0C]" : "bg-[#F1EEEA]"}`}>{children}</div>;
+  return <div className={`rounded px-4 py-3 text-sm leading-relaxed ${tipo === "alerta" ? "bg-aviso-100 text-aviso-700" : "bg-[#EAF3F5]"}`}>{children}</div>;
 }
 function Secao({ n, chave, titulo, extra, children }: { n: number; chave: string; titulo: string; extra?: ReactNode; children: ReactNode }) {
   const [aberta, setAberta] = useState(true);
   return (
     <section id={`sec-${chave}`} aria-labelledby={`h-${chave}`} className="rounded border border-gray-200 bg-white">
       <header className="flex flex-wrap items-center gap-3 px-4 py-3.5 md:px-5">
-        <span className="font-display text-sm font-semibold text-orange-700">{pad(n)}</span>
+        <span className="font-display text-sm font-semibold text-marca-700">{pad(n)}</span>
         <h2 id={`h-${chave}`} className="mr-auto text-lg">{titulo}</h2>
         {extra}
         <button type="button" onClick={() => setAberta(!aberta)} aria-expanded={aberta} aria-controls={`b-${chave}`}
@@ -106,7 +106,7 @@ function ItemServico({ i, it, cat, cliente, erros, onChange, onRemover }: {
     onChange({ ...it, cod, variante: 0, opcao: "", canal: novo.video ? cliente.canaisVideo[0] : "", audio: novo.video ? cliente.audiosVideo[0] : "" });
   };
   return (
-    <div className="relative grid gap-4 rounded border border-[#D6D2CE] p-4 pr-14">
+    <div className="relative grid gap-4 rounded border border-[#C9D7DC] p-4 pr-14">
       <h3 className="text-base">Serviço {i + 1}</h3>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Selecao id={id("cat")} rotulo="Categoria" valor={s.categoria} opcoes={cat.categorias.map((c) => [c.id, c.nome])}
@@ -133,17 +133,17 @@ function ItemServico({ i, it, cat, cliente, erros, onChange, onRemover }: {
       <Nota tipo={sobOrcamento ? "alerta" : "info"}>
         {sobOrcamento && <b className="block">Item a cotar: a Propaga define o valor conforme o contrato ao aceitar o pedido.</b>}
         <span>{s.escopo} Criação e ativos gerados pela Propaga incluídos.{s.video ? " Vídeos destinam-se às TVs internas; redes sociais dependem de solicitação expressa." : ""}</span>
-        {s.nota && <b className="mt-1 block text-orange-700">{s.nota}</b>}
+        {s.nota && <b className="mt-1 block text-alerta-700">{s.nota}</b>}
         {s.video && it.canal && it.canal !== cliente.canaisVideo[0] && <b className="mt-1 block">Publicação em redes sociais exige solicitação expressa e verificação de direitos de uso.</b>}
       </Nota>
       <details open={!!it.obs} className="text-sm">
         <summary className="cursor-pointer font-semibold">Observação deste serviço</summary>
         <label htmlFor={id("obs")} className="sr-only">Observação do serviço {i + 1}</label>
         <textarea id={id("obs")} rows={3} maxLength={3000} value={it.obs} onChange={(e) => onChange({ ...it, obs: e.target.value })}
-          placeholder="Orientações específicas para este item" className="mt-2 w-full rounded border border-[#D6D2CE] bg-white p-3" />
+          placeholder="Orientações específicas para este item" className="mt-2 w-full rounded border border-[#C9D7DC] bg-white p-3" />
       </details>
       <button type="button" onClick={onRemover} aria-label={`Remover serviço ${i + 1}`}
-        className="absolute right-3 top-3 grid size-9 place-items-center rounded text-gray-600 hover:bg-orange-100 hover:text-orange-700">
+        className="absolute right-3 top-3 grid size-9 place-items-center rounded text-gray-600 hover:bg-alerta-100 hover:text-alerta-700">
         <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg>
       </button>
     </div>
@@ -298,7 +298,7 @@ function Conteudo() {
         <Secao n={1} chave="dados" titulo="Dados da solicitação">
           <div className="grid gap-4 md:grid-cols-3">
             <Texto id="titulo" rotulo="Título da solicitação" maxLength={120} valor={r.titulo} erro={erros.titulo} onChange={(v) => { mudar({ titulo: v }); limparErro("titulo"); }} />
-            <Texto id="solicitante" rotulo="Solicitante" valor={s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#D6D2CE] bg-paper`} />
+            <Texto id="solicitante" rotulo="Solicitante" valor={s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#C9D7DC] bg-paper`} />
             <Selecao id="unidade" rotulo="Unidade (matriz ou filial)" valor={r.unidade} vazio="Selecione" erro={erros.unidade}
               opcoes={cliente.unidades.map((u) => [u, u])} onChange={(v) => { mudar({ unidade: v }); limparErro("unidade"); }} />
             <Texto id="email" rotulo="E-mail de contato" type="email" autoComplete="email" valor={r.email} erro={erros.email} onChange={(v) => { mudar({ email: v }); limparErro("email"); }} />
@@ -315,7 +315,7 @@ function Conteudo() {
             limparErro("itens");
             setTimeout(() => document.getElementById(`it${r.itens.length}-cat`)?.focus(), 30);
           }}>+ Adicionar serviço</Botao>}>
-          {r.itens.length === 0 && <p className="rounded border border-dashed border-[#D6D2CE] px-4 py-6 text-center text-sm text-gray-600">Nenhum serviço adicionado. Use “Adicionar serviço” para começar.</p>}
+          {r.itens.length === 0 && <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-6 text-center text-sm text-gray-600">Nenhum serviço adicionado. Use “Adicionar serviço” para começar.</p>}
           {r.itens.map((it, i) => (
             <ItemServico key={i} i={i} it={it} cat={cat} cliente={cliente} erros={erros}
               onChange={(novo) => { const itens = [...r.itens]; itens[i] = novo; mudar({ itens }); }}
@@ -338,7 +338,7 @@ function Conteudo() {
           </div>
           <ul className="flex flex-wrap gap-2" aria-label="Subpastas esperadas">{SUBPASTAS.map((x) => <li key={x} className="rounded-full bg-paper px-3 py-1 text-sm">{x}</li>)}</ul>
           <label className="flex items-start gap-2.5">
-            <input type="checkbox" id="driveOk" className="mt-1 size-4 accent-orange-700" checked={r.drive.conferido}
+            <input type="checkbox" id="driveOk" className="mt-1 size-4 accent-marca-700" checked={r.drive.conferido}
               aria-describedby={erros.driveOk ? "driveOk-erro" : undefined} onChange={(e) => { mudar({ drive: { ...r.drive, conferido: e.target.checked } }); limparErro("driveOk"); }} />
             <span>Conferi os arquivos e as permissões de acesso.</span>
           </label>
@@ -351,7 +351,7 @@ function Conteudo() {
           <label htmlFor="obs" className="sr-only">Observações gerais para a Propaga</label>
           <textarea id="obs" maxLength={30000} value={r.obs} onChange={(e) => mudar({ obs: e.target.value })} rows={12}
             placeholder={"Contexto, mensagem principal, referências, restrições.\nInforme aqui se precisa de filmagem, fotografia, impressão, fabricação ou montagem."}
-            className="w-full rounded border border-[#D6D2CE] bg-white p-3 leading-relaxed" />
+            className="w-full rounded border border-[#C9D7DC] bg-white p-3 leading-relaxed" />
           <div className="flex flex-wrap justify-between gap-2 text-sm text-gray-600">
             <span>Filmagem, fotografia, impressão, fabricação e montagem são avaliadas e orçadas à parte, antes de qualquer contratação.</span>
             <span><span className="tabular-nums">{r.obs.length.toLocaleString("pt-BR")}</span> / 30.000</span>
@@ -361,7 +361,7 @@ function Conteudo() {
               <div className="flex flex-wrap items-center gap-3"><h2 id="dlg-obs" className="mr-auto text-lg">Observações para a Propaga</h2>
                 <span className="text-sm text-gray-600">{r.obs.length.toLocaleString("pt-BR")} / 30.000</span></div>
               <textarea aria-labelledby="dlg-obs" maxLength={30000} value={r.obs} onChange={(e) => mudar({ obs: e.target.value })}
-                className="h-[65vh] w-full rounded border border-[#D6D2CE] p-3 leading-relaxed" />
+                className="h-[65vh] w-full rounded border border-[#C9D7DC] p-3 leading-relaxed" />
               <Botao type="button" className="justify-self-end" onClick={() => { dialogo.current?.close(); document.getElementById("obs")?.focus(); }}>Concluir</Botao>
             </div>
           </dialog>
@@ -373,10 +373,10 @@ function Conteudo() {
               onChange={(v) => { mudar({ prazo: { ...r.prazo, desejada: v } }); limparErro("desejada"); }} />
             <div className="grid content-start gap-1.5">
               <span className="text-sm font-semibold">Prazo padrão</span>
-              <p className="flex min-h-11 items-center rounded border border-[#D6D2CE] bg-paper px-3" aria-live="polite">{PRAZO_PADRAO_DIAS_UTEIS} dias úteis · 1ª apresentação {brData(primeira)}</p>
+              <p className="flex min-h-11 items-center rounded border border-[#C9D7DC] bg-paper px-3" aria-live="polite">{PRAZO_PADRAO_DIAS_UTEIS} dias úteis · 1ª apresentação {brData(primeira)}</p>
             </div>
             <label className="flex items-center gap-2.5 md:mt-7">
-              <input type="checkbox" className="size-4 accent-orange-700" checked={r.prazo.urgente} onChange={(e) => mudar({ prazo: { ...r.prazo, urgente: e.target.checked } })} />
+              <input type="checkbox" className="size-4 accent-marca-700" checked={r.prazo.urgente} onChange={(e) => mudar({ prazo: { ...r.prazo, urgente: e.target.checked } })} />
               <span>Pedido urgente (cronograma individual)</span>
             </label>
           </div>
@@ -391,7 +391,7 @@ function Conteudo() {
           {r.itens.length ? (
             <div className="overflow-x-auto rounded border border-gray-200">
               <table className="w-full text-sm">
-                <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
+                <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
                   <tr><th className="px-3 py-2.5">Qtd.</th><th className="px-3 py-2.5">Serviço</th><th className="px-3 py-2.5">Preço</th></tr>
                 </thead>
                 <tbody>
@@ -402,19 +402,19 @@ function Conteudo() {
                       <tr key={i} className="border-t border-gray-200">
                         <td className="px-3 py-2.5 tabular-nums">{it.qtd}×</td>
                         <td className="px-3 py-2.5"><b>{sv.nome}</b><div className="text-gray-600">{sv.cod} · {det}</div></td>
-                        <td className="px-3 py-2.5">{v?.preco == null ? <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">A cotar</span> : <span className="text-gray-600">Catálogo</span>}</td>
+                        <td className="px-3 py-2.5">{v?.preco == null ? <span className="rounded-full bg-aviso-100 px-2.5 py-0.5 text-xs font-semibold text-aviso-700">A cotar</span> : <span className="text-gray-600">Catálogo</span>}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-          ) : <p className="rounded border border-dashed border-[#D6D2CE] px-4 py-6 text-center text-sm text-gray-600">Adicione ao menos um serviço na seção 02.</p>}
+          ) : <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-6 text-center text-sm text-gray-600">Adicione ao menos um serviço na seção 02.</p>}
           <Nota><b>Prazo:</b> {PRAZO_PADRAO_DIAS_UTEIS} dias úteis após o aceite do pedido pela Propaga (1ª apresentação prevista para {brData(primeira)}, se aceito hoje).</Nota>
           <Nota>Os preços ficam no menu Valores {cliente.nome} e nos Relatórios.{pendentes ? ` ${pendentes > 1 ? "Os itens a cotar recebem" : "O item a cotar recebe"} valor da Propaga conforme o contrato.` : ""}</Nota>
 
           {listaErros.length > 0 && (
-            <div ref={caixaErros} role="alert" className="rounded bg-orange-100 px-4 py-3 text-sm text-[#7A1A0C]">
+            <div ref={caixaErros} role="alert" className="rounded bg-alerta-100 px-4 py-3 text-sm text-alerta-700">
               <b>Antes de enviar, corrija:</b>
               <ul className="mt-1 list-disc pl-5">{listaErros.map(([k, m]) => <li key={k}><a href={`#${k}`} className="underline" onClick={(e) => { e.preventDefault(); irPara(k); }}>{m}</a></li>)}</ul>
             </div>
@@ -424,7 +424,7 @@ function Conteudo() {
 
           <div className="flex flex-wrap items-center gap-4 border-t border-gray-200 pt-4">
             <label className="mr-auto flex items-start gap-2.5">
-              <input type="checkbox" id="conferido" className="mt-1 size-4 accent-orange-700" checked={r.conferido}
+              <input type="checkbox" id="conferido" className="mt-1 size-4 accent-marca-700" checked={r.conferido}
                 onChange={(e) => { mudar({ conferido: e.target.checked }); limparErro("conferido"); }} />
               <span>Conferi os serviços, os materiais e as informações.</span>
             </label>

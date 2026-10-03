@@ -68,17 +68,17 @@ function Conteudo() {
             <Campo id="emailConvite" rotulo="E-mail" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} erro={erros.email} />
             <div className="grid gap-1.5">
               <label htmlFor="papel" className="text-sm font-semibold">Perfil</label>
-              <select id="papel" value={form.papel} onChange={(e) => setForm({ ...form, papel: e.target.value })} className="min-h-11 rounded border border-[#D6D2CE] bg-white px-3">
+              <select id="papel" value={form.papel} onChange={(e) => setForm({ ...form, papel: e.target.value })} className="min-h-11 rounded border border-[#C9D7DC] bg-white px-3">
                 {Object.entries(NOMES_PAPEIS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             </div>
             {cliente && (
               <div className="grid gap-1.5">
                 <label htmlFor="cliente" className="text-sm font-semibold">Cliente</label>
-                <select id="cliente" value={form.clienteId} onChange={(e) => setForm({ ...form, clienteId: e.target.value })} aria-describedby={erros.clienteId ? "cliente-erro" : undefined} className="min-h-11 rounded border border-[#D6D2CE] bg-white px-3">
+                <select id="cliente" value={form.clienteId} onChange={(e) => setForm({ ...form, clienteId: e.target.value })} aria-describedby={erros.clienteId ? "cliente-erro" : undefined} className="min-h-11 rounded border border-[#C9D7DC] bg-white px-3">
                   {Object.values(CLIENTES).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
-                {erros.clienteId && <p id="cliente-erro" className="text-sm text-orange-700">{erros.clienteId}</p>}
+                {erros.clienteId && <p id="cliente-erro" className="text-sm text-alerta-700">{erros.clienteId}</p>}
               </div>
             )}
           </div>
@@ -92,7 +92,7 @@ function Conteudo() {
           <h2 className="text-lg">Pessoas com acesso</h2>
           <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full text-sm">
-              <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
+              <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr><th className="px-3 py-2.5">Pessoa</th><th className="px-3 py-2.5">Perfil</th><th className="px-3 py-2.5">Empresa</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5"><span className="sr-only">Ações</span></th></tr>
               </thead>
               <tbody>

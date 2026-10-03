@@ -44,17 +44,17 @@ function Conteudo() {
           <div className="grid gap-1.5">
             <label htmlFor="busca" className="text-sm font-semibold">Buscar</label>
             <input id="busca" type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Protocolo, título ou unidade"
-              className="min-h-11 w-72 max-w-full rounded border border-[#D6D2CE] bg-white px-3" />
+              className="min-h-11 w-72 max-w-full rounded border border-[#C9D7DC] bg-white px-3" />
           </div>
           <div className="grid gap-1.5">
             <label htmlFor="etapa" className="text-sm font-semibold">Etapa</label>
-            <select id="etapa" value={etapa} onChange={(e) => setEtapa(e.target.value as typeof etapa)} className="min-h-11 rounded border border-[#D6D2CE] bg-white px-3">
+            <select id="etapa" value={etapa} onChange={(e) => setEtapa(e.target.value as typeof etapa)} className="min-h-11 rounded border border-[#C9D7DC] bg-white px-3">
               <option value="abertas">Em andamento</option>
               <option value="todas">Todas</option>
               {(Object.keys(NOME_STATUS) as Status[]).filter((x) => x !== "rascunho").map((x) => <option key={x} value={x}>{NOME_STATUS[x]}</option>)}
             </select>
           </div>
-          {podeSolicitar && <a href="/nova-solicitacao/" className="ml-auto inline-flex min-h-11 items-center rounded bg-orange-500 px-5 font-semibold text-ink-900 hover:brightness-105">+ Nova solicitação</a>}
+          {podeSolicitar && <a href="/nova-solicitacao/" className="ml-auto inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">+ Nova solicitação</a>}
         </div>
 
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
@@ -63,7 +63,7 @@ function Conteudo() {
           <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full min-w-[720px] text-sm">
               <caption className="sr-only">Solicitações ({filtrada.length})</caption>
-              <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
+              <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Solicitação</th><th className="px-3 py-2.5">Unidade</th>
                   <th className="px-3 py-2.5">Data desejada</th><th className="px-3 py-2.5">Etapa</th><th className="px-3 py-2.5">Enviada em</th></tr>
               </thead>
@@ -74,7 +74,7 @@ function Conteudo() {
                     <td className="px-3 py-2.5"><a href={`/solicitacoes/pedido/?p=${encodeURIComponent(p.protocolo)}`} className="font-semibold">{p.titulo}</a>
                       <div className="text-gray-600">{p.solicitanteNome} · {p.itens.length} serviço{p.itens.length > 1 ? "s" : ""}</div></td>
                     <td className="px-3 py-2.5">{p.unidade}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5">{brData(p.prazo.desejada)}{p.prazo.urgente && <span className="ml-1.5 text-xs font-semibold text-orange-700">urgente</span>}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5">{brData(p.prazo.desejada)}{p.prazo.urgente && <span className="ml-1.5 text-xs font-semibold text-alerta-700">urgente</span>}</td>
                     <td className="px-3 py-2.5"><SeloStatus status={p.status} /></td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-gray-600">{brDataHora(p.criadoEm)}</td>
                   </tr>

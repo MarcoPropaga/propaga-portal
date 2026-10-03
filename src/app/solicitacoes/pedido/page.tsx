@@ -20,7 +20,7 @@ interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?:
 interface Valores { itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
 type Envio = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
-const cx = "min-h-11 w-full rounded border border-[#D6D2CE] bg-white px-3";
+const cx = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
 const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
 /* Textos de apoio de cada ação. */
@@ -112,7 +112,7 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
             ))}
           </fieldset>
         )}
-        <label className="flex items-start gap-2.5"><input type="checkbox" className="mt-1 size-4 accent-orange-700" checked={driveOk} onChange={(e) => setDriveOk(e.target.checked)} />
+        <label className="flex items-start gap-2.5"><input type="checkbox" className="mt-1 size-4 accent-marca-700" checked={driveOk} onChange={(e) => setDriveOk(e.target.checked)} />
           <span>Conferi o acesso à pasta do Drive e os materiais.</span></label>
       </>}
 
@@ -123,8 +123,8 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
 
       <div className="grid gap-1.5">
         <label htmlFor="nota" className="text-sm font-semibold">{acao === "cancelar" ? "Motivo" : acao === "pedirAjustes" ? "Ajustes necessários" : "Observação (opcional)"}
-          {NOTA_OBRIGATORIA.includes(acao) && <span className="text-orange-700" aria-hidden="true"> *</span>}</label>
-        <textarea id="nota" rows={acao === "pedirAjustes" ? 5 : 3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#D6D2CE] bg-white p-3" />
+          {NOTA_OBRIGATORIA.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
+        <textarea id="nota" rows={acao === "pedirAjustes" ? 5 : 3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#C9D7DC] bg-white p-3" />
       </div>
 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
@@ -214,7 +214,7 @@ function Conteudo() {
                       return (
                         <tr key={i} className="border-t border-gray-200 align-top">
                           <td className="py-2.5 pr-3 tabular-nums">{it.qtd}×</td>
-                          <td className="py-2.5 pr-3"><b>{it.nome}</b>{it.sobOrcamento && pedido.status === "enviada" && <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">a cotar</span>}
+                          <td className="py-2.5 pr-3"><b>{it.nome}</b>{it.sobOrcamento && pedido.status === "enviada" && <span className="ml-2 rounded-full bg-aviso-100 px-2 py-0.5 text-xs font-semibold text-aviso-700">a cotar</span>}
                             <div className="text-gray-600">{[it.cod, it.varianteRotulo, it.opcao, it.canal, it.audio].filter(Boolean).join(" · ")}</div>
                             {it.obs && <div className="mt-1 whitespace-pre-wrap">{it.obs}</div>}</td>
                           {veValores && <><td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums">{moeda(v?.unitario)}</td><td className="whitespace-nowrap py-2.5 text-right tabular-nums">{moeda(v?.subtotal)}</td></>}
@@ -239,7 +239,7 @@ function Conteudo() {
               <ol className="grid gap-3">
                 {eventos.map((e) => (
                   <li key={e.id} className="grid grid-cols-[12px_1fr] gap-3">
-                    <span className={`mt-1.5 size-3 rounded-full ${e.chave ? "bg-orange-500" : "bg-gray-200"}`} aria-hidden="true" />
+                    <span className={`mt-1.5 size-3 rounded-full ${e.chave ? "bg-marca-500" : "bg-gray-200"}`} aria-hidden="true" />
                     <div className="min-w-0 text-sm"><b>{e.rotulo}</b><div className="text-gray-600">{e.nome} · {brDataHora(e.em)}</div>
                       {e.nota && <p className="mt-1 whitespace-pre-wrap break-words">{e.nota}</p>}</div>
                   </li>
@@ -260,7 +260,7 @@ function Conteudo() {
             </Painel>
             <Painel titulo="Prazo">
               <dl className="grid grid-cols-[130px_minmax(0,1fr)] gap-x-3 gap-y-2 text-sm">
-                <dt className="text-gray-600">Data desejada</dt><dd>{brData(p.desejada)}{p.urgente && <b className="ml-1.5 text-orange-700">urgente</b>}</dd>
+                <dt className="text-gray-600">Data desejada</dt><dd>{brData(p.desejada)}{p.urgente && <b className="ml-1.5 text-alerta-700">urgente</b>}</dd>
                 <dt className="text-gray-600">Início</dt><dd>{brData(p.inicio)}</dd>
                 <dt className="text-gray-600">1ª apresentação</dt><dd>{brData(p.primeira)}</dd>
                 <dt className="text-gray-600">Entrega final</dt><dd>{brData(p.final)}</dd>

@@ -80,12 +80,12 @@ export default function PrimeiroAcesso() {
             <Botao type="submit" carregando={enviando}>Gerar novo link</Botao>
           </form>
         )}
-        <a href="/entrar/" className="text-sm font-semibold text-orange-700 hover:underline">Já tenho senha</a>
+        <a href="/entrar/" className="text-sm font-semibold text-marca-700 hover:underline">Já tenho senha</a>
       </TelaAcesso>
     );
   }
 
-  const passos = <div className="flex gap-1.5" aria-hidden="true">{[1, 2].map((i) => <i key={i} className={`h-1 flex-1 rounded ${(etapa === "senha" ? 1 : 2) >= i ? "bg-orange-500" : "bg-gray-200"}`} />)}</div>;
+  const passos = <div className="flex gap-1.5" aria-hidden="true">{[1, 2].map((i) => <i key={i} className={`h-1 flex-1 rounded ${(etapa === "senha" ? 1 : 2) >= i ? "bg-marca-500" : "bg-gray-200"}`} />)}</div>;
 
   if (etapa === "senha") {
     return (

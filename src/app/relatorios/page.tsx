@@ -103,14 +103,14 @@ function Conteudo() {
           <div className="flex flex-wrap gap-2" role="group" aria-label="Período">
             {([["7", "Últimos 7 dias"], ["30", "Últimos 30 dias"], ["ano", "Ano"], ["tudo", "Tudo"]] as [Periodo, string][]).map(([k, l]) => (
               <button key={k} type="button" aria-pressed={!protocolo && periodo === k} onClick={() => { setPeriodo(k); setProtocolo(""); }}
-                className={`min-h-11 rounded-full border px-4 text-sm ${!protocolo && periodo === k ? "border-ink-900 bg-ink-900 text-paper" : "border-[#D6D2CE] bg-white"}`}>{l}</button>
+                className={`min-h-11 rounded-full border px-4 text-sm ${!protocolo && periodo === k ? "border-ink-900 bg-ink-900 text-paper" : "border-[#C9D7DC] bg-white"}`}>{l}</button>
             ))}
           </div>
           <div className="grid gap-1.5"><label htmlFor="unidade" className="text-sm font-semibold">Unidade</label>
-            <select id="unidade" value={unidade} onChange={(e) => { setUnidade(e.target.value); setProtocolo(""); }} className="min-h-11 rounded border border-[#D6D2CE] bg-white px-3">
+            <select id="unidade" value={unidade} onChange={(e) => { setUnidade(e.target.value); setProtocolo(""); }} className="min-h-11 rounded border border-[#C9D7DC] bg-white px-3">
               <option value="todas">Todas</option>{cliente.unidades.map((u) => <option key={u}>{u}</option>)}</select></div>
           <div className="grid gap-1.5"><label htmlFor="pedido" className="text-sm font-semibold">Pedido</label>
-            <select id="pedido" value={protocolo} onChange={(e) => setProtocolo(e.target.value)} className="min-h-11 max-w-72 rounded border border-[#D6D2CE] bg-white px-3">
+            <select id="pedido" value={protocolo} onChange={(e) => setProtocolo(e.target.value)} className="min-h-11 max-w-72 rounded border border-[#C9D7DC] bg-white px-3">
               <option value="">Todos do período</option>{(pedidos ?? []).map((p) => <option key={p.protocolo} value={p.protocolo}>{p.protocolo} · {p.titulo}</option>)}</select></div>
           <div className="ml-auto flex gap-2">
             <Botao variante="discreto" onClick={exportarPlanilha} disabled={!linhas.length}>Exportar planilha</Botao>
@@ -133,7 +133,7 @@ function Conteudo() {
               <h2 id="h-unidade" className="text-lg">Por unidade</h2>
               <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
                 <table className="w-full text-sm">
-                  <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600"><tr><th className="px-3 py-2.5">Unidade</th><th className="px-3 py-2.5 text-right">Pedidos</th><th className="px-3 py-2.5 text-right">Valor</th></tr></thead>
+                  <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600"><tr><th className="px-3 py-2.5">Unidade</th><th className="px-3 py-2.5 text-right">Pedidos</th><th className="px-3 py-2.5 text-right">Valor</th></tr></thead>
                   <tbody>{porUnidade.map(([u, x]) => <tr key={u} className="border-t border-gray-200"><td className="px-3 py-2.5">{u}</td><td className="px-3 py-2.5 text-right tabular-nums">{x.n}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(x.v)}</td></tr>)}</tbody>
                 </table>
               </div>
@@ -144,7 +144,7 @@ function Conteudo() {
             <h2 id="h-itens" className="text-lg">Itens</h2>
             <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
               <table className="w-full min-w-[860px] text-sm">
-                <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
+                <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
                   <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Serviço</th><th className="px-3 py-2.5 text-right">Qtd.</th><th className="px-3 py-2.5 text-right">Unitário</th>
                     <th className="px-3 py-2.5 text-right">Subtotal</th><th className="px-3 py-2.5">Unidade</th><th className="px-3 py-2.5">Etapa</th></tr>
                 </thead>

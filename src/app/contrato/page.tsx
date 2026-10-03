@@ -25,7 +25,7 @@ function Conteudo() {
     <Casca titulo="Contrato">
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">Contrato de serviços de comunicação por demanda entre a Propaga e a {c.nome}, com as regras de operação deste portal.</p>
-        <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${assinado || testes ? "bg-[#E3F2EA] text-[#1E7047]" : "bg-orange-100 text-orange-700"}`}>
+        <span className={`w-fit rounded-full px-3 py-1 text-xs font-semibold ${assinado || testes ? "bg-[#E3F2EA] text-[#1E7047]" : "bg-aviso-100 text-aviso-700"}`}>
           {assinado ? `Contrato assinado em ${brData(c.contrato.assinadoEm!)}` : testes ? "Contrato vigente · considerado assinado no período de testes finais" : "Contrato assinado · registro do documento pendente"} · catálogo v{c.catalogoVersao} vigente
         </span>
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -39,7 +39,7 @@ function Conteudo() {
               <p className="text-sm text-gray-600">A versão assinada fica preservada aqui, sem edição. Alterações geram nova versão.</p>
               {c.contrato.pdfUrl
                 ? <a href={c.contrato.pdfUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 w-fit items-center rounded border border-ink-900 bg-white px-4 font-semibold">Abrir PDF assinado<span className="sr-only"> (abre em nova aba)</span></a>
-                : <p className="rounded bg-orange-100 px-4 py-3 text-sm text-[#7A1A0C]">O PDF assinado será disponibilizado aqui pela Propaga.</p>}
+                : <p className="rounded bg-aviso-100 px-4 py-3 text-sm text-aviso-700">O PDF assinado será disponibilizado aqui pela Propaga.</p>}
             </Painel>
             <Painel titulo="Versões">
               <ol className="grid gap-3 text-sm">
