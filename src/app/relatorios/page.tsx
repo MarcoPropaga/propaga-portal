@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { fatorCobranca, NOME_STATUS, REGRA_CANCELAMENTO, VE_RELATORIOS } from "@/lib/fluxo";
+import { fatorCobranca, NOME_STATUS, REGRA_CANCELAMENTO, REGRA_REFACAO, VE_RELATORIOS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
 import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
@@ -88,7 +88,7 @@ function Conteudo() {
     const cab = ["Protocolo", "Título", "Unidade", "Enviada em", "Etapa", "Código", "Serviço", "Modalidade e faixa", "Qtd.", "Unitário (R$)", "Subtotal (R$)", "Cobrado (R$)", "Observação", "Valor cotado"];
     const corpo = linhas.map(({ p, it, v, f }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], it.cod, it.nome,
       it.varianteRotulo, String(it.qtd), n(v?.unitario), n(v?.subtotal), n(cobrado(v, f)),
-      p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : "",
+      p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : f > 1 ? `${p.refacoesExtrasCobradas} refação(ões) extra: +${Math.round((f - 1) * 100)}%` : "",
       v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não"].map(q).join(";"));
     const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
@@ -101,7 +101,7 @@ function Conteudo() {
   return (
     <Casca titulo="Relatórios">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600 print:hidden">Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor.</p>
+        <p className="max-w-[75ch] text-gray-600 print:hidden">Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor; refação extra cobrada soma 30% ao valor.</p>
         <p className="hidden text-sm print:block">{cliente.nome} · emitido em {brData(hojeSP())} · {protocolo || { "7": "últimos 7 dias", "30": "últimos 30 dias", ano: "ano corrente", tudo: "todo o período" }[periodo]}{unidade !== "todas" && !protocolo ? ` · ${unidade}` : ""}</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
 
@@ -161,7 +161,7 @@ function Conteudo() {
                       <td className="px-3 py-2.5">{it.nome}<div className="text-gray-600">{it.varianteRotulo}{v?.orcado ? " · valor cotado" : ""}</div></td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{it.qtd}</td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{moeda(v?.unitario)}</td>
-                      <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{v?.subtotal == null ? "—" : moeda(cobrado(v, f))}{p.status === "cancelada" && f > 0 && <div className="text-xs">50% de {moeda(v?.subtotal)}</div>}</td>
+                      <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{v?.subtotal == null ? "—" : moeda(cobrado(v, f))}{p.status === "cancelada" && f > 0 && <div className="text-xs">50% de {moeda(v?.subtotal)}</div>}{f > 1 && <div className="text-xs text-aviso-700">+{Math.round((f - 1) * 100)}% refação extra</div>}</td>
                       <td className="px-3 py-2.5">{p.unidade}</td>
                       <td className="px-3 py-2.5"><SeloStatus status={p.status} /></td>
                     </tr>
@@ -170,7 +170,7 @@ function Conteudo() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {REGRA_CANCELAMENTO}</p>
+            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {REGRA_CANCELAMENTO} {REGRA_REFACAO}</p>
           </section>
         </>}
       </div>

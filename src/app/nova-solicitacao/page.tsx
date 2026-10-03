@@ -275,7 +275,7 @@ function Conteudo() {
             <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-gray-600">
               <li>A Propaga confere o briefing e o acesso à pasta do Drive.</li>
               <li>A Propaga aceita o pedido e confirma o cronograma. A produção começa.</li>
-              <li>As versões chegam para aprovação, com até 2 rodadas de ajuste.</li>
+              <li>As versões chegam para aprovação, com até 2 refações incluídas.</li>
             </ol>
           </section>
           <div className="flex flex-wrap gap-3">

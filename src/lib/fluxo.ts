@@ -6,6 +6,8 @@
    - A Mariana (Financeiro do cliente) só consulta Relatórios; não executa ações.
    - Só a Débora (Solicitante) aprova. Ela pode cancelar ao lado de "Pedir ajustes": o que foi
      cancelado depois de apresentado é cobrado em 50% do valor (Marco, 03/10/2026).
+   - Até 2 refações incluídas. A partir da 3ª, cada refação com edições diferentes das pedidas nas
+     anteriores acrescenta 30% ao valor da peça; o Atendimento confirma ao disponibilizar a versão.
    O servidor (Apps Script) aplica estas regras; o navegador só mostra os botões permitidos. */
 import type { Papel, Status } from "./tipos";
 
@@ -19,10 +21,15 @@ export const MAX_RODADAS = 2;
 export const COBRANCA_CANCELADA_APRESENTADA = 0.5;
 export const REGRA_CANCELAMENTO = "Peça ou pedido cancelado depois de apresentado para aprovação é cobrado em 50% do seu valor. Cancelado antes da apresentação não é cobrado.";
 
-/** Fração do valor do pedido que entra na cobrança: 1 normal, 0,5 se cancelado após apresentação, 0 se cancelado antes. */
-export function fatorCobranca(p: { status: Status; versao?: number }): number {
-  if (p.status !== "cancelada") return 1;
-  return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
+/** Refação extra (a partir da 3ª, com edições novas): acréscimo sobre o valor da peça. */
+export const ACRESCIMO_REFACAO_EXTRA = 0.3;
+export const REGRA_REFACAO = "Até 2 refações estão incluídas. A partir da 3ª solicitação de refação, é adicionado 30% ao valor da peça. A refação é cobrada quando as edições pedidas pelo marketing da B&M Log forem diferentes das pedidas na 1ª e na 2ª solicitação; ajuste que repete um pedido anterior ou corrige erro da Propaga não é cobrado.";
+
+/** Fração do valor do pedido que entra na cobrança: 1 normal (+30% por refação extra cobrada),
+    0,5 se cancelado após apresentação, 0 se cancelado antes. */
+export function fatorCobranca(p: { status: Status; versao?: number; refacoesExtrasCobradas?: number }): number {
+  if (p.status === "cancelada") return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
+  return 1 + ACRESCIMO_REFACAO_EXTRA * (p.refacoesExtrasCobradas ?? 0);
 }
 
 export interface Ctx { rodadas: number; recebidoPeloCliente?: boolean }
@@ -58,7 +65,6 @@ export const NOME_STATUS: Record<Status, string> = {
 export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx): boolean {
   const r = REGRAS[acao];
   if (!r.de.includes(status) || !r.papeis.includes(papel)) return false;
-  if (acao === "pedirAjustes" && ctx.rodadas >= MAX_RODADAS) return false;
   if (acao === "confirmarRecebimento" && ctx.recebidoPeloCliente) return false;
   // Antes da produção: solicitante e atendimento cancelam. Em apresentação: o solicitante também
   // (com cobrança de 50%). Nas demais etapas, só o admin.

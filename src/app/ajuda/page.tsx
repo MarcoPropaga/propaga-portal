@@ -12,7 +12,7 @@ const FAQ: [string, string][] = [
   ["Como faço uma solicitação?", "Em Nova solicitação, preencha os dados, escolha os serviços, informe a pasta do Drive e a data desejada. O que você preenche fica salvo como rascunho até o envio."],
   ["Por que alguns itens aparecem “a cotar”?", "O catálogo não define preço para algumas faixas, como vídeos mais longos ou mais páginas. A Propaga informa o valor, conforme o contrato, ao aceitar o pedido."],
   ["Quando o prazo começa a contar?", `Quando a Propaga aceita o pedido, com briefing completo e materiais acessíveis no Drive. Em serviços simples, a 1ª apresentação sai em até ${PRAZO_PADRAO_DIAS_UTEIS} dias úteis.`],
-  ["Quantos ajustes estão incluídos?", `Até ${MAX_RODADAS} rodadas consolidadas por entrega. Reúna todos os pontos de uma versão numa única lista ao clicar em “Pedir ajustes”.`],
+  ["Quantos ajustes estão incluídos?", `Até ${MAX_RODADAS} refações. A partir da 3ª, se as edições forem diferentes das pedidas antes, é adicionado 30% ao valor da peça. Reúna todos os pontos de uma versão numa única lista ao clicar em “Pedir ajustes”.`],
   ["Preciso de filmagem, fotografia ou impressão. Como peço?", "Descreva em Observações para a Propaga: necessidade, local, quantidade, especificações e data. A Propaga orça à parte antes de contratar."],
   ["Como acompanho meu pedido?", "Em Solicitações, abra o pedido. Você vê a etapa atual, o cronograma, a pasta do Drive e o histórico completo. Quando houver algo para você fazer, o botão aparece no topo."],
   ["Esqueci a senha.", "Na tela de entrada, use “Esqueci minha senha”. O link chega por e-mail e vale por 1 hora."],

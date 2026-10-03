@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { catalogoBmlogV1 as cat } from "@/content/catalogos/bmlog-v1.0";
 import { precoCliente, calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
-import { acoesDisponiveis, aplicar, podeExecutar } from "@/lib/fluxo";
+import { acoesDisponiveis, aplicar, fatorCobranca, podeExecutar } from "@/lib/fluxo";
 import { somarDiasUteis } from "@/lib/datas";
 import { solicitacaoSchema } from "@/lib/schemas";
 
@@ -59,7 +59,8 @@ describe("fluxo do pedido (decisão de 03/10: sem aceite do cliente)", () => {
   it("versão → ajustes (até 2 rodadas) ou aprovação", () => {
     expect(aplicar("disponibilizarVersao", "producao", "atendimento", ctx)).toBe("apresentacao");
     expect(aplicar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 1 })).toBe("producao");
-    expect(podeExecutar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 2 })).toBe(false);
+    // 3ª refação em diante é permitida (sujeita a +30%).
+    expect(podeExecutar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 2 })).toBe(true);
     expect(aplicar("aprovar", "apresentacao", "solicitante", ctx)).toBe("aprovada");
   });
   it("entrega, recebimento (uma vez), faturamento e pagamento", () => {
@@ -100,5 +101,14 @@ describe("validação da solicitação", () => {
   it("recusa link que não é do Drive", () => {
     const r = solicitacaoSchema.safeParse({ ...ok, drive: { ...ok.drive, link: "https://exemplo.com" } });
     expect(r.success).toBe(false);
+  });
+});
+
+describe("cobrança (Marco, 03/10)", () => {
+  it("refação extra soma 30%; cancelado após apresentação cobra 50%; antes, nada", () => {
+    expect(fatorCobranca({ status: "entregue" })).toBe(1);
+    expect(fatorCobranca({ status: "entregue", refacoesExtrasCobradas: 2 })).toBeCloseTo(1.6);
+    expect(fatorCobranca({ status: "cancelada", versao: 1 })).toBe(0.5);
+    expect(fatorCobranca({ status: "cancelada", versao: 0 })).toBe(0);
   });
 });
