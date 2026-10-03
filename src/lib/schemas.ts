@@ -74,5 +74,7 @@ export const acaoSchema = z.object({
     .optional(),
   valores: z.array(z.object({ indice: z.number().int().min(0), valor: z.number().positive("Informe um valor maior que zero.").max(1_000_000) })).max(30).optional(),
   driveVerificado: z.boolean().optional(),
+  /** Ao disponibilizar a versão de uma refação extra (3ª em diante): cobrar +30% ou não (repete pedido anterior / erro da Propaga). */
+  refacaoExtraCobrada: z.boolean().optional(),
 });
 export type AcaoInput = z.infer<typeof acaoSchema>;

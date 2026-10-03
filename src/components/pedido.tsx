@@ -42,5 +42,6 @@ export interface PedidoDoc {
   drive: { link: string; conferido: boolean; verificado: boolean }; obs: string;
   prazo: { desejada: string; urgente: boolean; inicio?: string; primeira?: string; final?: string; entrega?: string };
   rodadas: number; versao: number; catalogoVersao: string; recebidoPeloCliente?: boolean;
+  refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
   criadoEm: unknown; atualizadoEm: unknown;
 }

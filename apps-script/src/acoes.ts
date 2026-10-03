@@ -2,7 +2,7 @@
    registra o histórico e avisa por e-mail só quem precisa agir ou acompanhar. */
 import { CLIENTES } from "@/content/clientes";
 import { catalogo } from "@/content/catalogos";
-import { aplicar, MAX_RODADAS, NOME_STATUS, type Acao } from "@/lib/fluxo";
+import { ACRESCIMO_REFACAO_EXTRA, aplicar, MAX_RODADAS, NOME_STATUS, type Acao } from "@/lib/fluxo";
 import { calcularValores } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
@@ -17,6 +17,7 @@ interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; solicitanteNome: string;
   itens: (ItemSolicitacao & { nome: string; sobOrcamento: boolean })[]; rodadas: number; versao: number;
   catalogoVersao: string; prazo: Record<string, unknown>; drive: Record<string, unknown>; recebidoPeloCliente?: boolean;
+  refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
 }
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
@@ -79,15 +80,27 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       const v = (ped.versao || 0) + 1;
       mudancas.versao = v;
       rotulo = `Versão ${v} disponibilizada para aprovação`;
+      if (ped.refacaoExtraPendente) {
+        if (d.refacaoExtraCobrada === undefined) throw new ErroUsuario("Informe se a refação extra tem edições novas (cobrança de +30%) ou repete um pedido anterior.");
+        mudancas.refacaoExtraPendente = false;
+        if (d.refacaoExtraCobrada) {
+          mudancas.refacoesExtrasCobradas = (ped.refacoesExtrasCobradas || 0) + 1;
+          rotulo += ` · refação extra com edições novas: +${Math.round(ACRESCIMO_REFACAO_EXTRA * 100)}% no valor`;
+          avisar = ["solicitante", "financeiro_propaga"];
+        } else rotulo += " · refação extra sem cobrança (repete pedido anterior)";
+      }
       notaEvento = [nota, d.link ? `Arquivos: ${d.link}` : ""].filter(Boolean).join(" ");
-      avisar = ["solicitante"];
+      if (!avisar.length) avisar = ["solicitante"];
       break;
     }
     case "pedirAjustes": {
       if (nota.length < 3) throw new ErroUsuario("Descreva os ajustes necessários.");
       const rod = (ped.rodadas || 0) + 1;
       mudancas.rodadas = rod;
-      rotulo = `Ajustes solicitados (rodada ${rod} de ${MAX_RODADAS})`;
+      if (rod > MAX_RODADAS) {
+        mudancas.refacaoExtraPendente = true;
+        rotulo = `Refação extra solicitada (${rod}ª) · sujeita a +${Math.round(ACRESCIMO_REFACAO_EXTRA * 100)}% no valor`;
+      } else rotulo = `Ajustes solicitados (rodada ${rod} de ${MAX_RODADAS})`;
       avisar = ["atendimento"];
       break;
     }

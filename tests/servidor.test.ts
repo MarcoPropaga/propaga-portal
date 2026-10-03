@@ -269,6 +269,24 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
   });
 
+  it("3ª refação: Atendimento decide se cobra +30% ao disponibilizar a versão", () => {
+    acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 900 }], driveVerificado: true });
+    for (let i = 0; i < 2; i++) { acao(mcl, "disponibilizarVersao", {}); acao(deb, "pedirAjustes", { nota: `Ajuste ${i + 1}` }); }
+    acao(mcl, "disponibilizarVersao", {});
+    acao(deb, "pedirAjustes", { nota: "Trocar a foto e o título." });
+    expect(ped().rodadas).toBe(3);
+    expect(ped().refacaoExtraPendente).toBe(true);
+    expect(acao(mcl, "disponibilizarVersao", {}).mensagem).toMatch(/refação extra/);
+    f.emails.length = 0;
+    acao(mcl, "disponibilizarVersao", { refacaoExtraCobrada: true });
+    expect(ped().refacoesExtrasCobradas).toBe(1);
+    expect(ped().refacaoExtraPendente).toBe(false);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "marisa@propaga.com"]);
+    acao(deb, "pedirAjustes", { nota: "Repete: aumentar o logo." });
+    acao(mcl, "disponibilizarVersao", { refacaoExtraCobrada: false });
+    expect(ped().refacoesExtrasCobradas).toBe(1);
+  });
+
   it("solicitante cancela em apresentação: cobrança de 50% registrada e Financeiro Propaga avisado", () => {
     expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 900 }], driveVerificado: true }).status).toBe("ok");
     acao(mcl, "disponibilizarVersao", {});

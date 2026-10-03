@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
-import { acoesDisponiveis, ETAPAS, fatorCobranca, MAX_RODADAS, REGRAS, VE_RELATORIOS, type Acao } from "@/lib/fluxo";
+import { acoesDisponiveis, ETAPAS, fatorCobranca, MAX_RODADAS, REGRA_REFACAO, REGRAS, VE_RELATORIOS, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis, PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
 import { Protegido } from "@/components/auth/protegido";
@@ -27,7 +27,7 @@ const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v a
 const AJUDA: Partial<Record<Acao, string>> = {
   aceitarPedido: "Confirme o cronograma e informe o valor dos itens a cotar, conforme o contrato. O pedido entra em produção e o solicitante é avisado.",
   disponibilizarVersao: "Coloque os arquivos na pasta 03 Provas do Drive. O solicitante é avisado para aprovar ou pedir ajustes.",
-  pedirAjustes: `Descreva com clareza o que precisa mudar. Cada pedido de ajuste conta uma rodada (até ${MAX_RODADAS}).`,
+  pedirAjustes: `Descreva com clareza o que precisa mudar, numa única lista. Até ${MAX_RODADAS} refações estão incluídas.`,
   aprovar: "Ao aprovar, a Propaga prepara os arquivos finais para entrega.",
   entregar: "Confirme que os arquivos finais estão na pasta 04 Aprovados.",
   confirmarRecebimento: "Confirme que recebeu os arquivos finais.",
@@ -47,6 +47,8 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
   const [cron, setCron] = useState({ inicio: hoje, primeira: primeiraPadrao, final: finalPadrao });
   const [valores, setValores] = useState<Record<number, string>>({});
   const [driveOk, setDriveOk] = useState(false);
+  const [extra, setExtra] = useState<"" | "sim" | "nao">("");
+  const extraPendente = acao === "disponibilizarVersao" && !!pedido.refacaoExtraPendente;
   const [erro, setErro] = useState("");
   const [envio, setEnvio] = useState<Envio>({ tipo: "ocioso" });
   const aCotar = pedido.itens.map((it, i) => ({ it, i })).filter((x) => x.it.sobOrcamento);
@@ -68,6 +70,10 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
     const dados: Record<string, unknown> = { protocolo: pedido.protocolo, acao };
     if (nota.trim()) dados.nota = nota.trim();
     if (acao === "disponibilizarVersao" && link.trim()) dados.link = link.trim();
+    if (extraPendente) {
+      if (!extra) { setErro("Informe se a refação extra tem edições novas ou repete um pedido anterior."); return; }
+      dados.refacaoExtraCobrada = extra === "sim";
+    }
     if (acao === "aceitarPedido") {
       dados.cronograma = cron;
       dados.driveVerificado = driveOk;
@@ -92,6 +98,17 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
       {AJUDA[acao] && <p className="text-sm text-gray-600">{AJUDA[acao]}</p>}
       {acao === "cancelar" && (pedido.versao || 0) > 0 && (
         <p className="rounded border-l-4 border-alerta-700 bg-alerta-100 px-3 py-2 text-sm leading-relaxed"><b>Atenção:</b> este pedido já foi apresentado para aprovação. Se for cancelado, será cobrado <b>50% do seu valor</b>, conforme o contrato.</p>
+      )}
+      {acao === "pedirAjustes" && (pedido.rodadas || 0) >= MAX_RODADAS && (
+        <p className="rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm leading-relaxed"><b>Esta é a {(pedido.rodadas || 0) + 1}ª solicitação de refação.</b> As {MAX_RODADAS} incluídas já foram usadas: se as edições forem diferentes das pedidas antes, será adicionado <b>30% ao valor da peça</b>, conforme o contrato.</p>
+      )}
+      {extraPendente && (
+        <fieldset className="grid gap-2 rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-3 text-sm">
+          <legend className="sr-only">Refação extra</legend>
+          <p className="m-0"><b>Refação extra ({pedido.rodadas}ª).</b> As edições pedidas são diferentes das solicitadas antes?</p>
+          <label className="flex items-start gap-2"><input type="radio" name="extra" className="mt-1 accent-marca-700" checked={extra === "sim"} onChange={() => setExtra("sim")} /> Sim, edições novas: adicionar 30% ao valor da peça</label>
+          <label className="flex items-start gap-2"><input type="radio" name="extra" className="mt-1 accent-marca-700" checked={extra === "nao"} onChange={() => setExtra("nao")} /> Não, repete pedido anterior ou corrige erro da Propaga: sem cobrança</label>
+        </fieldset>
       )}
 
       {acao === "aceitarPedido" && <>
@@ -197,7 +214,7 @@ function Conteudo() {
         {acoes.length > 0 && (
           acao ? <FormAcao acao={acao} pedido={pedido} clienteId={clienteId} onFechar={() => setAcao(null)} /> : (
             <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Ações disponíveis">
-              <span className="mr-auto text-sm font-semibold">Sua próxima ação{pedido.status === "apresentacao" ? ` · versão ${pedido.versao || 1}, rodada de ajustes ${pedido.rodadas || 0} de ${MAX_RODADAS}` : ""}</span>
+              <span className="mr-auto text-sm font-semibold">Sua próxima ação{pedido.status === "apresentacao" ? ` · versão ${pedido.versao || 1}, refações ${pedido.rodadas || 0} (${MAX_RODADAS} incluídas)` : ""}</span>
               {principais.map((a, i) => <Botao key={a} variante={i === 0 ? "primario" : "linha"} onClick={() => setAcao(a)}>{REGRAS[a].rotulo}</Botao>)}
               {acoes.includes("cancelar") && <Botao variante={cancelarAoLado ? "linha" : "discreto"} onClick={() => setAcao("cancelar")}>{cancelarAoLado ? "Cancelar" : "Cancelar pedido"}</Botao>}
             </section>
