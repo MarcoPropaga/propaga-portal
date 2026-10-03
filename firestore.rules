@@ -48,8 +48,8 @@ service cloud.firestore {
       }
 
       match /rascunhos/{uid} {
-        allow read, write: if membro(c) && request.auth.uid == uid
-          && (request.resource == null || request.resource.size() < 200000);
+        allow read, delete: if membro(c) && request.auth.uid == uid;
+        allow create, update: if membro(c) && request.auth.uid == uid && request.resource.size() < 200000;
       }
     }
 

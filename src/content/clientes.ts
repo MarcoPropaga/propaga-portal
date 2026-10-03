@@ -1,14 +1,22 @@
-/* Clientes do portal. Unidades e públicos aprovados em 02/10/2026. */
-import { catalogoBmlogV1 } from "@/content/catalogos/bmlog-v1.0";
-import type { Catalogo } from "@/lib/tipos";
+/* Clientes do portal: dados PÚBLICOS (vão para o navegador). Unidades e públicos aprovados em 02/10/2026.
+   O catálogo com valores de referência fica em src/content/catalogos e só é usado pelo servidor;
+   o navegador lê o catálogo do Firestore (clientes/{id}/catalogo/{versao}), protegido por login e 2FA. */
 
 export interface Cliente {
   id: string;
   nome: string;
   nomePortal: string;
+  /** Prefixo do protocolo: BML-2026-0001. */
+  prefixo: string;
+  /** Versão vigente do catálogo (contrato assinado). */
+  catalogoVersao: string;
   unidades: string[];
   publicos: { valor: string; rotulo: string }[];
-  catalogo: Catalogo;
+  /** Destino e áudio dos vídeos. O primeiro é o padrão. */
+  canaisVideo: string[];
+  audiosVideo: string[];
+  /** Pares de serviços com escopo sobreposto: o portal alerta quando os dois estão no mesmo pedido. */
+  sobreposicoes: [string, string][];
 }
 
 export const CLIENTES: Record<string, Cliente> = {
@@ -16,6 +24,8 @@ export const CLIENTES: Record<string, Cliente> = {
     id: "bmlog",
     nome: "B&M Log",
     nomePortal: "Portal B&M Log",
+    prefixo: "BML",
+    catalogoVersao: "1.0",
     unidades: [
       "Matriz · Itajaí/SC", "Filial · São Bento do Sul/SC", "Filial · São Paulo/SP", "Filial · Santos/SP",
       "Filial · Guarulhos/SP", "Filial · Curitiba/PR", "Filial · São José dos Pinhais/PR", "Filial · Caxias do Sul/RS",
@@ -26,7 +36,9 @@ export const CLIENTES: Record<string, Cliente> = {
       { valor: "Colaboradores da matriz e das filiais", rotulo: "Secundário · Colaboradores da matriz e das filiais" },
       { valor: "Ambos os públicos", rotulo: "Ambos os públicos" },
     ],
-    catalogo: catalogoBmlogV1,
+    canaisVideo: ["TVs internas B&M Log", "Redes sociais da B&M Log (solicitação expressa)"],
+    audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela B&M Log", "Locução (cotada à parte)"],
+    sobreposicoes: [["48", "52"], ["37", "39"]],
   },
 };
 

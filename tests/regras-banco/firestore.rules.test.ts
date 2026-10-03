@@ -65,6 +65,19 @@ describe("regras do Firestore", () => {
     await assertFails(addDoc(collection(d, "fila"), { ...base, tipo: "enviar", status: "ok" }));
     await assertFails(addDoc(collection(d, "fila"), { ...base, tipo: "enviar", extra: 1 }));
   });
+  it("rascunho: cada pessoa grava e lê só o próprio", async () => {
+    const d = db("debora", debora);
+    await assertSucceeds(setDoc(doc(d, "clientes/bmlog/rascunhos/debora"), { dados: { titulo: "x" } }));
+    await assertSucceeds(getDoc(doc(d, "clientes/bmlog/rascunhos/debora")));
+    await assertFails(getDoc(doc(db("mariana", mariana), "clientes/bmlog/rascunhos/debora")));
+    await assertFails(setDoc(doc(d, "clientes/bmlog/rascunhos/mariana"), { dados: {} }));
+    await assertFails(setDoc(doc(db("x", outroCliente), "clientes/bmlog/rascunhos/x"), { dados: {} }));
+  });
+  it("catálogo público: membros leem com 2FA", async () => {
+    await env.withSecurityRulesDisabled(async (c) => { await setDoc(doc(c.firestore(), "clientes/bmlog/catalogo/1.0"), { versao: "1.0" }); });
+    await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/catalogo/1.0")));
+    await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog/catalogo/1.0")));
+  });
   it("fila: admin convida", async () => {
     await assertSucceeds(addDoc(collection(db("marco", marco), "fila"), { tipo: "convidar", uid: "marco", clienteId: null, dados: {}, status: "pendente", criadoEm: serverTimestamp() }));
   });

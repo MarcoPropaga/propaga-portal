@@ -4,9 +4,12 @@
    - convidar usuários (criar conta, definir perfil, enviar e-mail);
    - processar a /fila de ações enviadas pelo navegador, validando tudo de novo aqui. */
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
-import { catalogoPublico } from "@/lib/precos";
-import { conviteSchema, PAPEIS_PROPAGA, type ConviteInput } from "@/lib/schemas";
-import { emailConvite } from "./emails";
+import { catalogoVigente } from "@/content/catalogos";
+import { calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
+import { hojeSP } from "@/lib/datas";
+import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput } from "@/lib/schemas";
+import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
+import { emailConvite, emailNovaSolicitacao } from "./emails";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
 import { ErroUsuario, type Plataforma } from "./plataforma";
@@ -25,11 +28,14 @@ export function configurarProjeto(p: Plataforma) {
   new Identidade(p, cfg.projeto).configurarSeguranca();
   const fs = new Firestore(p, cfg.projeto);
   const agora = p.agora();
-  const ops = Object.values(CLIENTES).flatMap((c) => [
-    { caminho: `clientes/${c.id}`, dados: { nome: c.nome, nomePortal: c.nomePortal, unidades: c.unidades, publicos: c.publicos, catalogoVigente: c.catalogo.versao, atualizadoEm: agora } },
-    { caminho: `clientes/${c.id}/catalogo/${c.catalogo.versao}`, dados: { ...catalogoPublico(c.catalogo), publicadoEm: agora } as unknown as Record<string, unknown> },
-    { caminho: `interno/catalogos/versoes/${c.id}-${c.catalogo.versao}`, dados: { ...c.catalogo, publicadoEm: agora } as unknown as Record<string, unknown> },
-  ]);
+  const ops = Object.values(CLIENTES).flatMap((c) => {
+    const cat = catalogoVigente(c.id);
+    return [
+      { caminho: `clientes/${c.id}`, dados: { nome: c.nome, nomePortal: c.nomePortal, unidades: c.unidades, publicos: c.publicos, catalogoVigente: cat.versao, atualizadoEm: agora } },
+      { caminho: `clientes/${c.id}/catalogo/${cat.versao}`, dados: { ...catalogoPublico(cat), publicadoEm: agora } as unknown as Record<string, unknown> },
+      { caminho: `interno/catalogos/versoes/${c.id}-${cat.versao}`, dados: { ...cat, publicadoEm: agora } as unknown as Record<string, unknown> },
+    ];
+  });
   fs.gravar(ops);
   p.log(`Projeto ${cfg.projeto} configurado: TOTP, política de senha e ${Object.keys(CLIENTES).length} cliente(s).`);
 }
@@ -107,7 +113,7 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
   // O perfil vem do cadastro gravado pelo servidor, nunca do pedido.
   const usuario = fs.ler(`usuarios/${uid}`);
   if (!usuario) throw new ErroUsuario("Usuário sem cadastro no portal.");
-  const u = usuario.dados as { nome: string; papel: string };
+  const u = usuario.dados as { nome: string; papel: string; email: string; clienteId: string | null };
 
   switch (tipo) {
     case "convidar":
@@ -116,7 +122,105 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       const r = convidar(p, dados, { uid, nome: u.nome });
       return { uid: r.uid, novo: r.novo };
     }
+    case "enviar":
+      return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     default:
       throw new ErroUsuario("Esta ação ainda não está disponível.");
   }
+}
+
+/* ---------------- Nova solicitação ---------------- */
+
+const DESTINO_AVISO = ["solicitante", "financeiro_cliente", "atendimento", "financeiro_propaga"];
+
+/** Valida de novo no servidor, numera o protocolo, grava pedido + valores + eventos e avisa por e-mail. */
+export function enviarSolicitacao(
+  p: Plataforma, fs: Firestore,
+  u: { uid: string; nome: string; papel: string; email: string; clienteId: string | null },
+  clienteId: string, dadosBrutos: unknown,
+) {
+  if (!["solicitante", "admin"].includes(u.papel)) throw new ErroUsuario("Seu perfil não envia solicitações.");
+  if (u.papel !== "admin" && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
+  const cliente = CLIENTES[clienteId];
+  if (!cliente) throw new ErroUsuario("Cliente não encontrado.");
+
+  const r = solicitacaoSchema.safeParse(dadosBrutos);
+  if (!r.success) throw new ErroUsuario(r.error.issues[0]?.message || "Dados da solicitação inválidos.");
+  const d = r.data;
+  if (!cliente.unidades.includes(d.unidade)) throw new ErroUsuario("Selecione a unidade: matriz, filial ou todas.");
+  if (!cliente.publicos.some((x) => x.valor === d.publico)) throw new ErroUsuario("Selecione o público da solicitação.");
+  const cat = catalogoVigente(clienteId);
+  const errosItens = Object.values(validarItens(cat.servicos, d.itens, cliente));
+  if (errosItens.length) throw new ErroUsuario(errosItens[0]);
+  if (d.prazo.desejada < hojeSP(p.agora())) throw new ErroUsuario("A data desejada já passou. Escolha outra data.");
+
+  const itens = d.itens.map((it) => {
+    const s = cat.servicos.find((x) => x.cod === it.cod)!;
+    const n = normalizarItem(s, it);
+    return { ...n, nome: s.nome, varianteRotulo: s.variantes[it.variante].rotulo, sobOrcamento: exigeOrcamento(cat, it) };
+  });
+
+  const cfg = lerConfig(p);
+  const agora = p.agora();
+  const ano = hojeSP(agora).slice(0, 4);
+  const caminhoContador = `interno/contadores/protocolos/${clienteId}-${ano}`;
+
+  let protocolo = "";
+  for (let tentativa = 0; ; tentativa++) {
+    const cont = fs.ler(caminhoContador);
+    const n = Number(cont?.dados.n ?? 0) + 1;
+    protocolo = `${cliente.prefixo}-${ano}-${String(n).padStart(4, "0")}`;
+    const base = `clientes/${clienteId}`;
+    const ev = (sufixo: string, dados: Record<string, unknown>) => ({ caminho: `${base}/solicitacoes/${protocolo}/eventos/${agora.getTime()}-${sufixo}`, dados });
+    try {
+      fs.gravar([
+        { caminho: caminhoContador, dados: { n, atualizadoEm: agora }, ...(cont ? { seAtualizadoEm: cont.atualizadoEm } : { seNaoExiste: true }) },
+        {
+          caminho: `${base}/solicitacoes/${protocolo}`, seNaoExiste: true,
+          dados: {
+            protocolo, clienteId, titulo: d.titulo, solicitanteUid: u.uid, solicitanteNome: u.nome,
+            unidade: d.unidade, email: d.email, objetivo: d.objetivo, publico: d.publico, itens,
+            drive: { link: d.drive.link, conferido: true, verificado: false }, obs: d.obs,
+            prazo: { desejada: d.prazo.desejada, urgente: d.prazo.urgente },
+            status: "enviada", rodadas: 0, versao: 0, catalogoVersao: cat.versao,
+            criadoEm: agora, atualizadoEm: agora,
+          },
+        },
+        { caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
+        ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
+      ]);
+      break;
+    } catch (e) {
+      if (tentativa >= 2) throw e; // contador disputado: tenta de novo com o número seguinte
+    }
+  }
+
+  // Avisos por e-mail (falha de e-mail não desfaz o pedido; fica registrada no histórico).
+  try {
+    const destinatarios = fs.listar("usuarios").map((x) => x.dados as { nome: string; email: string; papel: string; clienteId: string | null; propaga?: boolean })
+      .filter((x) => DESTINO_AVISO.includes(x.papel) && (x.clienteId === clienteId || x.propaga));
+    const msg = emailNovaSolicitacao({
+      cliente: cliente.nomePortal, protocolo, titulo: d.titulo, solicitante: u.nome, unidade: d.unidade, publico: d.publico,
+      objetivo: d.objetivo, desejada: d.prazo.desejada, urgente: d.prazo.urgente,
+      itens: itens.map((i) => ({ qtd: i.qtd, nome: i.nome, detalhe: descreverItem(cat.servicos.find((s) => s.cod === i.cod)!, i), sobOrcamento: i.sobOrcamento })),
+      link: `${cfg.portalUrl}/inicio/`,
+    });
+    const avisados: string[] = [], falhas: string[] = [];
+    for (const x of destinatarios) {
+      try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); avisados.push(x.nome); }
+      catch (e) { falhas.push(x.nome); p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
+    }
+    const quando = p.agora();
+    fs.gravar([{
+      caminho: `clientes/${clienteId}/solicitacoes/${protocolo}/eventos/${quando.getTime()}-aviso`,
+      dados: {
+        em: quando, uid: "sistema", nome: "Sistema", chave: false,
+        rotulo: avisados.length ? `Aviso por e-mail enviado a ${avisados.join(", ")}` : "Nenhum destinatário de aviso cadastrado",
+        nota: falhas.length ? `Falha no envio para ${falhas.join(", ")}.` : "",
+      },
+    }]);
+  } catch (e) {
+    p.log(`Avisos da ${protocolo} falharam: ${(e as Error).message}`); // o pedido já está gravado
+  }
+  return { protocolo };
 }
