@@ -29,7 +29,7 @@ function Conteudo() {
         <div className="divide-y divide-gray-200 rounded border border-gray-200 bg-white px-4 md:px-5">
           {FAQ.map(([q, a]) => (
             <details key={q} className="group py-3.5">
-              <summary className="cursor-pointer font-semibold marker:text-orange-700">{q}</summary>
+              <summary className="cursor-pointer font-semibold marker:text-marca-700">{q}</summary>
               <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-gray-600">{a}</p>
             </details>
           ))}

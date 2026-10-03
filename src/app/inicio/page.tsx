@@ -32,7 +32,7 @@ function Conteudo() {
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <h2 className="text-lg">Precisa de uma peça ou campanha?</h2>
             <p className="text-sm text-gray-600">Escolha os serviços do catálogo, organize o briefing e envie para a Propaga.</p>
-            <a href="/nova-solicitacao/" className="inline-flex min-h-11 w-fit items-center rounded bg-orange-500 px-5 font-semibold text-ink-900 hover:brightness-105">Nova solicitação</a>
+            <a href="/nova-solicitacao/" className="inline-flex min-h-11 w-fit items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Nova solicitação</a>
           </section>
         )}
         <nav aria-label="Atalhos" className="grid grid-cols-1 gap-2 sm:grid-cols-2">

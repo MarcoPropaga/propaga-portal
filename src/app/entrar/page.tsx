@@ -56,7 +56,7 @@ export default function Entrar() {
         <Campo id="senha" rotulo="Senha" type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} erro={erro} />
         <Botao type="submit" carregando={enviando}>Entrar</Botao>
       </form>
-      <a href="/recuperar/" className="text-sm font-semibold text-orange-700 underline-offset-2 hover:underline">Esqueci minha senha</a>
+      <a href="/recuperar/" className="text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Esqueci minha senha</a>
     </TelaAcesso>
   );
 }

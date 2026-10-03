@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
-/* Tokens da marca Propaga (aprovados em 27/09/2026). Botão primário: laranja com texto grafite. */
+/* Tokens do portal. Botão primário: aqua com texto azul petróleo. */
 @theme {
-  --color-orange-500: #FF1B00;
-  --color-orange-700: #C81500;
-  --color-orange-100: #FFE3DE;
-  --color-ink-900: #141414;
-  --color-gray-200: #E9E9E9;
-  --color-paper: #F7F5F2;
-  --color-gray-600: #5F5A56;
+  /* Paleta B&M Log (aprovada por Marco em 03/10/2026): #003C57 e #55C5D0. */
+  --color-marca-900: #003C57;   /* azul petróleo: menu, títulos, texto forte */
+  --color-marca-700: #00708A;   /* texto/link de destaque (AA em fundo claro) */
+  --color-marca-500: #55C5D0;   /* aqua: botão primário, item ativo */
+  --color-marca-100: #DDF3F5;   /* fundos de destaque */
+  --color-ink-900: #003C57;
+  --color-paper: #F4F8F9;
+  --color-gray-200: #E2EAED;
+  --color-gray-600: #4E6670;
+  /* Estados (independentes da marca) */
+  --color-alerta-700: #B42318;  /* erro */
+  --color-alerta-100: #FDECEA;
+  --color-aviso-700: #7A4B00;   /* atenção: a cotar, pendente */
+  --color-aviso-100: #FFF1D6;
   --font-display: var(--font-outfit), "Segoe UI", system-ui, sans-serif;
   --font-sans: var(--font-hanken), "Segoe UI", system-ui, sans-serif;
   --radius-sm: 3px;

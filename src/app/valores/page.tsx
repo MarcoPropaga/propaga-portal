@@ -54,12 +54,12 @@ function Conteudo() {
             <span className="text-sm text-gray-600">{cat.servicos.length} serviços</span>
             <label htmlFor="busca" className="sr-only">Buscar serviço</label>
             <input id="busca" type="search" placeholder="Buscar serviço" value={busca} onChange={(e) => setBusca(e.target.value)}
-              className="ml-auto min-h-11 w-72 max-w-full rounded border border-[#D6D2CE] bg-white px-3" />
+              className="ml-auto min-h-11 w-72 max-w-full rounded border border-[#C9D7DC] bg-white px-3" />
           </div>
           <div className="flex flex-wrap gap-2" role="group" aria-label="Categorias">
             {[{ id: "todas", nome: "Todas" }, ...cat.categorias].map((c) => (
               <button key={c.id} type="button" aria-pressed={categoria === c.id} onClick={() => setCategoria(c.id)}
-                className={`rounded-full border px-3 py-1.5 text-sm ${categoria === c.id ? "border-ink-900 bg-ink-900 text-paper" : "border-[#D6D2CE] bg-white hover:border-ink-900"}`}>{c.nome}</button>
+                className={`rounded-full border px-3 py-1.5 text-sm ${categoria === c.id ? "border-ink-900 bg-ink-900 text-paper" : "border-[#C9D7DC] bg-white hover:border-ink-900"}`}>{c.nome}</button>
             ))}
           </div>
           {grupos.map(({ c, itens }) => (
@@ -68,9 +68,9 @@ function Conteudo() {
               <ul className="divide-y divide-gray-200 rounded border border-gray-200 bg-white">
                 {itens.map((x) => (
                   <li key={x.cod} className="grid gap-3 p-4 md:grid-cols-[56px_minmax(0,1fr)_minmax(0,300px)]">
-                    <span className="font-display text-sm font-semibold text-orange-700">{x.cod}</span>
+                    <span className="font-display text-sm font-semibold text-marca-700">{x.cod}</span>
                     <div className="grid min-w-0 gap-1"><b>{x.nome}</b><span className="text-sm text-gray-600">{x.descricao} {x.escopo}</span>
-                      {x.nota && <span className="text-sm font-semibold text-orange-700">{x.nota}</span>}</div>
+                      {x.nota && <span className="text-sm font-semibold text-alerta-700">{x.nota}</span>}</div>
                     <dl className="grid gap-1 text-sm">
                       {x.variantes.map((v, i) => (
                         <div key={i} className="flex justify-between gap-3 border-b border-dashed border-gray-200 pb-1 last:border-0">
@@ -83,8 +83,8 @@ function Conteudo() {
               </ul>
             </section>
           ))}
-          {!grupos.length && <p className="rounded border border-dashed border-[#D6D2CE] px-4 py-8 text-center text-gray-600">Nenhum serviço encontrado.</p>}
-          <p className="rounded bg-[#F1EEEA] px-4 py-3 text-sm leading-relaxed">Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte. Duas rodadas de ajustes consolidados por entrega.</p>
+          {!grupos.length && <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-8 text-center text-gray-600">Nenhum serviço encontrado.</p>}
+          <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte. Duas rodadas de ajustes consolidados por entrega.</p>
         </>}
       </div>
     </Casca>

@@ -44,9 +44,9 @@ export function CadastroTotp({ usuario, aoConcluir }: { usuario: User; aoConclui
       <div className="flex flex-wrap items-start gap-4">
         {s ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.qr} alt="Código QR para o aplicativo autenticador" width={160} height={160} className="rounded border border-[#D6D2CE]" />
+          <img src={s.qr} alt="Código QR para o aplicativo autenticador" width={160} height={160} className="rounded border border-[#C9D7DC]" />
         ) : falhaQr ? null : (
-          <div className="grid h-40 w-40 place-items-center rounded border border-[#D6D2CE] text-sm text-gray-600" aria-live="polite">Gerando código…</div>
+          <div className="grid h-40 w-40 place-items-center rounded border border-[#C9D7DC] text-sm text-gray-600" aria-live="polite">Gerando código…</div>
         )}
         {s && <p className="max-w-[24ch] text-sm text-gray-600">Sem câmera? Digite esta chave no aplicativo:<br /><b className="font-mono text-ink-900 tabular-nums">{s.chave}</b></p>}
       </div>

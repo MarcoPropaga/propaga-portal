@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "B&M Log", statusBarStyle: "black-translucent" },
 };
 
-export const viewport: Viewport = { themeColor: "#021A3B" };
+export const viewport: Viewport = { themeColor: "#003C57" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

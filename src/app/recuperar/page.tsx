@@ -29,7 +29,7 @@ export default function Recuperar() {
           <Botao type="submit" carregando={enviando}>Enviar link</Botao>
         </form>
       )}
-      <a href="/entrar/" className="text-sm font-semibold text-orange-700 hover:underline">Voltar para entrar</a>
+      <a href="/entrar/" className="text-sm font-semibold text-marca-700 hover:underline">Voltar para entrar</a>
     </TelaAcesso>
   );
 }

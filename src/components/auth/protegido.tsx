@@ -25,7 +25,7 @@ export function Protegido({ papeis, children }: { papeis?: Papel[]; children: Re
   }, [bloqueio, router, s]);
 
   if (bloqueio === "sem-permissao") {
-    return <main className="grid min-h-screen place-items-center p-6"><div className="grid max-w-md gap-3"><h1 className="text-2xl">Sem acesso a esta área</h1><p className="text-gray-600">Seu perfil não tem permissão para esta página.</p><a className="text-orange-700 underline" href="/inicio/">Voltar ao início</a></div></main>;
+    return <main className="grid min-h-screen place-items-center p-6"><div className="grid max-w-md gap-3"><h1 className="text-2xl">Sem acesso a esta área</h1><p className="text-gray-600">Seu perfil não tem permissão para esta página.</p><a className="text-marca-700 underline" href="/inicio/">Voltar ao início</a></div></main>;
   }
   if (bloqueio) return <main className="grid min-h-screen place-items-center text-gray-600" aria-busy="true">Carregando…</main>;
   return <>{children}</>;

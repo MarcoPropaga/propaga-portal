@@ -29,13 +29,13 @@ function Conteudo() {
     <Casca titulo="Arquivos no Drive">
       <div className="grid max-w-5xl gap-4">
         <p className="max-w-[75ch] text-gray-600">Cada solicitação tem uma pasta no Drive compartilhado da {CLIENTES[clienteId].nome}. O portal guarda os links; os arquivos ficam no Drive.</p>
-        <p className="rounded bg-[#F1EEEA] px-4 py-3 text-sm leading-relaxed">Estrutura padrão por pedido: <b>01 Briefing</b>, <b>02 Materiais</b>, <b>03 Provas</b> e <b>04 Aprovados</b>. Compartilhe só com o grupo da Propaga, nunca com link público.</p>
+        <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">Estrutura padrão por pedido: <b>01 Briefing</b>, <b>02 Materiais</b>, <b>03 Provas</b> e <b>04 Aprovados</b>. Compartilhe só com o grupo da Propaga, nunca com link público.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {lista && (
           <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full min-w-[640px] text-sm">
-              <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
+              <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
                 <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Solicitação</th><th className="px-3 py-2.5">Pasta</th><th className="px-3 py-2.5">Acesso</th></tr>
               </thead>
               <tbody>
@@ -46,7 +46,7 @@ function Conteudo() {
                     <td className="px-3 py-2.5"><a href={p.drive.link} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Abrir pasta<span className="sr-only"> de {p.protocolo} (abre em nova aba)</span></a></td>
                     <td className="px-3 py-2.5">{p.drive.verificado
                       ? <span className="rounded-full bg-[#E3F2EA] px-2.5 py-0.5 text-xs font-semibold text-[#1E7047]">Conferido pela Propaga</span>
-                      : <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">A conferir</span>}</td>
+                      : <span className="rounded-full bg-aviso-100 px-2.5 py-0.5 text-xs font-semibold text-aviso-700">A conferir</span>}</td>
                   </tr>
                 ))}
                 {!lista.length && <tr><td colSpan={4} className="px-3 py-8 text-center text-gray-600">Nenhuma pasta ainda. Elas aparecem aqui quando você envia uma solicitação.</td></tr>}
