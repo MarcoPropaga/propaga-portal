@@ -131,7 +131,7 @@ function Conteudo() {
           {!protocolo && porUnidade.length > 0 && (
             <section className="grid gap-2 break-inside-avoid" aria-labelledby="h-unidade">
               <h2 id="h-unidade" className="text-lg">Por unidade</h2>
-              <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+              <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
                 <table className="w-full text-sm">
                   <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600"><tr><th className="px-3 py-2.5">Unidade</th><th className="px-3 py-2.5 text-right">Pedidos</th><th className="px-3 py-2.5 text-right">Valor</th></tr></thead>
                   <tbody>{porUnidade.map(([u, x]) => <tr key={u} className="border-t border-gray-200"><td className="px-3 py-2.5">{u}</td><td className="px-3 py-2.5 text-right tabular-nums">{x.n}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(x.v)}</td></tr>)}</tbody>
@@ -142,7 +142,7 @@ function Conteudo() {
 
           <section className="grid gap-2" aria-labelledby="h-itens">
             <h2 id="h-itens" className="text-lg">Itens</h2>
-            <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+            <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
               <table className="w-full min-w-[860px] text-sm">
                 <thead className="bg-[#F1EEEA] text-left text-xs uppercase tracking-wide text-gray-600">
                   <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Serviço</th><th className="px-3 py-2.5 text-right">Qtd.</th><th className="px-3 py-2.5 text-right">Unitário</th>
