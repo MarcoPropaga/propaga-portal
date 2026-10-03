@@ -9,6 +9,8 @@ const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
+  { href: "/valores/", rotulo: "Valores" },
+  { href: "/relatorios/", rotulo: "Relatórios", papeis: ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"] },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
 ];
 
@@ -19,8 +21,8 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   const nomePortal = s.clienteId ? CLIENTES[s.clienteId]?.nomePortal : "Portal Propaga";
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
-    <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)]">
-      <aside className="flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:p-5" aria-label="Menu principal">
+    <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">
+      <aside className="print:hidden flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:p-5" aria-label="Menu principal">
         <div><Logo className="w-[150px]" /><span className="mt-1.5 block text-sm text-[#A8A29C]">{nomePortal}</span></div>
         <nav className="flex flex-wrap gap-1 md:grid">
           {ITENS.filter((i) => !i.papeis || (s.papel && i.papeis.includes(s.papel))).map((i) => {
@@ -34,7 +36,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           <button type="button" onClick={() => s.sair()} className="ml-auto rounded border border-white/20 px-2 py-1 text-xs">Sair</button>
         </div>
       </aside>
-      <main className="min-w-0 px-4 py-6 md:px-8 md:py-8">
+      <main className="min-w-0 px-4 py-6 md:px-8 md:py-8 print:p-0">
         <h1 className="mb-6 text-3xl">{titulo}</h1>
         {children}
       </main>

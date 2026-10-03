@@ -4,7 +4,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 
-const MODULOS = ["Valores", "Relatórios", "Contrato", "Arquivos no Drive"];
+const MODULOS = ["Contrato", "Arquivos no Drive", "Ajuda"];
 
 function Conteudo() {
   const s = useSessao();
