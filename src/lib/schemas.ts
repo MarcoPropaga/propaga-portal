@@ -33,3 +33,29 @@ export const solicitacaoSchema = z.object({
 });
 
 export type SolicitacaoInput = z.infer<typeof solicitacaoSchema>;
+
+/* Convite de usuário (somente admin). */
+export const PAPEIS_CLIENTE = ["solicitante", "financeiro_cliente"] as const;
+export const PAPEIS_PROPAGA = ["atendimento", "financeiro_propaga", "admin"] as const;
+
+export const conviteSchema = z
+  .object({
+    nome: z.string().trim().min(2, "Informe o nome.").max(80),
+    email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
+    papel: z.enum([...PAPEIS_CLIENTE, ...PAPEIS_PROPAGA], { message: "Escolha o perfil." }),
+    clienteId: z.string().trim().optional(),
+  })
+  .refine((d) => !(PAPEIS_CLIENTE as readonly string[]).includes(d.papel) || !!d.clienteId, {
+    message: "Perfis de cliente precisam de um cliente vinculado.",
+    path: ["clienteId"],
+  });
+
+export type ConviteInput = z.infer<typeof conviteSchema>;
+
+/* Regras de senha (iguais à política configurada no Firebase). */
+export const REGRAS_SENHA: { texto: string; ok: (s: string) => boolean }[] = [
+  { texto: "8 caracteres ou mais", ok: (s) => s.length >= 8 },
+  { texto: "Uma letra maiúscula", ok: (s) => /[A-Z]/.test(s) },
+  { texto: "Um número", ok: (s) => /\d/.test(s) },
+  { texto: "Um símbolo", ok: (s) => /[^A-Za-z0-9]/.test(s) },
+];

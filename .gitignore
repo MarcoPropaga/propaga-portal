@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# bundle gerado do Apps Script
+/apps-script/dist/
+.firebase/
+*-debug.log
