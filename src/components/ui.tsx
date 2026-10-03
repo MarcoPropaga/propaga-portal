@@ -56,9 +56,9 @@ export function TelaAcesso({ titulo, subtitulo, children, voltar }: { titulo: st
       <section className="flex flex-col gap-5 bg-ink-900 p-6 text-paper md:gap-7 md:p-12">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/selo-mkt-bmlog.png" alt="mkt B&M Log" width={104} height={104} className="size-[88px] md:size-[104px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
-        <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-marca-900">Portal de clientes</span>
+        <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-marca-900">Portal MKT B&M Log</span>
         <p className="max-w-[18ch] font-display text-2xl font-semibold leading-tight md:text-4xl">Solicitações, aprovações, entregas e relatórios.</p>
-        <p className="hidden max-w-[46ch] text-[#A9CBD6] md:block">Área exclusiva da B&M Log para solicitar serviços e acompanhar cada etapa.</p>
+        <p className="hidden max-w-[46ch] text-[#A9CBD6] md:block">Área exclusiva / Marketing B&M Log e Propaga</p>
       </section>
       <section className="grid place-items-center px-4 py-10 md:px-6">
         <div className="grid w-full max-w-[420px] gap-5">
