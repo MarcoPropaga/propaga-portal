@@ -3,13 +3,16 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
-import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
-import { VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
+import { NOMES_PAPEIS } from "@/content/clientes";
+import { VE_APROVACOES, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
+import { pendentePara } from "@/lib/pecas";
+import { usePedidos } from "@/lib/usarFila";
 
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
+  { href: "/aprovacoes/", rotulo: "Aprovações", papeis: VE_APROVACOES as string[] },
   { href: "/valores/", rotulo: "Jobs Propaga", papeis: VE_VALORES as string[] },
   { href: "/relatorios/", rotulo: "Relatórios", papeis: VE_RELATORIOS as string[] },
   { href: "/contrato/", rotulo: "Contrato", papeis: VE_CONTRATO as string[] },
@@ -22,7 +25,10 @@ const ITENS = [
 export function Casca({ titulo, children }: { titulo: string; children: ReactNode }) {
   const s = useSessao();
   const caminho = usePathname();
-  const nomePortal = s.clienteId ? CLIENTES[s.clienteId]?.nomePortal : "Portal Propaga";
+  const nomePortal = "Portal MKT B&M Log";
+  const veAprov = !!s.papel && (VE_APROVACOES as string[]).includes(s.papel);
+  const { lista } = usePedidos(veAprov);
+  const pend = (lista ?? []).flatMap((p) => p.pecas ?? []).filter((x) => pendentePara(s.papel, x)).length;
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">
@@ -36,7 +42,8 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           {ITENS.filter((i) => !i.papeis || (s.papel && i.papeis.includes(s.papel))).map((i) => {
             const atual = caminho === i.href || (i.href === "/solicitacoes/" && caminho.startsWith("/solicitacoes/"));
             return <a key={i.href} href={i.href} aria-current={atual ? "page" : undefined}
-              className={`rounded px-3 py-2.5 font-medium ${atual ? "bg-marca-500 text-ink-900" : "hover:bg-white/10"}`}>{i.rotulo}</a>;
+              className={`flex items-center gap-2 rounded px-3 py-2.5 font-medium ${atual ? "bg-marca-500 text-ink-900" : "hover:bg-white/10"}`}>{i.rotulo}
+              {i.href === "/aprovacoes/" && pend > 0 && <span className="ml-auto inline-grid h-[22px] min-w-[22px] place-items-center rounded-full bg-alerta-700 px-1.5 text-xs font-semibold tabular-nums text-white" aria-label={`${pend} pendentes`}>{pend}</span>}</a>;
           })}
         </nav>
         <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-3">

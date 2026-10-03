@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { NOME_STATUS } from "@/lib/fluxo";
 import type { Status } from "@/lib/tipos";
+import type { Peca } from "@/lib/pecas";
 
 export const brData = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 export const brDataHora = (v: unknown) => {
@@ -43,5 +44,6 @@ export interface PedidoDoc {
   prazo: { desejada: string; urgente: boolean; inicio?: string; primeira?: string; final?: string; entrega?: string };
   rodadas: number; versao: number; catalogoVersao: string; recebidoPeloCliente?: boolean;
   refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
+  temPecas?: boolean; pecas?: Peca[];
   criadoEm: unknown; atualizadoEm: unknown;
 }

@@ -27,7 +27,8 @@ export const REGRA_REFACAO = "Até 2 refações estão incluídas. A partir da 3
 
 /** Fração do valor do pedido que entra na cobrança: 1 normal (+30% por refação extra cobrada),
     0,5 se cancelado após apresentação, 0 se cancelado antes. */
-export function fatorCobranca(p: { status: Status; versao?: number; refacoesExtrasCobradas?: number }): number {
+export function fatorCobranca(p: { status: Status; versao?: number; refacoesExtrasCobradas?: number; temPecas?: boolean }): number {
+  if (p.temPecas) return 1; // com peças, 50% e +30% são calculados por peça (ajustePecas)
   if (p.status === "cancelada") return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
   return 1 + ACRESCIMO_REFACAO_EXTRA * (p.refacoesExtrasCobradas ?? 0);
 }
@@ -93,5 +94,7 @@ export const VE_VALORES_PEDIDO: Papel[] = ["financeiro_cliente", "atendimento", 
 export const VE_CONTRATO: Papel[] = ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
 /** Quem vê Arquivos no Drive (os financeiros não, decisão de 03/10). */
 export const VE_ARQUIVOS: Papel[] = ["solicitante", "atendimento", "criativo", "admin"];
+/** Quem usa Aprovações (Débora avalia, Marcelo orienta e revisa, Mariane executa). */
+export const VE_APROVACOES: Papel[] = ["solicitante", "atendimento", "criativo", "admin"];
 /** Quem vê a tabela de Valores (o Criativo não vê preços). */
 export const VE_VALORES: Papel[] = ["solicitante", "financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
