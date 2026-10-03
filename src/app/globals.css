@@ -26,6 +26,14 @@
 body { background: var(--color-paper); color: var(--color-ink-900); font-family: var(--font-sans); }
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; }
 :focus-visible { outline: 2px solid var(--color-ink-900); outline-offset: 2px; }
+/* Campos de preenchimento (Marco, 03/10): sem contorno escuro; foco em aqua com halo azul claro. */
+input:not([type="checkbox"]):not([type="radio"]):focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 3px solid rgb(85 197 208 / 0.4); outline-offset: 0; border-color: var(--color-marca-500);
+}
+input[aria-invalid="true"]:focus-visible, textarea[aria-invalid="true"]:focus-visible, select[aria-invalid="true"]:focus-visible {
+  outline-color: rgb(180 35 24 / 0.25); border-color: var(--color-alerta-700);
+}
+input::placeholder, textarea::placeholder { color: #7C949E; opacity: 1; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 
 @media print { @page { margin: 14mm; } body { background: #fff; } }

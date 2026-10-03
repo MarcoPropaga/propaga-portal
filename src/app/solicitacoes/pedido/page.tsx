@@ -87,7 +87,7 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
 
   const ocupado = envio.tipo === "aguardando" || envio.tipo === "ok";
   return (
-    <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-ink-900 bg-white p-4 md:p-5" aria-labelledby="form-acao-titulo">
+    <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-marca-500 bg-white p-4 md:p-5" aria-labelledby="form-acao-titulo">
       <h3 id="form-acao-titulo" className="text-base">{REGRAS[acao].rotulo}</h3>
       {AJUDA[acao] && <p className="text-sm text-gray-600">{AJUDA[acao]}</p>}
       {acao === "cancelar" && (pedido.versao || 0) > 0 && (
