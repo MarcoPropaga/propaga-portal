@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { catalogoBmlogV1 as cat } from "@/content/catalogos/bmlog-v1.0";
 import { precoCliente, calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
-import { aplicar, podeExecutar } from "@/lib/fluxo";
+import { acoesDisponiveis, aplicar, podeExecutar } from "@/lib/fluxo";
 import { somarDiasUteis } from "@/lib/datas";
 import { solicitacaoSchema } from "@/lib/schemas";
 
@@ -44,23 +44,37 @@ describe("preços (cláusula 4)", () => {
   });
 });
 
-describe("fluxo do pedido", () => {
-  const ctx = { temOrcamento: false, rodadas: 0 };
-  it("só catálogo: cronograma confirmado vai direto para produção", () => {
-    expect(aplicar("confirmarCronograma", "validacao", "atendimento", ctx)).toBe("producao");
+describe("fluxo do pedido (decisão de 03/10: sem aceite do cliente)", () => {
+  const ctx = { rodadas: 0 };
+  it("Atendimento aceita o pedido e ele vai direto para produção", () => {
+    expect(aplicar("aceitarPedido", "enviada", "atendimento", ctx)).toBe("producao");
+    expect(podeExecutar("aceitarPedido", "enviada", "solicitante", ctx)).toBe(false);
+    expect(podeExecutar("aceitarPedido", "enviada", "financeiro_cliente", ctx)).toBe(false);
   });
-  it("com orçamento: vai para aceite do financeiro do cliente", () => {
-    expect(aplicar("confirmarCronograma", "validacao", "atendimento", { ...ctx, temOrcamento: true })).toBe("aceite");
-    expect(podeExecutar("aceitarOrcamento", "aceite", "financeiro_cliente", ctx)).toBe(true);
-    expect(podeExecutar("aceitarOrcamento", "aceite", "admin", ctx)).toBe(false);
-    expect(podeExecutar("aceitarOrcamento", "aceite", "solicitante", ctx)).toBe(false);
+  it("Financeiro do cliente não executa nenhuma ação", () => {
+    for (const s of ["enviada", "producao", "apresentacao", "aprovada", "entregue", "faturada"] as const) {
+      expect(acoesDisponiveis(s, "financeiro_cliente", ctx)).toEqual([]);
+    }
   });
-  it("limita a 2 rodadas de ajuste", () => {
-    expect(podeExecutar("pedirAjustes", "apresentacao", "solicitante", { ...ctx, rodadas: 2 })).toBe(false);
+  it("versão → ajustes (até 2 rodadas) ou aprovação", () => {
+    expect(aplicar("disponibilizarVersao", "producao", "atendimento", ctx)).toBe("apresentacao");
+    expect(aplicar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 1 })).toBe("producao");
+    expect(podeExecutar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 2 })).toBe(false);
+    expect(aplicar("aprovar", "apresentacao", "solicitante", ctx)).toBe("aprovada");
   });
-  it("solicitante não cancela depois da produção", () => {
+  it("entrega, recebimento (uma vez), faturamento e pagamento", () => {
+    expect(aplicar("entregar", "aprovada", "atendimento", ctx)).toBe("entregue");
+    expect(aplicar("confirmarRecebimento", "entregue", "solicitante", ctx)).toBe("entregue");
+    expect(podeExecutar("confirmarRecebimento", "entregue", "solicitante", { rodadas: 0, recebidoPeloCliente: true })).toBe(false);
+    expect(aplicar("faturar", "entregue", "financeiro_propaga", ctx)).toBe("faturada");
+    expect(aplicar("registrarPagamento", "faturada", "financeiro_propaga", ctx)).toBe("paga");
+  });
+  it("cancelamento: solicitante e atendimento só antes da produção; admin até a aprovação", () => {
+    expect(podeExecutar("cancelar", "enviada", "solicitante", ctx)).toBe(true);
     expect(podeExecutar("cancelar", "producao", "solicitante", ctx)).toBe(false);
-    expect(podeExecutar("cancelar", "producao", "admin", ctx)).toBe(true);
+    expect(podeExecutar("cancelar", "producao", "atendimento", ctx)).toBe(false);
+    expect(podeExecutar("cancelar", "aprovada", "admin", ctx)).toBe(true);
+    expect(podeExecutar("cancelar", "entregue", "admin", ctx)).toBe(false);
   });
   it("bloqueia ação fora do perfil", () => {
     expect(() => aplicar("faturar", "entregue", "solicitante", ctx)).toThrow();

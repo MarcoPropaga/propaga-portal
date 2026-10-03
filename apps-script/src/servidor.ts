@@ -10,6 +10,7 @@ import { hojeSP } from "@/lib/datas";
 import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { emailConvite, emailNovaSolicitacao } from "./emails";
+import { executarAcao } from "./acoes";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
 import { ErroUsuario, type Plataforma } from "./plataforma";
@@ -113,7 +114,7 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
   // O perfil vem do cadastro gravado pelo servidor, nunca do pedido.
   const usuario = fs.ler(`usuarios/${uid}`);
   if (!usuario) throw new ErroUsuario("Usuário sem cadastro no portal.");
-  const u = usuario.dados as { nome: string; papel: string; email: string; clienteId: string | null };
+  const u = usuario.dados as { nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean };
 
   switch (tipo) {
     case "convidar":
@@ -124,6 +125,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
     }
     case "enviar":
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
+    case "acao":
+      return executarAcao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     default:
       throw new ErroUsuario("Esta ação ainda não está disponível.");
   }
@@ -131,7 +134,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
 
 /* ---------------- Nova solicitação ---------------- */
 
-const DESTINO_AVISO = ["solicitante", "financeiro_cliente", "atendimento", "financeiro_propaga"];
+/** Nova solicitação avisa: quem enviou (confirmação), o Atendimento e o Admin (decisão de 03/10/2026). */
+const DESTINO_AVISO = ["atendimento", "admin"];
 
 /** Valida de novo no servidor, numera o protocolo, grava pedido + valores + eventos e avisa por e-mail. */
 export function enviarSolicitacao(
@@ -197,13 +201,13 @@ export function enviarSolicitacao(
 
   // Avisos por e-mail (falha de e-mail não desfaz o pedido; fica registrada no histórico).
   try {
-    const destinatarios = fs.listar("usuarios").map((x) => x.dados as { nome: string; email: string; papel: string; clienteId: string | null; propaga?: boolean })
-      .filter((x) => DESTINO_AVISO.includes(x.papel) && (x.clienteId === clienteId || x.propaga));
+    const destinatarios = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as { nome: string; email: string; papel: string; propaga?: boolean }) }))
+      .filter((x) => x.uid === u.uid || (x.propaga && DESTINO_AVISO.includes(x.papel)));
     const msg = emailNovaSolicitacao({
       cliente: cliente.nomePortal, protocolo, titulo: d.titulo, solicitante: u.nome, unidade: d.unidade, publico: d.publico,
       objetivo: d.objetivo, desejada: d.prazo.desejada, urgente: d.prazo.urgente,
       itens: itens.map((i) => ({ qtd: i.qtd, nome: i.nome, detalhe: descreverItem(cat.servicos.find((s) => s.cod === i.cod)!, i), sobOrcamento: i.sobOrcamento })),
-      link: `${cfg.portalUrl}/inicio/`,
+      link: `${cfg.portalUrl}/solicitacoes/pedido/?p=${encodeURIComponent(protocolo)}`,
     });
     const avisados: string[] = [], falhas: string[] = [];
     for (const x of destinatarios) {

@@ -33,13 +33,13 @@ export interface Catalogo {
 /** Papéis por cliente (Anexo A2 da minuta). */
 export type Papel =
   | "solicitante"          // Débora — solicita, acompanha, aprova conteúdo
-  | "financeiro_cliente"   // Mariana — relatórios, aceite de orçamento
-  | "atendimento"          // Marcelo — recebe, orça, cronograma, versões, entrega
+  | "financeiro_cliente"   // Mariana — consulta relatórios (sem ações no fluxo)
+  | "atendimento"          // Marcelo — aceita o pedido, cronograma, valor dos itens a cotar, versões, entrega
   | "financeiro_propaga"   // Marisa — relatórios, faturamento, pagamento
   | "admin";               // Marco — acesso geral, catálogo, usuários
 
 export type Status =
-  | "rascunho" | "enviada" | "validacao" | "aceite" | "producao"
+  | "rascunho" | "enviada" | "producao"
   | "apresentacao" | "aprovada" | "entregue" | "faturada" | "paga" | "cancelada";
 
 export interface ItemSolicitacao {

@@ -53,6 +53,20 @@ export function emailNovaSolicitacao(o: {
   return { assunto, texto, html };
 }
 
+/** Aviso de mudança num pedido (sem valores). */
+export function emailAtualizacao(o: { cliente: string; protocolo: string; titulo: string; rotulo: string; nota: string; autor: string; etapa: string; link: string }) {
+  const assunto = `${o.protocolo} · ${o.rotulo}`;
+  const texto = [`${o.cliente} · ${o.protocolo} · ${o.titulo}`, ``, `${o.rotulo} (por ${o.autor}).`, o.nota ? `\n${o.nota}` : "",
+    ``, `Etapa atual: ${o.etapa}`, `Abrir o pedido: ${o.link}`, ``, `Propaga · Comunicação com Inteligência Aplicada`].join("\n");
+  const html = moldura(`
+<p style="margin:0 0 6px;font-size:13px;color:#5F5A56">${esc(o.cliente)} · ${esc(o.protocolo)}</p>
+<h1 style="margin:0 0 12px;font-size:22px">${esc(o.rotulo)}</h1>
+<p style="margin:0 0 12px;line-height:1.55"><b>${esc(o.titulo)}</b><br><span style="color:#5F5A56">por ${esc(o.autor)} · etapa atual: ${esc(o.etapa)}</span></p>
+${o.nota ? `<p style="margin:0 0 16px;line-height:1.55;background:#F7F5F2;padding:12px 14px;border-radius:4px;white-space:pre-wrap">${esc(o.nota)}</p>` : ""}
+<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:#FF1B00;color:#141414;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir o pedido</a></p>`);
+  return { assunto, texto, html };
+}
+
 export function emailConvite(o: { nome: string; link: string; cliente: string; convidadoPor: string }) {
   const assunto = `Seu acesso ao ${o.cliente}`;
   const texto = [
