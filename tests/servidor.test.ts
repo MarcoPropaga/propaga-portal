@@ -166,7 +166,7 @@ describe("nova solicitação (fila 'enviar')", () => {
     expect(v.total).toBeGreaterThan(0);
     const evs = [...f.docs.keys()].filter((k) => k.startsWith("clientes/bmlog/solicitacoes/BML-2026-0001/eventos/"));
     expect(evs).toHaveLength(2);
-    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "financeiro@bmlog.com.br", "marcelo@propaga.com"]);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "marcelo@propaga.com", "marco@propaga.com"]);
     expect(f.emails[0].assunto).toBe("Nova solicitação BML-2026-0001 · Campanha de segurança");
     expect(f.emails[0].html).not.toMatch(/R\$/);
     expect(f.emails[0].html).toContain("sob orçamento");
@@ -189,5 +189,83 @@ describe("nova solicitação (fila 'enviar')", () => {
     expect(f.doc(`fila/${d}`).mensagem).toMatch(/unidade/);
     expect(f.doc(`fila/${e}`).mensagem).toMatch(/já passou/);
     expect(f.emails).toHaveLength(0);
+  });
+});
+
+describe("ações do pedido (fila 'acao')", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, deb: string, mar: string, mcl: string, mrs: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `x${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const acao = (uid: string, acao: string, extra: Record<string, unknown> = {}) => fila("acao", uid, { protocolo: "BML-2026-0001", acao, ...extra });
+  const ped = () => f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+  const cron = { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" };
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidar(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mar = convidar(f.p, { nome: "Mariana Fontora", email: "financeiro@bmlog.com.br", papel: "financeiro_cliente", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    mrs = convidar(f.p, { nome: "Marisa Coelho", email: "marisa@propaga.com", papel: "financeiro_propaga" }, { uid: adm, nome: "Marco" }).uid;
+    fila("enviar", deb, {
+      titulo: "Campanha", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos",
+      itens: [{ cod: "01", variante: 0, qtd: 2, opcao: "4:5" }, { cod: "02", variante: 1, qtd: 1, opcao: "1:1" }],
+      drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+    });
+    f.emails.length = 0;
+  });
+
+  it("ciclo completo: aceite com valor a cotar, versão, ajuste, aprovação, entrega, recebimento, faturamento e pagamento", () => {
+    expect(acao(mcl, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/valor do item 2/);
+    expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 510 }], driveVerificado: true }).status).toBe("ok");
+    expect(ped().status).toBe("producao");
+    expect(ped().prazo.primeira).toBe("2026-10-09");
+    const v = f.doc("clientes/bmlog/valores/BML-2026-0001");
+    expect(v.pendencias).toBe(0);
+    expect(v.total).toBe(850); // 2 × 170 + 510
+    expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
+    expect(f.emails[0].html).not.toContain("510");
+
+    acao(mcl, "disponibilizarVersao", { nota: "Versão 1 na pasta 03 Provas." });
+    expect(ped().status).toBe("apresentacao");
+    expect(acao(deb, "pedirAjustes", {}).mensagem).toMatch(/Descreva os ajustes/);
+    acao(deb, "pedirAjustes", { nota: "Aumentar o logo." });
+    expect(ped().rodadas).toBe(1);
+    acao(mcl, "disponibilizarVersao", {});
+    expect(ped().versao).toBe(2);
+    acao(deb, "aprovar");
+    expect(ped().status).toBe("aprovada");
+    f.emails.length = 0;
+    acao(mcl, "entregar");
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "marisa@propaga.com"]);
+    acao(deb, "confirmarRecebimento");
+    expect(ped().recebidoPeloCliente).toBe(true);
+    expect(acao(deb, "confirmarRecebimento").status).toBe("erro");
+    acao(mrs, "faturar", { nota: "NF 1234" });
+    acao(mrs, "registrarPagamento");
+    expect(ped().status).toBe("paga");
+    const evs = [...f.docs.keys()].filter((k) => k.includes("/BML-2026-0001/eventos/"));
+    expect(evs.length).toBe(11); // envio + aviso + 9 ações válidas
+  });
+
+  it("bloqueios: Financeiro do cliente não age, solicitante não aceita, outro cliente não mexe", () => {
+    expect(acao(mar, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
+    expect(acao(deb, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
+    expect(acao(mcl, "aprovar").mensagem).toMatch(/não está disponível/);
+    const outro = convidar(f.p, { nome: "Outra", email: "o@x.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "M" }).uid;
+    expect(acao(outro, "cancelar", { nota: "teste" }).mensagem).toMatch(/não é seu/);
+    expect(ped().status).toBe("enviada");
+  });
+
+  it("cancelamento exige motivo e avisa solicitante e atendimento", () => {
+    expect(acao(deb, "cancelar").mensagem).toMatch(/motivo/);
+    acao(deb, "cancelar", { nota: "Campanha adiada." });
+    expect(ped().status).toBe("cancelada");
+    expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
   });
 });

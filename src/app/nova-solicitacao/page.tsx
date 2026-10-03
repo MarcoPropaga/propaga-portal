@@ -131,7 +131,7 @@ function ItemServico({ i, it, cat, cliente, erros, onChange, onRemover }: {
         </div>
       )}
       <Nota tipo={sobOrcamento ? "alerta" : "info"}>
-        {sobOrcamento && <b className="block">Item sob orçamento: a Propaga avalia o escopo e envia o orçamento antes do aceite.</b>}
+        {sobOrcamento && <b className="block">Item a cotar: a Propaga define o valor conforme o contrato ao aceitar o pedido.</b>}
         <span>{s.escopo} Criação e ativos gerados pela Propaga incluídos.{s.video ? " Vídeos destinam-se às TVs internas; redes sociais dependem de solicitação expressa." : ""}</span>
         {s.nota && <b className="mt-1 block text-orange-700">{s.nota}</b>}
         {s.video && it.canal && it.canal !== cliente.canaisVideo[0] && <b className="mt-1 block">Publicação em redes sociais exige solicitação expressa e verificação de direitos de uso.</b>}
@@ -274,12 +274,14 @@ function Conteudo() {
             <p>A Propaga recebeu sua solicitação. As pessoas responsáveis foram avisadas por e-mail.</p>
             <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-gray-600">
               <li>A Propaga confere o briefing e o acesso à pasta do Drive.</li>
-              <li>Você recebe o cronograma. Itens sob orçamento passam pelo aceite do Financeiro antes da produção.</li>
+              <li>A Propaga aceita o pedido e confirma o cronograma. A produção começa.</li>
               <li>As versões chegam para aprovação, com até 2 rodadas de ajuste.</li>
             </ol>
           </section>
-          <Aviso>O acompanhamento das etapas entra no portal na próxima atualização. Até lá, a Propaga mantém você informado por e-mail.</Aviso>
-          <Botao className="justify-self-start" onClick={() => { setR(vazio(s.usuario?.email ?? "")); setErros({}); setEnvio({ tipo: "ocioso" }); }}>Nova solicitação</Botao>
+          <div className="flex flex-wrap gap-3">
+          <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(envio.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-ink-900 bg-white px-5 font-semibold">Acompanhar este pedido</a>
+          <Botao onClick={() => { setR(vazio(s.usuario?.email ?? "")); setErros({}); setEnvio({ tipo: "ocioso" }); }}>Nova solicitação</Botao>
+          </div>
         </div>
       </Casca>
     );
@@ -379,10 +381,10 @@ function Conteudo() {
             </label>
           </div>
           {r.prazo.urgente
-            ? <Nota tipo="alerta">Pedido urgente: a Propaga confirma um cronograma individual. Urgência não significa aceite automático nem acréscimo sem aprovação.</Nota>
+            ? <Nota tipo="alerta">Pedido urgente: a Propaga confirma um cronograma individual. Urgência não significa entrega garantida na data desejada.</Nota>
             : r.prazo.desejada && r.prazo.desejada >= hoje && r.prazo.desejada < primeira &&
               <Nota tipo="alerta">A data desejada ({brData(r.prazo.desejada)}) é anterior à primeira apresentação possível no prazo padrão ({brData(primeira)}). Marque o pedido como urgente ou ajuste a data.</Nota>}
-          <Nota>O prazo conta a partir do briefing completo, dos materiais acessíveis e do aceite de escopo, preço e prazo. Projetos complexos ou com muitas peças recebem cronograma confirmado pela Propaga. Feriados nacionais já considerados.</Nota>
+          <Nota>O prazo conta a partir do briefing completo, dos materiais acessíveis e do aceite do pedido pela Propaga. Projetos complexos ou com muitas peças recebem cronograma confirmado pela Propaga. Feriados nacionais já considerados.</Nota>
         </Secao>
 
         <Secao n={6} chave="resumo" titulo="Resumo antes do envio" extra={<span className="rounded-full bg-[#E3F2EA] px-3 py-1 text-xs font-semibold text-[#1E7047]">Catálogo v{cat.versao} · {cat.status}</span>}>
@@ -400,7 +402,7 @@ function Conteudo() {
                       <tr key={i} className="border-t border-gray-200">
                         <td className="px-3 py-2.5 tabular-nums">{it.qtd}×</td>
                         <td className="px-3 py-2.5"><b>{sv.nome}</b><div className="text-gray-600">{sv.cod} · {det}</div></td>
-                        <td className="px-3 py-2.5">{v?.preco == null ? <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">Sob orçamento</span> : <span className="text-gray-600">Catálogo</span>}</td>
+                        <td className="px-3 py-2.5">{v?.preco == null ? <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">A cotar</span> : <span className="text-gray-600">Catálogo</span>}</td>
                       </tr>
                     );
                   })}
@@ -408,8 +410,8 @@ function Conteudo() {
               </table>
             </div>
           ) : <p className="rounded border border-dashed border-[#D6D2CE] px-4 py-6 text-center text-sm text-gray-600">Adicione ao menos um serviço na seção 02.</p>}
-          <Nota><b>Prazo:</b> {PRAZO_PADRAO_DIAS_UTEIS} dias úteis após a validação do briefing e o aceite (1ª apresentação prevista para {brData(primeira)}, se aceito hoje).</Nota>
-          <Nota>Os preços ficam no menu Valores {cliente.nome} e nos Relatórios.{pendentes ? ` ${pendentes > 1 ? "Os itens sob orçamento recebem" : "O item sob orçamento recebe"} valor da Propaga antes do aceite.` : ""}</Nota>
+          <Nota><b>Prazo:</b> {PRAZO_PADRAO_DIAS_UTEIS} dias úteis após o aceite do pedido pela Propaga (1ª apresentação prevista para {brData(primeira)}, se aceito hoje).</Nota>
+          <Nota>Os preços ficam no menu Valores {cliente.nome} e nos Relatórios.{pendentes ? ` ${pendentes > 1 ? "Os itens a cotar recebem" : "O item a cotar recebe"} valor da Propaga conforme o contrato.` : ""}</Nota>
 
           {listaErros.length > 0 && (
             <div ref={caixaErros} role="alert" className="rounded bg-orange-100 px-4 py-3 text-sm text-[#7A1A0C]">

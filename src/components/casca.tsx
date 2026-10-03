@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui";
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
+  { href: "/solicitacoes/", rotulo: "Solicitações" },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
 ];
 
@@ -23,7 +24,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
         <div><Logo className="w-[150px]" /><span className="mt-1.5 block text-sm text-[#A8A29C]">{nomePortal}</span></div>
         <nav className="flex flex-wrap gap-1 md:grid">
           {ITENS.filter((i) => !i.papeis || (s.papel && i.papeis.includes(s.papel))).map((i) => {
-            const atual = caminho === i.href;
+            const atual = caminho === i.href || (i.href === "/solicitacoes/" && caminho.startsWith("/solicitacoes/"));
             return <a key={i.href} href={i.href} aria-current={atual ? "page" : undefined}
               className={`rounded px-3 py-2.5 font-medium ${atual ? "bg-orange-500 text-ink-900" : "hover:bg-white/10"}`}>{i.rotulo}</a>;
           })}
