@@ -36,6 +36,7 @@ export type Papel =
   | "financeiro_cliente"   // Mariana — consulta relatórios (sem ações no fluxo)
   | "atendimento"          // Marcelo — aceita o pedido, cronograma, valor dos itens a cotar, versões, entrega
   | "financeiro_propaga"   // Marisa — relatórios, faturamento, pagamento
+  | "criativo"             // Mariane — criativo Propaga: lê pedidos e refações, sem valores e sem ações
   | "admin";               // Marco — acesso geral, catálogo, usuários
 
 export type Status =

@@ -27,7 +27,7 @@ service cloud.firestore {
       allow write: if false;
 
       match /catalogo/{versao} {
-        allow read: if membro(c);
+        allow read: if membro(c) && papel() != 'criativo';
         allow write: if false;
       }
 

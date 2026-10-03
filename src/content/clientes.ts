@@ -54,5 +54,6 @@ export const NOMES_PAPEIS: Record<string, string> = {
   financeiro_cliente: "Financeiro do cliente",
   atendimento: "Atendimento Propaga",
   financeiro_propaga: "Financeiro Propaga",
+  criativo: "Criativo Propaga",
   admin: "Administrador",
 };
