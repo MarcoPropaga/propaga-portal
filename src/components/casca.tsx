@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
-import { Logo } from "@/components/ui";
 
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
@@ -26,7 +25,11 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">
       <aside className="print:hidden flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:p-5" aria-label="Menu principal">
-        <div><Logo className="w-[150px]" /><span className="mt-1.5 block text-sm text-[#A9CBD6]">{nomePortal}</span></div>
+        <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-mkt-bmlog.svg" alt="mkt B&M Log" className="h-auto w-[190px]" />
+          <span className="mt-2 block text-sm text-[#A9CBD6]">{nomePortal}</span>
+        </div>
         <nav className="flex flex-wrap gap-1 md:grid">
           {ITENS.filter((i) => !i.papeis || (s.papel && i.papeis.includes(s.papel))).map((i) => {
             const atual = caminho === i.href || (i.href === "/solicitacoes/" && caminho.startsWith("/solicitacoes/"));
