@@ -30,11 +30,13 @@ function Conteudo() {
   }, [clienteId, s.papel, s.usuario]);
 
   const filtrada = useMemo(() => (lista ?? []).filter((p) => {
+    // O criativo só recebe o pedido depois que o Atendimento aceita (Débora → Marcelo → Mariane).
+    if (s.papel === "criativo" && p.status === "enviada") return false;
     if (etapa === "abertas" && ["paga", "cancelada"].includes(p.status)) return false;
     if (etapa !== "abertas" && etapa !== "todas" && p.status !== etapa) return false;
     const t = busca.trim().toLowerCase();
     return !t || [p.protocolo, p.titulo, p.unidade, p.solicitanteNome].some((x) => x?.toLowerCase().includes(t));
-  }), [lista, etapa, busca]);
+  }), [lista, etapa, busca, s.papel]);
 
   const podeSolicitar = s.papel === "solicitante" || s.papel === "admin";
   return (

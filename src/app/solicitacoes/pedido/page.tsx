@@ -227,6 +227,7 @@ function Conteudo() {
   }, [protocolo, clienteId, veValores]);
 
   if (pedido === undefined) return <Casca titulo="Solicitação"><p className="text-gray-600" aria-busy="true">Carregando…</p></Casca>;
+  if (pedido && s.papel === "criativo" && pedido.status === "enviada") return <Casca titulo="Solicitação"><Aviso>Este pedido ainda está com o Atendimento. Ele aparece para você quando o Marcelo aceitar.</Aviso></Casca>;
   if (pedido === null) return <Casca titulo="Solicitação"><Aviso tipo="erro">Pedido não encontrado ou sem acesso para o seu perfil.</Aviso><a href="/solicitacoes/" className="mt-4 inline-block underline">Voltar para Solicitações</a></Casca>;
 
   const acoes = s.papel ? acoesDisponiveis(pedido.status, s.papel as Papel, { rodadas: pedido.rodadas || 0, recebidoPeloCliente: pedido.recebidoPeloCliente })
