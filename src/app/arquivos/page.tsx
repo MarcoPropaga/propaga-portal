@@ -22,7 +22,7 @@ function Conteudo() {
   useEffect(() => {
     const col = collection(db(), "clientes", clienteId, "solicitacoes");
     const q = s.papel === "solicitante" ? query(col, where("solicitanteUid", "==", s.usuario!.uid)) : col;
-    return onSnapshot(q, (snap) => setLista(snap.docs.map((d) => d.data() as PedidoDoc).filter((p) => p.status !== "cancelada").sort((a, b) => ms(b.criadoEm) - ms(a.criadoEm))),
+    return onSnapshot(q, (snap) => setLista(snap.docs.map((d) => d.data() as PedidoDoc).filter((p) => p.status !== "cancelada" && !(s.papel === "criativo" && p.status === "enviada")).sort((a, b) => ms(b.criadoEm) - ms(a.criadoEm))),
       () => setErro("Não foi possível carregar as pastas."));
   }, [clienteId, s.papel, s.usuario]);
 

@@ -1,7 +1,8 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { onIdTokenChanged, multiFactor, signOut, type User } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { doc, onSnapshot } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import type { Papel } from "@/lib/tipos";
 
 export interface Sessao {
@@ -38,6 +39,17 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       entrouComSegundoFator: !!fb?.sign_in_second_factor,
     });
   }), []);
+
+  // Perfil alterado pelo administrador: o cadastro muda na hora; renova a credencial para o menu
+  // e as permissões refletirem o novo perfil sem precisar sair e entrar de novo.
+  const uid = s.usuario?.uid, papel = s.papel;
+  useEffect(() => {
+    if (!uid) return;
+    return onSnapshot(doc(db(), "usuarios", uid), (d) => {
+      const novo = d.data()?.papel;
+      if (novo && novo !== papel) auth().currentUser?.getIdToken(true).catch(() => {});
+    }, () => {});
+  }, [uid, papel]);
 
   return <Ctx.Provider value={{ ...s, sair: () => signOut(auth()) }}>{children}</Ctx.Provider>;
 }
