@@ -4,15 +4,15 @@ import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
 import { NOMES_PAPEIS } from "@/content/clientes";
-import { VE_APROVACOES, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
-import { aguardaCriacao, pendentePara } from "@/lib/pecas";
+import { VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
+import { contarPendencias } from "@/lib/pecas";
 import { usePedidos } from "@/lib/usarFila";
 
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
-  { href: "/aprovacoes/", rotulo: "Aprovações", papeis: VE_APROVACOES as string[] },
+  { href: "/aprovacoes/", rotulo: "Minhas tarefas", papeis: VE_TAREFAS as string[] },
   { href: "/valores/", rotulo: "Jobs Propaga", papeis: VE_VALORES as string[] },
   { href: "/relatorios/", rotulo: "Relatórios", papeis: VE_RELATORIOS as string[] },
   { href: "/contrato/", rotulo: "Contrato", papeis: VE_CONTRATO as string[] },
@@ -26,10 +26,9 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   const s = useSessao();
   const caminho = usePathname();
   const nomePortal = "Portal MKT B&M Log";
-  const veAprov = !!s.papel && (VE_APROVACOES as string[]).includes(s.papel);
+  const veAprov = !!s.papel && (VE_TAREFAS as string[]).includes(s.papel);
   const { lista } = usePedidos(veAprov);
-  const pend = (lista ?? []).flatMap((p) => p.pecas ?? []).filter((x) => pendentePara(s.papel, x)).length
-    + (s.papel === "criativo" ? (lista ?? []).filter(aguardaCriacao).length : 0);
+  const pend = contarPendencias(s.papel, (lista ?? []).filter((p) => s.papel !== "solicitante" || p.solicitanteUid === s.usuario?.uid));
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">

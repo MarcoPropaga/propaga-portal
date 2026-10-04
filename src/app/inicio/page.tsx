@@ -3,10 +3,10 @@ import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
-import { VE_APROVACOES, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
+import { VE_TAREFAS, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
 
 const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] }[] = [
-  { href: "/aprovacoes/", rotulo: "Aprovações", texto: "Peças para avaliar, orientar, refazer ou revisar.", papeis: VE_APROVACOES },
+  { href: "/aprovacoes/", rotulo: "Minhas tarefas", texto: "Tudo o que está com você, num só lugar.", papeis: VE_TAREFAS },
   { href: "/solicitacoes/", rotulo: "Solicitações", texto: "Acompanhe etapas, versões e entregas." },
   { href: "/valores/", rotulo: "Jobs Propaga", texto: "Serviços do catálogo vigente, com preço final.", papeis: VE_VALORES },
   { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: VE_RELATORIOS },

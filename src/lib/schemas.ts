@@ -62,20 +62,16 @@ export const REGRAS_SENHA: { texto: string; ok: (s: string) => boolean }[] = [
 
 /* Ações sobre um pedido (fila tipo "acao"). Exigências por ação ficam no servidor (acoes.ts). */
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.");
-export const ACOES = ["aceitarPedido", "disponibilizarVersao", "pedirAjustes", "aprovar", "entregar",
-  "confirmarRecebimento", "faturar", "registrarPagamento", "cancelar"] as const;
+export const ACOES = ["aceitarPedido", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
 export const acaoSchema = z.object({
   protocolo: z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/, "Protocolo inválido."),
   acao: z.enum(ACOES),
   nota: z.string().trim().max(3000, "A nota aceita até 3.000 caracteres.").optional(),
-  link: z.string().trim().regex(driveRegex, "Cole um link do Google Drive.").optional(),
   cronograma: z.object({ inicio: data, primeira: data, final: data })
     .refine((c) => c.inicio <= c.primeira && c.primeira <= c.final, { message: "As datas devem seguir a ordem: início, 1ª apresentação, entrega final." })
     .optional(),
   valores: z.array(z.object({ indice: z.number().int().min(0), valor: z.number().positive("Informe um valor maior que zero.").max(1_000_000) })).max(30).optional(),
   driveVerificado: z.boolean().optional(),
-  /** Ao disponibilizar a versão de uma refação extra (3ª em diante): cobrar +30% ou não (repete pedido anterior / erro da Propaga). */
-  refacaoExtraCobrada: z.boolean().optional(),
 });
 export type AcaoInput = z.infer<typeof acaoSchema>;
 

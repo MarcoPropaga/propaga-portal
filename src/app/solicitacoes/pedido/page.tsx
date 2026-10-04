@@ -5,7 +5,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
-import { acoesDisponiveis, ETAPAS, fatorCobranca, MAX_RODADAS, REGRA_REFACAO, REGRAS, VE_VALORES_PEDIDO, type Acao } from "@/lib/fluxo";
+import { ETAPAS, fatorCobranca, podeExecutar, VE_VALORES_PEDIDO, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis, PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
 import { Protegido } from "@/components/auth/protegido";
@@ -15,151 +15,17 @@ import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, moeda, Painel, SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
-import { aguardaCriacao, situacaoInterna, situacaoRelatorio, ultima } from "@/lib/pecas";
+import { contarPendencias, situacaoInterna, situacaoRelatorio, ultima } from "@/lib/pecas";
 import { FormPublicar } from "@/components/publicar";
+import { FormAcao } from "@/components/formAcao";
 
-interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?: string; chave?: boolean }
+interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?: string; chave?: boolean; acao?: string }
 interface Valores { itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
 type Envio = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
 const cx = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
+const ACOES_PECA = ["publicar", "avaliar", "encaminhar", "enviarVersao", "finalizar", "ciente", "liberar", "devolver"];
 const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
-
-/* Textos de apoio de cada ação. */
-const AJUDA: Partial<Record<Acao, string>> = {
-  aceitarPedido: "Confirme o cronograma e informe o valor dos itens a cotar, conforme o contrato. O pedido entra em produção e o solicitante é avisado.",
-  disponibilizarVersao: "Coloque os arquivos na pasta 03 Provas do Drive. O solicitante é avisado para aprovar ou pedir ajustes.",
-  pedirAjustes: `Descreva com clareza o que precisa mudar, numa única lista. Até ${MAX_RODADAS} refações estão incluídas.`,
-  aprovar: "Ao aprovar, a Propaga prepara os arquivos finais para entrega.",
-  entregar: "Confirme que os arquivos finais estão na pasta 04 Aprovados.",
-  confirmarRecebimento: "Confirme que recebeu os arquivos finais.",
-  faturar: "Registre o faturamento (ex.: número da nota fiscal).",
-  registrarPagamento: "Registre o recebimento do pagamento.",
-  cancelar: "O cancelamento encerra o pedido. Informe o motivo.",
-};
-const NOTA_OBRIGATORIA: Acao[] = ["pedirAjustes", "cancelar"];
-
-function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: PedidoDoc; clienteId: string; onFechar: () => void }) {
-  const s = useSessao();
-  const hoje = hojeSP();
-  const primeiraPadrao = somarDiasUteis(hoje, PRAZO_PADRAO_DIAS_UTEIS);
-  const finalPadrao = [pedido.prazo.desejada, somarDiasUteis(primeiraPadrao, 3)].sort()[1];
-  const [nota, setNota] = useState("");
-  const [link, setLink] = useState("");
-  const [cron, setCron] = useState({ inicio: hoje, primeira: primeiraPadrao, final: finalPadrao });
-  const [valores, setValores] = useState<Record<number, string>>({});
-  const [driveOk, setDriveOk] = useState(false);
-  const [extra, setExtra] = useState<"" | "sim" | "nao">("");
-  const extraPendente = acao === "disponibilizarVersao" && !!pedido.refacaoExtraPendente;
-  const [erro, setErro] = useState("");
-  const [envio, setEnvio] = useState<Envio>({ tipo: "ocioso" });
-  const aCotar = pedido.itens.map((it, i) => ({ it, i })).filter((x) => x.it.sobOrcamento);
-
-  useEffect(() => {
-    if (envio.tipo !== "aguardando") return;
-    return onSnapshot(doc(db(), "fila", envio.id), (d) => {
-      const x = d.data() as { status: string; mensagem?: string } | undefined;
-      if (x?.status === "ok") { setEnvio({ tipo: "ok", msg: "Registrado." }); setTimeout(onFechar, 800); }
-      if (x?.status === "erro") setEnvio({ tipo: "erro", msg: x.mensagem || "Não foi possível registrar." });
-    });
-  }, [envio, onFechar]);
-
-  async function confirmar(e: React.FormEvent) {
-    e.preventDefault();
-    setErro("");
-    if (NOTA_OBRIGATORIA.includes(acao) && nota.trim().length < 3) { setErro(acao === "cancelar" ? "Informe o motivo do cancelamento." : "Descreva os ajustes necessários."); return; }
-    const num = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
-    const dados: Record<string, unknown> = { protocolo: pedido.protocolo, acao };
-    if (nota.trim()) dados.nota = nota.trim();
-    if (acao === "disponibilizarVersao" && link.trim()) dados.link = link.trim();
-    if (extraPendente) {
-      if (!extra) { setErro("Informe se a refação extra tem edições novas ou repete um pedido anterior."); return; }
-      dados.refacaoExtraCobrada = extra === "sim";
-    }
-    if (acao === "aceitarPedido") {
-      dados.cronograma = cron;
-      dados.driveVerificado = driveOk;
-      const faltando = aCotar.filter(({ i }) => !(num(valores[i] ?? "") > 0));
-      if (faltando.length) { setErro(`Informe o valor do item ${faltando.map((x) => x.i + 1).join(", ")} (a cotar).`); return; }
-      dados.valores = aCotar.map(({ i }) => ({ indice: i, valor: num(valores[i]) }));
-      if (cron.inicio < hoje) { setErro("A data de início não pode estar no passado."); return; }
-    }
-    const r = acaoSchema.safeParse(dados);
-    if (!r.success) { setErro(r.error.issues[0]?.message ?? "Confira os dados."); return; }
-    try {
-      const ref = await addDoc(collection(db(), "fila"), { tipo: "acao", uid: s.usuario!.uid, clienteId, dados: r.data, status: "pendente", criadoEm: serverTimestamp() });
-      avisarServidor();
-      setEnvio({ tipo: "aguardando", id: ref.id });
-    } catch { setEnvio({ tipo: "erro", msg: "Não foi possível registrar. Verifique sua conexão." }); }
-  }
-
-  const ocupado = envio.tipo === "aguardando" || envio.tipo === "ok";
-  return (
-    <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-marca-500 bg-white p-4 md:p-5" aria-labelledby="form-acao-titulo">
-      <h3 id="form-acao-titulo" className="text-base">{REGRAS[acao].rotulo}</h3>
-      {AJUDA[acao] && <p className="text-sm text-gray-600">{AJUDA[acao]}</p>}
-      {acao === "cancelar" && (pedido.versao || 0) > 0 && (
-        <p className="rounded border-l-4 border-alerta-700 bg-alerta-100 px-3 py-2 text-sm leading-relaxed"><b>Atenção:</b> este pedido já foi apresentado para aprovação. Se for cancelado, será cobrado <b>50% do seu valor</b>, conforme o contrato.</p>
-      )}
-      {acao === "pedirAjustes" && (pedido.rodadas || 0) >= MAX_RODADAS && (
-        <p className="rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm leading-relaxed"><b>Esta é a {(pedido.rodadas || 0) + 1}ª solicitação de refação.</b> As {MAX_RODADAS} incluídas já foram usadas: se as edições forem diferentes das pedidas antes, será adicionado <b>30% ao valor da peça</b>, conforme o contrato.</p>
-      )}
-      {extraPendente && (
-        <fieldset className="grid gap-2 rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-3 text-sm">
-          <legend className="sr-only">Refação extra</legend>
-          <p className="m-0"><b>Refação extra ({pedido.rodadas}ª).</b> As edições pedidas são diferentes das solicitadas antes?</p>
-          <label className="flex items-start gap-2"><input type="radio" name="extra" className="mt-1 accent-marca-700" checked={extra === "sim"} onChange={() => setExtra("sim")} /> Sim, edições novas: adicionar 30% ao valor da peça</label>
-          <label className="flex items-start gap-2"><input type="radio" name="extra" className="mt-1 accent-marca-700" checked={extra === "nao"} onChange={() => setExtra("nao")} /> Não, repete pedido anterior ou corrige erro da Propaga: sem cobrança</label>
-        </fieldset>
-      )}
-
-      {acao === "aceitarPedido" && <>
-        <fieldset className="grid gap-3 sm:grid-cols-3">
-          <legend className="mb-2 text-sm font-semibold">Cronograma</legend>
-          {([["inicio", "Início"], ["primeira", "1ª apresentação"], ["final", "Entrega final"]] as const).map(([k, l]) => (
-            <div key={k} className="grid gap-1.5"><label htmlFor={`c-${k}`} className="text-sm">{l}</label>
-              <input id={`c-${k}`} type="date" min={hoje} value={cron[k]} onChange={(e) => setCron({ ...cron, [k]: e.target.value })} className={cx} /></div>
-          ))}
-        </fieldset>
-        <p className="text-sm text-gray-600">Data desejada pelo cliente: <b>{brData(pedido.prazo.desejada)}</b>{pedido.prazo.urgente && " · pedido urgente"}.</p>
-        {aCotar.length > 0 && (
-          <fieldset className="grid gap-3">
-            <legend className="mb-2 text-sm font-semibold">Valor unitário dos itens a cotar (preço final ao cliente)</legend>
-            {aCotar.map(({ it, i }) => (
-              <div key={i} className="grid items-center gap-2 sm:grid-cols-[1fr_180px]">
-                <label htmlFor={`v-${i}`} className="text-sm">Item {i + 1}: {it.qtd}× {it.nome} <span className="text-gray-600">· {it.varianteRotulo}</span></label>
-                <div className="flex items-center gap-2"><span className="text-sm text-gray-600">R$</span>
-                  <input id={`v-${i}`} inputMode="decimal" placeholder="0,00" value={valores[i] ?? ""} onChange={(e) => setValores({ ...valores, [i]: e.target.value })} className={cx} /></div>
-              </div>
-            ))}
-          </fieldset>
-        )}
-        <label className="flex items-start gap-2.5"><input type="checkbox" className="mt-1 size-4 accent-marca-700" checked={driveOk} onChange={(e) => setDriveOk(e.target.checked)} />
-          <span>Conferi o acesso à pasta do Drive e os materiais.</span></label>
-      </>}
-
-      {acao === "disponibilizarVersao" && (
-        <div className="grid gap-1.5"><label htmlFor="link" className="text-sm font-semibold">Link dos arquivos no Drive (opcional)</label>
-          <input id="link" type="url" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" className={cx} /></div>
-      )}
-
-      <div className="grid gap-1.5">
-        <label htmlFor="nota" className="text-sm font-semibold">{acao === "cancelar" ? "Motivo" : acao === "pedirAjustes" ? "Ajustes necessários" : "Observação (opcional)"}
-          {NOTA_OBRIGATORIA.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
-        <textarea id="nota" rows={acao === "pedirAjustes" ? 5 : 3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#C9D7DC] bg-white p-3" />
-      </div>
-
-      {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      {envio.tipo === "aguardando" && <Aviso>Registrando… costuma levar poucos segundos (no máximo 1 minuto).</Aviso>}
-      {envio.tipo === "ok" && <Aviso tipo="ok">{envio.msg}</Aviso>}
-      {envio.tipo === "erro" && <Aviso tipo="erro">{envio.msg}</Aviso>}
-      <div className="flex flex-wrap gap-3">
-        <Botao type="submit" carregando={envio.tipo === "aguardando"} disabled={ocupado}>{REGRAS[acao].rotulo}</Botao>
-        <Botao type="button" variante="discreto" onClick={onFechar} disabled={envio.tipo === "aguardando"}>Voltar</Botao>
-      </div>
-    </form>
-  );
-}
 
 function Conteudo() {
   const s = useSessao();
@@ -185,15 +51,19 @@ function Conteudo() {
   if (pedido && s.papel === "criativo" && pedido.status === "enviada") return <Casca titulo="Solicitação"><Aviso>Este pedido ainda está com o Atendimento. Ele aparece para você quando o Marcelo aceitar.</Aviso></Casca>;
   if (pedido === null) return <Casca titulo="Solicitação"><Aviso tipo="erro">Pedido não encontrado ou sem acesso para o seu perfil.</Aviso><a href="/solicitacoes/" className="mt-4 inline-block underline">Voltar para Solicitações</a></Casca>;
 
-  const acoes = s.papel ? acoesDisponiveis(pedido.status, s.papel as Papel, { rodadas: pedido.rodadas || 0, recebidoPeloCliente: pedido.recebidoPeloCliente })
-    .filter(() => !(s.papel === "solicitante" && pedido.solicitanteUid !== s.usuario?.uid))
-    // Com peças, versões/ajustes/aprovação são por peça (Aprovações); cancelar o pedido inteiro só o admin.
-    .filter((a) => !pedido.temPecas || !(["disponibilizarVersao", "pedirAjustes", "aprovar"].includes(a) || (a === "cancelar" && s.papel !== "admin"))) : [];
-  const podePublicar = ((s.papel === "atendimento" || s.papel === "admin") && ["producao", "apresentacao"].includes(pedido.status))
-    || (s.papel === "criativo" && aguardaCriacao(pedido));
+  // Consulta: ações ficam em Minhas tarefas. Aqui só o admin tem atalhos (cancelar o pedido / publicar em emergência).
+  const ehAdmin = s.papel === "admin";
+  const podeCancelar = ehAdmin && podeExecutar("cancelar", pedido.status, "admin");
+  const podePublicar = ehAdmin && ["producao", "apresentacao"].includes(pedido.status);
+  const minhas = contarPendencias(s.papel, [pedido]) > 0 && (s.papel !== "solicitante" || pedido.solicitanteUid === s.usuario?.uid);
   const ehCliente = s.papel === "solicitante" || s.papel === "financeiro_cliente";
-  const principais = acoes.filter((a) => a !== "cancelar");
-  const cancelarAoLado = pedido.status === "apresentacao";
+  // Linha do tempo única: eventos do pedido + ações de cada peça, do mais recente para o mais antigo.
+  const tms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : Date.parse(String(v)) || 0);
+  const linhaDoTempo = [
+    // Ações de peça já aparecem no histórico de cada peça: não repetir o resumo do pedido.
+    ...eventos.filter((e) => !String(e.rotulo).startsWith("Aviso por e-mail") && !ACOES_PECA.includes(e.acao ?? "")),
+    ...(pedido.pecas ?? []).flatMap((x) => x.hist.map((h, k) => ({ id: `${x.id}-${k}`, em: h.em, nome: h.por, rotulo: `${x.nome}: ${h.txt}`, chave: false, nota: "" }))),
+  ].sort((a, b) => tms(b.em) - tms(a.em));
   const idxAtual = ETAPAS.findIndex((e) => e.status === pedido.status);
   const p = pedido.prazo;
 
@@ -219,18 +89,21 @@ function Conteudo() {
           </ol>
         )}
 
-        {/* Ações */}
+        {/* Tarefas: um único lugar para agir */}
+        {minhas && (
+          <section className="flex flex-wrap items-center gap-3 rounded border border-marca-500 bg-marca-100 p-4" aria-label="Sua tarefa">
+            <span className="mr-auto text-sm font-semibold">Há uma tarefa sua neste pedido.</span>
+            <a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900">Abrir em Minhas tarefas</a>
+          </section>
+        )}
         {publicando && <FormPublicar pedido={pedido} onFechar={() => setPublicando(false)} />}
-        {!publicando && (acoes.length > 0 || podePublicar || pedido.temPecas) && (
-          acao ? <FormAcao acao={acao} pedido={pedido} clienteId={clienteId} onFechar={() => setAcao(null)} /> : (
-            <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Ações disponíveis">
-              <span className="mr-auto text-sm font-semibold">Sua próxima ação{pedido.status === "apresentacao" ? ` · versão ${pedido.versao || 1}, refações ${pedido.rodadas || 0} (${MAX_RODADAS} incluídas)` : ""}</span>
-              {pedido.temPecas && s.papel !== "financeiro_cliente" && s.papel !== "financeiro_propaga" && <a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900">Abrir Aprovações</a>}
-              {podePublicar && <Botao variante={pedido.temPecas ? "linha" : "primario"} onClick={() => setPublicando(true)}>{s.papel === "criativo" ? "Enviar peças criadas ao Marcelo" : pedido.temPecas ? "Publicar mais peças" : "Publicar peças para aprovação"}</Botao>}
-              {principais.filter((a) => a !== "disponibilizarVersao").map((a, i) => <Botao key={a} variante={i === 0 && !podePublicar && !pedido.temPecas ? "primario" : "linha"} onClick={() => setAcao(a)}>{REGRAS[a].rotulo}</Botao>)}
-              {acoes.includes("cancelar") && <Botao variante={cancelarAoLado ? "linha" : "discreto"} onClick={() => setAcao("cancelar")}>{cancelarAoLado ? "Cancelar" : "Cancelar pedido"}</Botao>}
-            </section>
-          )
+        {acao && <FormAcao acao={acao} pedido={pedido} onFechar={() => setAcao(null)} />}
+        {!publicando && !acao && (podeCancelar || podePublicar) && (
+          <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Atalhos do administrador">
+            <span className="mr-auto text-sm text-gray-600">Atalhos do administrador</span>
+            {podePublicar && <Botao variante="discreto" onClick={() => setPublicando(true)}>Publicar peças direto para a Débora</Botao>}
+            {podeCancelar && <Botao variante="discreto" onClick={() => setAcao("cancelar")}>Cancelar pedido</Botao>}
+          </section>
         )}
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
@@ -265,7 +138,7 @@ function Conteudo() {
             </Painel>
 
             {pedido.temPecas && (
-              <Painel titulo="Peças" extra={<a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="text-xs font-semibold underline">Aprovações</a>}>
+              <Painel titulo="Peças" extra={<a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="text-xs font-semibold underline">Minhas tarefas</a>}>
                 <ul className="divide-y divide-gray-200 text-sm">
                   {(pedido.pecas ?? []).map((x) => (
                     <li key={x.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
@@ -281,16 +154,16 @@ function Conteudo() {
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{pedido.obs || "—"}</p>
             </Painel>
 
-            <Painel titulo="Histórico">
+            <Painel titulo="Linha do tempo">
               <ol className="grid gap-3">
-                {eventos.map((e) => (
+                {linhaDoTempo.map((e) => (
                   <li key={e.id} className="grid grid-cols-[12px_1fr] gap-3">
                     <span className={`mt-1.5 size-3 rounded-full ${e.chave ? "bg-marca-500" : "bg-gray-200"}`} aria-hidden="true" />
                     <div className="min-w-0 text-sm"><b>{e.rotulo}</b><div className="text-gray-600">{e.nome} · {brDataHora(e.em)}</div>
                       {e.nota && <p className="mt-1 whitespace-pre-wrap break-words">{e.nota}</p>}</div>
                   </li>
                 ))}
-                {!eventos.length && <li className="text-sm text-gray-600">Sem registros.</li>}
+                {!linhaDoTempo.length && <li className="text-sm text-gray-600">Sem registros.</li>}
               </ol>
             </Painel>
           </div>

@@ -56,26 +56,17 @@ describe("fluxo do pedido (decisão de 03/10: sem aceite do cliente)", () => {
       expect(acoesDisponiveis(s, "financeiro_cliente", ctx)).toEqual([]);
     }
   });
-  it("versão → ajustes (até 2 rodadas) ou aprovação", () => {
-    expect(aplicar("disponibilizarVersao", "producao", "atendimento", ctx)).toBe("apresentacao");
-    expect(aplicar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 1 })).toBe("producao");
-    // 3ª refação em diante é permitida (sujeita a +30%).
-    expect(podeExecutar("pedirAjustes", "apresentacao", "solicitante", { rodadas: 2 })).toBe(true);
-    expect(aplicar("aprovar", "apresentacao", "solicitante", ctx)).toBe("aprovada");
-  });
-  it("entrega, recebimento (uma vez), faturamento e pagamento", () => {
+  it("ações do pedido: entrega, faturamento e pagamento (aprovação é por peça)", () => {
     expect(aplicar("entregar", "aprovada", "atendimento", ctx)).toBe("entregue");
-    expect(aplicar("confirmarRecebimento", "entregue", "solicitante", ctx)).toBe("entregue");
-    expect(podeExecutar("confirmarRecebimento", "entregue", "solicitante", { rodadas: 0, recebidoPeloCliente: true })).toBe(false);
     expect(aplicar("faturar", "entregue", "financeiro_propaga", ctx)).toBe("faturada");
     expect(aplicar("registrarPagamento", "faturada", "financeiro_propaga", ctx)).toBe("paga");
+    expect(acoesDisponiveis("apresentacao", "solicitante", ctx)).toEqual([]);
   });
-  it("cancelamento: solicitante e atendimento só antes da produção; admin até a aprovação", () => {
+  it("cancelar o pedido inteiro: solicitante e atendimento só antes do aceite; depois, só o admin", () => {
     expect(podeExecutar("cancelar", "enviada", "solicitante", ctx)).toBe(true);
+    expect(podeExecutar("cancelar", "enviada", "atendimento", ctx)).toBe(true);
     expect(podeExecutar("cancelar", "producao", "solicitante", ctx)).toBe(false);
-    expect(podeExecutar("cancelar", "producao", "atendimento", ctx)).toBe(false);
-    expect(podeExecutar("cancelar", "apresentacao", "solicitante", ctx)).toBe(true);
-    expect(podeExecutar("cancelar", "apresentacao", "atendimento", ctx)).toBe(false);
+    expect(podeExecutar("cancelar", "apresentacao", "solicitante", ctx)).toBe(false);
     expect(podeExecutar("cancelar", "aprovada", "admin", ctx)).toBe(true);
     expect(podeExecutar("cancelar", "entregue", "admin", ctx)).toBe(false);
   });
@@ -107,7 +98,6 @@ describe("validação da solicitação", () => {
 describe("cobrança (Marco, 03/10)", () => {
   it("refação extra soma 30%; cancelado após apresentação cobra 50%; antes, nada", () => {
     expect(fatorCobranca({ status: "entregue" })).toBe(1);
-    expect(fatorCobranca({ status: "entregue", refacoesExtrasCobradas: 2 })).toBeCloseTo(1.6);
     expect(fatorCobranca({ status: "cancelada", versao: 1 })).toBe(0.5);
     expect(fatorCobranca({ status: "cancelada", versao: 0 })).toBe(0);
   });

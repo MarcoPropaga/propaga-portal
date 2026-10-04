@@ -222,7 +222,7 @@ describe("ações do pedido (fila 'acao')", () => {
     f.emails.length = 0;
   });
 
-  it("ciclo completo: aceite com valor a cotar, versão, ajuste, aprovação, entrega, recebimento, faturamento e pagamento", () => {
+  it("aceite com valor a cotar; nova solicitação avisa o Atendimento e manda só um recibo para quem enviou", () => {
     expect(acao(mcl, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/valor do item 2/);
     expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 510 }], driveVerificado: true }).status).toBe("ok");
     expect(ped().status).toBe("producao");
@@ -232,33 +232,12 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(v.total).toBe(850); // 2 × 170 + 510
     expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
     expect(f.emails[0].html).not.toContain("510");
-
-    acao(mcl, "disponibilizarVersao", { nota: "Versão 1 na pasta 03 Provas." });
-    expect(ped().status).toBe("apresentacao");
-    expect(acao(deb, "pedirAjustes", {}).mensagem).toMatch(/Descreva os ajustes/);
-    acao(deb, "pedirAjustes", { nota: "Aumentar o logo." });
-    expect(ped().rodadas).toBe(1);
-    acao(mcl, "disponibilizarVersao", {});
-    expect(ped().versao).toBe(2);
-    acao(deb, "aprovar");
-    expect(ped().status).toBe("aprovada");
-    f.emails.length = 0;
-    acao(mcl, "entregar");
-    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "marisa@propaga.com"]);
-    acao(deb, "confirmarRecebimento");
-    expect(ped().recebidoPeloCliente).toBe(true);
-    expect(acao(deb, "confirmarRecebimento").status).toBe("erro");
-    acao(mrs, "faturar", { nota: "NF 1234" });
-    acao(mrs, "registrarPagamento");
-    expect(ped().status).toBe("paga");
-    const evs = [...f.docs.keys()].filter((k) => k.includes("/BML-2026-0001/eventos/"));
-    expect(evs.length).toBe(11); // envio + aviso + 9 ações válidas
+    expect(acao(mcl, "entregar").mensagem).toMatch(/peças em andamento/); // sem peças não há entrega
   });
 
   it("bloqueios: Financeiro do cliente não age, solicitante não aceita, outro cliente não mexe", () => {
     expect(acao(mar, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
     expect(acao(deb, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
-    expect(acao(mcl, "aprovar").mensagem).toMatch(/não está disponível/);
     const outro = convidar(f.p, { nome: "Outra", email: "o@x.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "M" }).uid;
     expect(acao(outro, "cancelar", { nota: "teste" }).mensagem).toMatch(/não é seu/);
     expect(ped().status).toBe("enviada");
@@ -271,35 +250,7 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
   });
 
-  it("3ª refação: Atendimento decide se cobra +30% ao disponibilizar a versão", () => {
-    acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 900 }], driveVerificado: true });
-    for (let i = 0; i < 2; i++) { acao(mcl, "disponibilizarVersao", {}); acao(deb, "pedirAjustes", { nota: `Ajuste ${i + 1}` }); }
-    acao(mcl, "disponibilizarVersao", {});
-    acao(deb, "pedirAjustes", { nota: "Trocar a foto e o título." });
-    expect(ped().rodadas).toBe(3);
-    expect(ped().refacaoExtraPendente).toBe(true);
-    expect(acao(mcl, "disponibilizarVersao", {}).mensagem).toMatch(/refação extra/);
-    f.emails.length = 0;
-    acao(mcl, "disponibilizarVersao", { refacaoExtraCobrada: true });
-    expect(ped().refacoesExtrasCobradas).toBe(1);
-    expect(ped().refacaoExtraPendente).toBe(false);
-    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "marisa@propaga.com"]);
-    acao(deb, "pedirAjustes", { nota: "Repete: aumentar o logo." });
-    acao(mcl, "disponibilizarVersao", { refacaoExtraCobrada: false });
-    expect(ped().refacoesExtrasCobradas).toBe(1);
-  });
 
-  it("solicitante cancela em apresentação: cobrança de 50% registrada e Financeiro Propaga avisado", () => {
-    expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 900 }], driveVerificado: true }).status).toBe("ok");
-    acao(mcl, "disponibilizarVersao", {});
-    f.emails.length = 0;
-    expect(acao(mcl, "cancelar", { nota: "x".repeat(5) }).mensagem).toMatch(/não está disponível/);
-    acao(deb, "cancelar", { nota: "Campanha suspensa." });
-    expect(ped().status).toBe("cancelada");
-    const evs = [...f.docs.keys()].filter((k) => k.includes("/BML-2026-0001/eventos/")).map((k) => String(f.doc(k).rotulo));
-    expect(evs.some((r) => /50%/.test(r))).toBe(true);
-    expect(f.emails.map((e) => e.para).sort()).toEqual(["marcelo@propaga.com", "marisa@propaga.com"]);
-  });
 });
 
 describe("aprovação por peça (fila 'peca')", () => {
@@ -335,7 +286,8 @@ describe("aprovação por peça (fila 'peca')", () => {
 
   it("ciclo: publicar → avaliar (aprova, refaz, cancela) → encaminhar → nova versão → revisão → Débora aprova → final → pronto para entrega", () => {
     expect(peca(deb, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).mensagem).toMatch(/perfil/);
-    expect(peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }, { nome: "Post B", item: 0, link: link("b") }, { nome: "Post C", item: 0, link: link("c") }] }).status).toBe("ok");
+    expect(peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).mensagem).toMatch(/perfil/); // só a Mariane cria (admin: emergência)
+    expect(peca(adm, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }, { nome: "Post B", item: 0, link: link("b") }, { nome: "Post C", item: 0, link: link("c") }] }).status).toBe("ok");
     expect(ped().status).toBe("apresentacao");
     expect(para()).toEqual(["deborabmlog@gmail.com"]);
 
@@ -344,11 +296,11 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: [] }, { id: "p3", tipo: "cancelada", nota: "Suspensa." }] }).mensagem).toMatch(/Liste os ajustes/);
     expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: ["Aumentar título", "Trocar foto"] }, { id: "p3", tipo: "cancelada", nota: "Campanha suspensa." }] }).status).toBe("ok");
     expect([pc("p1").etapa, pc("p1").tarefa]).toEqual(["criativo", "final"]);   // aprovada vai direto à Mariane
-    expect([pc("p3").etapa, pc("p3").tarefa]).toEqual(["criativo", "ciencia"]); // cancelada também
+    expect(pc("p3").etapa).toBe("encerrada"); // cancelada fecha na hora (50%), Mariane só é avisada
     expect(pc("p2").etapa).toBe("triagem");                                       // só a refação passa pelo Marcelo
     expect(ped().rodadas).toBe(1);
     expect(ped().status).toBe("producao");
-    expect(para()).toEqual(["marcelo@propaga.com", "mariane@propaga.com", "marisa@propaga.com"]);
+    expect(para()).toEqual(["marcelo@propaga.com", "mariane@propaga.com"]); // só quem recebe a vez
 
     f.emails.length = 0;
     expect(peca(mcl, "encaminhar", { prazo: "2026-10-07", refacoes: [{ id: "p2", itens: ["Aumentar título", "Foto do caminhão azul"] }] }).status).toBe("ok");
@@ -371,16 +323,16 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect(para()).toEqual(["deborabmlog@gmail.com"]);
 
     peca(deb, "avaliar", { decisoes: [{ id: "p2", tipo: "aprovada" }] });
-    expect(ped().status).toBe("aprovada");
+    expect(ped().status).toBe("producao"); // aprovadas, mas arquivos finais ainda em preparação
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).mensagem).toMatch(/peças em andamento/);
-    peca(mri, "ciente", { id: "p3" });
     peca(mri, "finalizar", { id: "p1" });
     f.emails.length = 0;
     expect(peca(mri, "finalizar", { id: "p2" }).resultado.pronto).toBe(true);
+    expect(ped().status).toBe("aprovada"); // "Pronto para entrega"
     expect(f.emails.some((e) => e.para === "marcelo@propaga.com" && /pronto para entrega/.test(e.assunto))).toBe(true);
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).status).toBe("ok");
     // ações antigas por pedido ficam bloqueadas
-    expect(fila("acao", deb, { protocolo: "BML-2026-0001", acao: "aprovar" }).mensagem).toMatch(/Aprovações|disponível/);
+    expect(fila("acao", deb, { protocolo: "BML-2026-0001", acao: "aprovar" }).mensagem).toMatch(/Invalid option|inválid|disponível/); // ação antiga não existe mais
   });
 
   it("Mariane cria as peças → Marcelo revisa (devolve a v1, ela substitui) → Débora recebe", () => {
@@ -399,7 +351,7 @@ describe("aprovação por peça (fila 'peca')", () => {
   });
 
   it("resumo diário: uma vez por dia, só para quem tem pendência", () => {
-    peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
+    peca(adm, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
     f.docs.delete("interno/resumos/dias/2026-10-02");
     f.emails.length = 0;
     const cfg = { p: f.p };
@@ -410,7 +362,7 @@ describe("aprovação por peça (fila 'peca')", () => {
   });
 
   it("3ª refação: +30% só quando o Marcelo marca; criativo não avalia", () => {
-    peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
+    peca(adm, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
     expect(peca(mri, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }] }).mensagem).toMatch(/perfil/);
     for (let i = 0; i < 3; i++) {
       peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "refacao", itens: [`Ajuste ${i}`] }] });

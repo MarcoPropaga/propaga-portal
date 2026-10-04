@@ -9,7 +9,7 @@ import { calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
 import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
-import { emailConvite, emailNovaSolicitacao } from "./emails";
+import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
 import { executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
 import { Firestore, type Doc } from "./firestore";
@@ -206,7 +206,8 @@ export function enviarSolicitacao(
   // Avisos por e-mail (falha de e-mail não desfaz o pedido; fica registrada no histórico).
   try {
     const destinatarios = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as { nome: string; email: string; papel: string; propaga?: boolean }) }))
-      .filter((x) => x.uid === u.uid || (x.propaga && DESTINO_AVISO.includes(x.papel)));
+      .filter((x) => x.uid !== u.uid && x.propaga && DESTINO_AVISO.includes(x.papel));
+    const autor = fs.ler(`usuarios/${u.uid}`)?.dados as { email?: string } | undefined;
     const msg = emailNovaSolicitacao({
       cliente: cliente.nomePortal, protocolo, titulo: d.titulo, solicitante: u.nome, unidade: d.unidade, publico: d.publico,
       objetivo: d.objetivo, desejada: d.prazo.desejada, urgente: d.prazo.urgente,
@@ -217,6 +218,13 @@ export function enviarSolicitacao(
     for (const x of destinatarios) {
       try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); avisados.push(x.nome); }
       catch (e) { falhas.push(x.nome); p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
+    }
+    // Recibo curto para quem enviou (não repete o e-mail completo do Atendimento).
+    if (autor?.email) {
+      const r = emailAtualizacao({ cliente: cliente.nomePortal, protocolo, titulo: d.titulo, rotulo: "Recebemos sua solicitação",
+        nota: "O atendimento da Propaga vai conferir o briefing e confirmar o cronograma. Você recebe um aviso quando houver peças para aprovar.",
+        autor: u.nome, etapa: "Enviada", link: `${cfg.portalUrl}/solicitacoes/pedido/?p=${encodeURIComponent(protocolo)}` });
+      try { p.enviarEmail({ para: autor.email, assunto: r.assunto, html: r.html, texto: r.texto, nomeRemetente: cfg.remetente }); } catch (e) { p.log(`Recibo falhou: ${(e as Error).message}`); }
     }
     const quando = p.agora();
     fs.gravar([{
