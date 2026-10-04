@@ -19,7 +19,7 @@ interface Pedido {
 type Quem = "solicitante" | "atendimento" | "criativo" | "financeiro_propaga";
 
 const PODE: Record<string, string[]> = {
-  publicar: ["criativo", "atendimento", "admin"],
+  publicar: ["criativo", "admin"], // só a Mariane cria; o admin mantém a rota direta para emergência
   avaliar: ["solicitante", "admin"],
   encaminhar: ["atendimento", "admin"],
   enviarVersao: ["criativo", "atendimento", "admin"],
@@ -87,15 +87,15 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         if (dec.tipo === "cancelada" && (dec.nota?.length ?? 0) < 3) throw new ErroUsuario(`Justifique o cancelamento de "${x.nome}".`);
         ultima(x).decisao = { tipo: dec.tipo, itens: dec.tipo === "refacao" ? dec.itens : undefined, nota: dec.nota || undefined, por: u.nome, em: agora };
         if (dec.tipo === "aprovada") { mover(x, "criativo", "final"); log(x, "Aprovada · relatório: concluída · Mariane prepara o arquivo final"); ap.push(x.nome); }
-        if (dec.tipo === "cancelada") { mover(x, "criativo", "ciencia"); log(x, "Cancelada · relatório: 50% · Mariane avisada para interromper"); cn.push(x.nome); }
+        if (dec.tipo === "cancelada") { mover(x, "encerrada"); log(x, "Cancelada · relatório: 50% · peça encerrada"); cn.push(`${x.nome} (${dec.nota})`); }
         if (dec.tipo === "refacao") { mover(x, "triagem"); log(x, `Refação pedida (${rodadas}ª)${rodadas > MAX_RODADAS ? " · sujeita a +30%" : ""}`); rf.push(`${x.nome}: ${dec.itens!.join("; ")}`); }
       }
       rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões), ${cn.length} cancelada(s)`;
       const resumo = [ap.length ? `Aprovadas: ${ap.join(", ")}` : "", rf.length ? `Refação:\n${rf.map((t) => `- ${t}`).join("\n")}` : "", cn.length ? `Canceladas (50%): ${cn.join(", ")}` : ""].filter(Boolean).join("\n");
-      avisos.push({ quem: ["atendimento"], rotulo: rf.length ? "Avaliação recebida · oriente a refação" : "Avaliação recebida", nota: resumo });
-      if (ap.length || cn.length) avisos.push({ quem: ["criativo"], rotulo: "Peças avaliadas pela Débora",
-        nota: [ap.length ? `Preparar arquivo final em 04 Aprovados: ${ap.join(", ")}` : "", cn.length ? `Interromper (cancelada): ${cn.join(", ")}` : ""].filter(Boolean).join("\n") });
-      if (cn.length) avisos.push({ quem: ["financeiro_propaga"], rotulo: "Peça cancelada após apresentação · cobrança de 50%", nota: cn.join(", ") });
+      // E-mail só para quem recebe a vez: Marcelo (refações) e Mariane (finais; canceladas como aviso).
+      if (rf.length) avisos.push({ quem: ["atendimento"], rotulo: "Refação pedida · oriente a Mariane", nota: resumo });
+      if (ap.length || cn.length) avisos.push({ quem: ["criativo"], rotulo: ap.length ? "Peças aprovadas · preparar arquivo final" : "Peça cancelada pela Débora",
+        nota: [ap.length ? `Preparar arquivo final em 04 Aprovados: ${ap.join(", ")}` : "", cn.length ? `Canceladas (interromper, nada a entregar): ${cn.join(", ")}` : ""].filter(Boolean).join("\n") });
       break;
     }
     case "encaminhar": {
@@ -114,7 +114,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       }
       rotuloEvento = `${naVez.length} refação(ões) encaminhada(s) ao criativo`;
       avisos.push({ quem: ["criativo"], rotulo: "Refação para fazer", nota: naVez.map((x) => `- ${x.nome}: ${x.orientacao!.itens.join("; ")}`).join("\n") + `\nPrazo: ${d.prazo.split("-").reverse().join("/")}` });
-      if (cobradas.length) avisos.push({ quem: ["solicitante", "financeiro_propaga"], rotulo: "Refação extra · +30% no valor da peça", nota: cobradas.join(", ") });
+      if (cobradas.length) avisos.push({ quem: ["solicitante"], rotulo: "Refação extra · +30% no valor da peça", nota: cobradas.join(", ") });
       break;
     }
     case "enviarVersao": {

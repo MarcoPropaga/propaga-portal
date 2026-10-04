@@ -31,7 +31,7 @@ export function FormPublicar({ pedido, onFechar, onOk }: { pedido: PedidoDoc; on
   return (
     <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-marca-500 bg-white p-4 md:p-5" aria-labelledby="pub-t">
       <h3 id="pub-t" className="text-base">{criativo ? "Enviar peças criadas ao Marcelo" : pedido.temPecas ? "Publicar mais peças" : "Publicar peças para aprovação"}</h3>
-      <p className="text-sm text-gray-600">Uma linha por peça, com o link do arquivo na pasta <b>03 Provas</b> do Drive. {criativo ? "O Marcelo revisa e envia à Débora." : "A Débora avalia peça por peça na página Aprovações."}</p>
+      <p className="text-sm text-gray-600">Uma linha por peça, com o link do arquivo na pasta <b>03 Provas</b> do Drive. {criativo ? "O Marcelo revisa e envia à Débora." : "A Débora avalia peça por peça em Minhas tarefas."}</p>
       <div className="grid gap-3">
         {linhas.map((l, k) => (
           <fieldset key={k} className="grid gap-2 rounded border border-gray-200 p-3 md:grid-cols-[1fr_1fr_1.4fr_auto] md:items-end">

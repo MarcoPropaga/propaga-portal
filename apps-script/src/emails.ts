@@ -101,13 +101,13 @@ export function emailResumo(o: { nome: string; link: string; linhas: { protocolo
   const assunto = `Suas pendências no portal: ${o.linhas.length}${atras ? ` (${atras} atrasada${atras > 1 ? "s" : ""})` : ""}`;
   const br = (d: string | null) => (d ? d.split("-").reverse().join("/") : "—");
   const texto = [`Olá, ${o.nome}.`, ``, `Peças aguardando você:`, ...o.linhas.map((l) => `- ${l.protocolo} · ${l.peca} · prazo ${br(l.prazo)}${l.atrasada ? " (ATRASADA)" : ""}`),
-    ``, `Abrir Aprovações: ${o.link}`].join("\n");
+    ``, `Abrir Minhas tarefas: ${o.link}`].join("\n");
   const html = moldura(`
 <h1 style="margin:0 0 12px;font-size:22px">Olá, ${esc(o.nome)}.</h1>
 <p style="margin:0 0 12px;line-height:1.55">${o.linhas.length} peça${o.linhas.length > 1 ? "s aguardam" : " aguarda"} você${atras ? ` · <b style="color:#B42318">${atras} atrasada${atras > 1 ? "s" : ""}</b>` : ""}.</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;line-height:1.5;margin:0 0 18px;border-collapse:collapse">
 ${o.linhas.map((l) => `<tr><td style="padding:6px 8px 6px 0;border-top:1px solid #E2EAED;vertical-align:top"><b>${esc(l.peca)}</b><br><span style="color:#4E6670">${esc(l.protocolo)} · ${esc(l.titulo)}</span></td><td style="padding:6px 0;border-top:1px solid #E2EAED;text-align:right;white-space:nowrap;vertical-align:top;${l.atrasada ? "color:#B42318;font-weight:bold" : "color:#4E6670"}">prazo ${br(l.prazo)}</td></tr>`).join("")}
 </table>
-<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:#55C5D0;color:#003C57;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir Aprovações</a></p>`);
+<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:#55C5D0;color:#003C57;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir Minhas tarefas</a></p>`);
   return { assunto, texto, html };
 }

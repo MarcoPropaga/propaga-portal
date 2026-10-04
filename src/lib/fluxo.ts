@@ -1,19 +1,12 @@
-/* Máquina de estados do pedido e quem pode executar cada ação.
-   Decisões de Marco (03/10/2026):
-   - Contrato assinado: valores e orçamentos já estão aprovados. Não há aceite do lado do cliente.
-   - A Débora (Solicitante) envia; o Marcelo (Atendimento) aceita o pedido, confirma o cronograma e
-     informa o valor dos itens "a cotar". O pedido entra direto em produção.
-   - A Mariana (Financeiro do cliente) só consulta Relatórios; não executa ações.
-   - Só a Débora (Solicitante) aprova. Ela pode cancelar ao lado de "Pedir ajustes": o que foi
-     cancelado depois de apresentado é cobrado em 50% do valor (Marco, 03/10/2026).
-   - Até 2 refações incluídas. A partir da 3ª, cada refação com edições diferentes das pedidas nas
-     anteriores acrescenta 30% ao valor da peça; o Atendimento confirma ao disponibilizar a versão.
+/* Etapas do pedido e ações por pedido (decisões de Marco, 03/10/2026 — fluxo único, sem duplicidade).
+   Fluxo: Débora solicita → Marcelo aceita → Mariane cria → Marcelo revisa → Débora avalia cada peça
+   (aprovada / refação / cancelada) → pronto para entrega → Marcelo entrega → Marisa fatura e recebe.
+   Aprovação, refação e cancelamento são POR PEÇA (src/lib/pecas.ts); aqui ficam só as ações do pedido.
+   As etapas "Em aprovação" e "Pronto para entrega" são calculadas pelas peças.
    O servidor (Apps Script) aplica estas regras; o navegador só mostra os botões permitidos. */
 import type { Papel, Status } from "./tipos";
 
-export type Acao =
-  | "aceitarPedido" | "disponibilizarVersao" | "pedirAjustes" | "aprovar" | "entregar"
-  | "confirmarRecebimento" | "faturar" | "registrarPagamento" | "cancelar";
+export type Acao = "aceitarPedido" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
 
 export const MAX_RODADAS = 2;
 
@@ -25,25 +18,20 @@ export const REGRA_CANCELAMENTO = "Peça ou pedido cancelado depois de apresenta
 export const ACRESCIMO_REFACAO_EXTRA = 0.3;
 export const REGRA_REFACAO = "Até 2 refações estão incluídas. A partir da 3ª solicitação de refação, é adicionado 30% ao valor da peça. A refação é cobrada quando as edições pedidas pelo marketing da B&M Log forem diferentes das pedidas na 1ª e na 2ª solicitação; ajuste que repete um pedido anterior ou corrige erro da Propaga não é cobrado.";
 
-/** Fração do valor do pedido que entra na cobrança: 1 normal (+30% por refação extra cobrada),
-    0,5 se cancelado após apresentação, 0 se cancelado antes. */
-export function fatorCobranca(p: { status: Status; versao?: number; refacoesExtrasCobradas?: number; temPecas?: boolean }): number {
-  if (p.temPecas) return 1; // com peças, 50% e +30% são calculados por peça (ajustePecas)
-  if (p.status === "cancelada") return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
-  return 1 + ACRESCIMO_REFACAO_EXTRA * (p.refacoesExtrasCobradas ?? 0);
+/** Fração do valor do pedido: 1 normal; pedido inteiro cancelado = 0,5 se já havia peças apresentadas, 0 se não.
+    Ajustes por peça (−50% cancelada, +30% refação extra) ficam em ajustePecas (src/lib/pecas.ts). */
+export function fatorCobranca(p: { status: Status; versao?: number; temPecas?: boolean; pecas?: unknown[] }): number {
+  if (p.status !== "cancelada") return 1;
+  if (p.temPecas) return 1; // cancelado peça a peça: o 50% sai de ajustePecas
+  return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
 }
 
-export interface Ctx { rodadas: number; recebidoPeloCliente?: boolean }
-interface Regra { de: Status[]; para: Status | null; papeis: Papel[]; rotulo: string }
+export interface Ctx { rodadas?: number }
+interface Regra { de: Status[]; para: Status; papeis: Papel[]; rotulo: string }
 
-/** `para: null` = registra no histórico sem mudar a etapa. */
 export const REGRAS: Record<Acao, Regra> = {
   aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar pedido" },
-  disponibilizarVersao: { de: ["producao"], para: "apresentacao", papeis: ["atendimento", "admin"], rotulo: "Disponibilizar versão" },
-  pedirAjustes: { de: ["apresentacao"], para: "producao", papeis: ["solicitante", "admin"], rotulo: "Pedir ajustes" },
-  aprovar: { de: ["apresentacao"], para: "aprovada", papeis: ["solicitante", "admin"], rotulo: "Aprovar conteúdo" },
   entregar: { de: ["aprovada"], para: "entregue", papeis: ["atendimento", "admin"], rotulo: "Registrar entrega" },
-  confirmarRecebimento: { de: ["entregue", "faturada", "paga"], para: null, papeis: ["solicitante", "admin"], rotulo: "Confirmar recebimento" },
   faturar: { de: ["entregue"], para: "faturada", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar faturamento" },
   registrarPagamento: { de: ["faturada"], para: "paga", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar pagamento" },
   cancelar: { de: ["enviada", "producao", "apresentacao", "aprovada"], para: "cancelada", papeis: ["solicitante", "atendimento", "admin"], rotulo: "Cancelar pedido" },
@@ -52,8 +40,8 @@ export const REGRAS: Record<Acao, Regra> = {
 export const ETAPAS: { status: Status; rotulo: string }[] = [
   { status: "enviada", rotulo: "Enviada" },
   { status: "producao", rotulo: "Em produção" },
-  { status: "apresentacao", rotulo: "Em apresentação" },
-  { status: "aprovada", rotulo: "Aprovada" },
+  { status: "apresentacao", rotulo: "Em aprovação" },
+  { status: "aprovada", rotulo: "Pronto para entrega" },
   { status: "entregue", rotulo: "Entregue" },
   { status: "faturada", rotulo: "Faturada" },
   { status: "paga", rotulo: "Paga" },
@@ -63,26 +51,23 @@ export const NOME_STATUS: Record<Status, string> = {
   rascunho: "Rascunho", cancelada: "Cancelada",
 };
 
-export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx): boolean {
+export function podeExecutar(acao: Acao, status: Status, papel: Papel, _ctx: Ctx = {}): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
   const r = REGRAS[acao];
   if (!r.de.includes(status) || !r.papeis.includes(papel)) return false;
-  if (acao === "confirmarRecebimento" && ctx.recebidoPeloCliente) return false;
-  // Antes da produção: solicitante e atendimento cancelam. Em apresentação: o solicitante também
-  // (com cobrança de 50%). Nas demais etapas, só o admin.
-  if (acao === "cancelar" && papel !== "admin" && !(status === "enviada" || (status === "apresentacao" && papel === "solicitante"))) return false;
+  // Pedido inteiro: Solicitante e Atendimento só cancelam antes do aceite; depois, só o admin.
+  // (Depois das peças, a Débora cancela peça por peça, com 50%.)
+  if (acao === "cancelar" && papel !== "admin" && status !== "enviada") return false;
   return true;
 }
 
 /** Retorna o novo status ou lança erro com mensagem para o usuário. */
-export function aplicar(acao: Acao, status: Status, papel: Papel, ctx: Ctx): Status {
-  if (!podeExecutar(acao, status, papel, ctx)) {
-    throw new Error("Esta ação não está disponível para o seu perfil nesta etapa do pedido.");
-  }
-  return REGRAS[acao].para ?? status;
+export function aplicar(acao: Acao, status: Status, papel: Papel, ctx: Ctx = {}): Status {
+  if (!podeExecutar(acao, status, papel, ctx)) throw new Error("Esta ação não está disponível para o seu perfil nesta etapa do pedido.");
+  return REGRAS[acao].para;
 }
 
 /** Ações disponíveis para um perfil num pedido (para os botões da tela). */
-export function acoesDisponiveis(status: Status, papel: Papel, ctx: Ctx): Acao[] {
+export function acoesDisponiveis(status: Status, papel: Papel, ctx: Ctx = {}): Acao[] {
   return (Object.keys(REGRAS) as Acao[]).filter((a) => podeExecutar(a, status, papel, ctx));
 }
 
@@ -94,7 +79,8 @@ export const VE_VALORES_PEDIDO: Papel[] = ["financeiro_cliente", "atendimento", 
 export const VE_CONTRATO: Papel[] = ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
 /** Quem vê Arquivos no Drive (os financeiros não, decisão de 03/10). */
 export const VE_ARQUIVOS: Papel[] = ["solicitante", "atendimento", "criativo", "admin"];
-/** Quem usa Aprovações (Débora avalia, Marcelo orienta e revisa, Mariane executa). */
-export const VE_APROVACOES: Papel[] = ["solicitante", "atendimento", "criativo", "admin"];
+/** Quem usa "Minhas tarefas" (cada pessoa age só ali). */
+export const VE_TAREFAS: Papel[] = ["solicitante", "atendimento", "criativo", "financeiro_propaga", "admin"];
+export const VE_APROVACOES = VE_TAREFAS;
 /** Quem vê a tabela de Valores (o Criativo não vê preços). */
 export const VE_VALORES: Papel[] = ["solicitante", "financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];

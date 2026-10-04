@@ -68,12 +68,14 @@ export function pendentePara(papel: Papel | string | null | undefined, p: Peca):
 export const prontoParaEntrega = (pecas: Peca[]) =>
   pecas.length > 0 && pecas.every((p) => p.etapa === "concluida" || p.etapa === "encerrada") && pecas.some((p) => p.etapa === "concluida");
 
-/** Etapa do pedido a partir das peças (só enquanto o pedido está em produção/apresentação/aprovado). */
+/** Etapa do pedido a partir das peças (só enquanto o pedido está entre produção e pronto para entrega).
+    Em aprovação = alguma peça com a Débora; Pronto para entrega = todas fechadas (arquivo final ou cancelada);
+    todas canceladas = pedido cancelado; nos demais casos, em produção. */
 export function statusPorPecas(pecas: Peca[], atual: Status): Status {
   if (!["producao", "apresentacao", "aprovada", "cancelada"].includes(atual) || !pecas.length) return atual;
   if (pecas.some((p) => p.etapa === "cliente")) return "apresentacao";
-  const decs = pecas.map(ultimaDecisao);
-  if (decs.every((d) => d && d.tipo !== "refacao")) return decs.some((d) => d!.tipo === "aprovada") ? "aprovada" : "cancelada";
+  if (prontoParaEntrega(pecas)) return "aprovada";
+  if (pecas.every((p) => p.etapa === "encerrada")) return "cancelada";
   return "producao";
 }
 
@@ -97,3 +99,21 @@ export function previewDrive(link: string): string | null {
 
 /** Texto em linhas → itens (para refação em lista). */
 export const linhasParaItens = (t: string) => t.split(/\n+/).map((x) => x.replace(/^\s*(\d+[.)-]|[-•*])\s*/, "").trim()).filter(Boolean);
+
+/** Tarefas do pedido (fora das peças) que cabem a cada perfil — base de "Minhas tarefas" e do contador. */
+export type TarefaPedido = "aceitar" | "criar" | "entregar" | "faturar" | "receber";
+export function tarefasDoPedido(papel: Papel | string | null | undefined, p: { status: string; temPecas?: boolean }): TarefaPedido[] {
+  const t: TarefaPedido[] = [];
+  const atend = papel === "atendimento" || papel === "admin", fin = papel === "financeiro_propaga" || papel === "admin";
+  if (atend && p.status === "enviada") t.push("aceitar");
+  if (papel === "criativo" && aguardaCriacao(p)) t.push("criar");
+  if (atend && p.status === "aprovada") t.push("entregar");
+  if (fin && p.status === "entregue") t.push("faturar");
+  if (fin && p.status === "faturada") t.push("receber");
+  return t;
+}
+
+/** Total de pendências de um perfil (tarefas de pedido + peças). */
+export function contarPendencias(papel: Papel | string | null | undefined, pedidos: { status: string; temPecas?: boolean; pecas?: Peca[] }[]): number {
+  return pedidos.reduce((n, p) => n + tarefasDoPedido(papel, p).length + (p.pecas ?? []).filter((x) => pendentePara(papel, x)).length, 0);
+}
