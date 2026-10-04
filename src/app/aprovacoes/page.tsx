@@ -301,7 +301,8 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
   const ehCliente = papel === "solicitante";
   const pasta = <a href={pd.drive.link} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>;
 
-  if ((ehCliente || papel === "admin") && aba === "aguardando") {
+  // Admin também avalia (pedidos que ele mesmo abriu ou em nome da Débora), pela aba "Com a Débora".
+  if ((ehCliente && aba === "aguardando") || (papel === "admin" && aba === "cliente")) {
     const feitas = pecas.filter((x) => rasc[x.id] && !rasc[x.id].pendente).length;
     return <>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
