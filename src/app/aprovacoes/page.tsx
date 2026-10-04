@@ -11,8 +11,9 @@ import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, type PedidoDoc } from "@/components/pedido";
 import { MAX_RODADAS } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis } from "@/lib/datas";
-import { atrasada, linhasParaItens, pendentePara, prazoEtapa, previewDrive, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
+import { aguardaCriacao, atrasada, linhasParaItens, pendentePara, prazoEtapa, previewDrive, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
 import { useFila, usePedidos } from "@/lib/usarFila";
+import { FormPublicar } from "@/components/publicar";
 import type { Papel } from "@/lib/tipos";
 
 type Aba = { k: string; rotulo: string; f: (p: Peca) => boolean };
@@ -33,6 +34,7 @@ const ABAS: Record<string, Aba[]> = {
     { k: "canceladas", rotulo: "Canceladas", f: decidida("cancelada") },
   ],
   criativo: [
+    { k: "criar", rotulo: "Criar peças", f: () => false },
     { k: "refazer", rotulo: "Refazer", f: (p) => p.etapa === "criativo" && p.tarefa === "refazer" },
     { k: "final", rotulo: "Finalizar aprovadas", f: (p) => p.etapa === "criativo" && p.tarefa === "final" },
     { k: "ciencia", rotulo: "Canceladas", f: (p) => p.etapa === "criativo" && p.tarefa === "ciencia" },
@@ -181,7 +183,10 @@ function Conteudo() {
 
   const pedidos = useMemo(() => (lista ?? []).filter((p) => p.temPecas && (!filtro || p.protocolo === filtro))
     .sort((a, b) => b.protocolo.localeCompare(a.protocolo)), [lista, filtro]);
-  const pendentes = pedidos.flatMap((p) => p.pecas ?? []).filter((x) => pendentePara(papel, x)).length;
+  // Mariane: pedidos aceitos pelo Marcelo esperando a criação das peças.
+  const paraCriar = useMemo(() => papel === "criativo" ? (lista ?? []).filter((p) => aguardaCriacao(p) && (!filtro || p.protocolo === filtro)) : [], [lista, filtro, papel]);
+  const [criando, setCriando] = useState<string | null>(null);
+  const pendentes = pedidos.flatMap((p) => p.pecas ?? []).filter((x) => pendentePara(papel, x)).length + paraCriar.length;
   const abaAtual = abas.find((a) => a.k === aba) ?? abas[0];
   const blocos = pedidos.map((pd) => ({ pd, pecas: (pd.pecas ?? []).filter(abaAtual.f) })).filter((b) => b.pecas.length);
 
@@ -189,7 +194,7 @@ function Conteudo() {
   const iniciou = useRef(false);
   useEffect(() => {
     if (iniciou.current || !lista) return; iniciou.current = true;
-    const k = abas.find((a) => pedidos.some((pd) => (pd.pecas ?? []).some(a.f)))?.k; if (k) setAba(k);
+    const k = paraCriar.length ? "criar" : abas.find((a) => pedidos.some((pd) => (pd.pecas ?? []).some(a.f)))?.k; if (k) setAba(k);
   }, [lista]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function executar(dados: Record<string, unknown>, okMsg: string) {
@@ -206,7 +211,7 @@ function Conteudo() {
 
   const texto = ({
     solicitante: pendentes ? `${pendentes} ${pendentes > 1 ? "peças aguardam" : "peça aguarda"} sua avaliação. Aprove, peça refação ou cancele e envie a avaliação do pedido.` : "Nada aguardando você agora.",
-    criativo: pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: refazer, preparar arquivos finais e tomar ciência de cancelamentos.` : "Nenhuma tarefa pendente.",
+    criativo: pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: criar peças, refazer, preparar arquivos finais e tomar ciência de cancelamentos.` : "Nenhuma tarefa pendente.",
 } as Record<string, string>)[papel ?? ""] ?? (pendentes ? `${pendentes} ${pendentes > 1 ? "itens pedem" : "item pede"} sua ação: orientar refações ou revisar versões do criativo.` : "Nenhuma ação pendente.");
 
   return (
@@ -214,8 +219,8 @@ function Conteudo() {
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">{texto}</p>
         <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
-          {["Débora avalia", "Marcelo orienta a refação", "Mariane executa", "Marcelo revisa", "volta para a Débora"].map((t, k) => (
-            <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k < 4 ? `${k + 1} · ` : ""}{t}</span></li>
+          {["Débora solicita", "Marcelo aceita", "Mariane cria", "Marcelo revisa", "Débora aprova, pede refação ou cancela"].map((t, k) => (
+            <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
         </ol>
         {filtro && <Aviso>Mostrando só o pedido {filtro}. <button type="button" className="font-semibold underline" onClick={() => setFiltro("")}>Ver todos</button></Aviso>}
@@ -223,13 +228,35 @@ function Conteudo() {
         {aviso && <Aviso tipo={aviso.tipo}>{aviso.msg}</Aviso>}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Filtro">
           {abas.map((a) => {
-            const n = pedidos.reduce((t, pd) => t + (pd.pecas ?? []).filter(a.f).length, 0);
+            const n = a.k === "criar" ? paraCriar.length : pedidos.reduce((t, pd) => t + (pd.pecas ?? []).filter(a.f).length, 0);
             return <button key={a.k} type="button" aria-pressed={abaAtual.k === a.k} onClick={() => setAba(a.k)}
               className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium ${abaAtual.k === a.k ? "border-ink-900 bg-ink-900 text-paper" : "border-[#C9D7DC] bg-white"}`}>{a.rotulo} <span className="tabular-nums opacity-80">{n}</span></button>;
           })}
         </div>
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
-        {lista && !blocos.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
+        {abaAtual.k === "criar" && paraCriar.map((pd) => (
+          <section key={pd.protocolo} className="grid gap-3 rounded-md border border-gray-200 bg-white p-4" aria-label={pd.protocolo}>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="font-display text-sm font-semibold text-marca-700 underline-offset-4 hover:underline">{pd.protocolo}</a>
+              <h2 className="text-lg">{pd.titulo}</h2>
+              <span className="text-sm text-gray-600">{pd.unidade} · 1ª apresentação {brData(pd.prazo.primeira)}</span>
+            </div>
+            <dl className="grid gap-x-3 gap-y-1 text-sm sm:grid-cols-[120px_minmax(0,1fr)]">
+              <dt className="text-gray-600">Objetivo</dt><dd>{pd.objetivo}</dd>
+              <dt className="text-gray-600">Público</dt><dd>{pd.publico}</dd>
+              <dt className="text-gray-600">Peças</dt><dd>{pd.itens.map((it) => `${it.qtd}× ${it.nome} (${it.varianteRotulo})`).join(" · ")}</dd>
+              {pd.obs && <><dt className="text-gray-600">Observações</dt><dd className="whitespace-pre-wrap">{pd.obs}</dd></>}
+            </dl>
+            {criando === pd.protocolo ? <FormPublicar pedido={pd} onFechar={() => setCriando(null)} onOk={(m) => setAviso({ tipo: "ok", msg: m })} /> : (
+              <div className="flex flex-wrap gap-3">
+                <Botao onClick={() => setCriando(pd.protocolo)}>Enviar peças criadas ao Marcelo</Botao>
+                <a href={pd.drive.link} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>
+                <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver briefing completo</a>
+              </div>
+            )}
+          </section>
+        ))}
+        {lista && !blocos.length && !(abaAtual.k === "criar" && paraCriar.length) && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
 
         {blocos.map(({ pd, pecas }) => (
           <section key={pd.protocolo} className="grid gap-3 rounded-md border border-gray-200 bg-white p-4" aria-label={pd.protocolo}>
@@ -302,8 +329,8 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
   if (aba === "revisao" && papel !== "criativo") return <>
     <div className="grid gap-2">{pecas.map((x) => { const v = ultima(x); return (
       <div key={x.id} className="grid gap-2 rounded border border-gray-200 p-3">
-        <div className="flex flex-wrap items-center gap-3"><b>{x.nome} · v{v.v} da Mariane</b><Prazo p={x} /></div>
-        <Nota><b>Orientação:</b><Lista itens={x.orientacao?.itens} /><span className="text-gray-600">Mariane marcou {v.feitos ?? 0} de {x.orientacao?.itens.length ?? 0} como feitos.</span></Nota>
+        <div className="flex flex-wrap items-center gap-3"><b>{x.nome} · v{v.v} da Mariane</b><Prazo p={x} />{!x.orientacao && <span className="text-xs text-gray-600">primeira versão</span>}</div>
+        {x.orientacao && <Nota><b>Orientação:</b><Lista itens={x.orientacao.itens} /><span className="text-gray-600">Mariane marcou {v.feitos ?? 0} de {x.orientacao.itens.length} como feitos.</span></Nota>}
         {v.nota && <Nota cor="ok"><b>Mariane:</b> {v.nota}</Nota>}
         <div className="flex flex-wrap gap-2">
           <Botao variante="discreto" onClick={() => abrir(pd, pecas, x.id)}>Ver versão</Botao>
@@ -311,6 +338,7 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
           <Botao disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: [x.id] }, "Versão enviada à Débora.")}>Enviar à Débora</Botao>
         </div>
       </div>); })}</div>
+    {pecas.length > 1 && <Botao className="w-fit" disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: pecas.map((x) => x.id) }, `${pecas.length} peças enviadas à Débora.`)}>Enviar todas à Débora ({pecas.length})</Botao>}
   </>;
 
   if (papel === "criativo" && ["refazer", "final", "ciencia"].includes(aba)) return <>
@@ -395,7 +423,7 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
 
   if (modal.tipo === "enviarVersao" && peca) {
     const itens = peca.orientacao?.itens ?? [];
-    return <Modal titulo={`Enviar v${ultima(peca).v + 1} ao Marcelo`} onFechar={onFechar}>
+    return <Modal titulo={`Enviar v${ultima(peca).interna ? ultima(peca).v : ultima(peca).v + 1} ao Marcelo`} onFechar={onFechar}>
       <p><b>{peca.nome}</b> · {pd.protocolo}</p>
       <fieldset className="grid gap-1.5"><legend className="mb-1 text-sm font-semibold">Confira cada ajuste</legend>
         {itens.map((t, k) => <label key={k} className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-marca-700" checked={feitos[k] ?? false} onChange={(e) => { const f = [...feitos]; f[k] = e.target.checked; setFeitos(f); }} /><span>{t}</span></label>)}

@@ -15,8 +15,8 @@ import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, moeda, Painel, SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
-import { situacaoInterna, situacaoRelatorio, ultima } from "@/lib/pecas";
-import { useFila } from "@/lib/usarFila";
+import { aguardaCriacao, situacaoInterna, situacaoRelatorio, ultima } from "@/lib/pecas";
+import { FormPublicar } from "@/components/publicar";
 
 interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?: string; chave?: boolean }
 interface Valores { itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
@@ -161,51 +161,6 @@ function FormAcao({ acao, pedido, clienteId, onFechar }: { acao: Acao; pedido: P
   );
 }
 
-/* Publicar peças para aprovação (Marcelo): uma linha por peça, já sugerida a partir dos serviços do pedido. */
-function FormPublicar({ pedido, onFechar }: { pedido: PedidoDoc; onFechar: () => void }) {
-  const enviar = useFila();
-  const sugestao = pedido.temPecas ? [{ nome: "", item: 0 as number | null, link: "" }]
-    : pedido.itens.flatMap((it, i) => Array.from({ length: Math.min(it.qtd, 10) }, (_, k) => ({ nome: it.qtd > 1 ? `${it.nome} ${k + 1}` : it.nome, item: i as number | null, link: "" })));
-  const [linhas, setLinhas] = useState(sugestao);
-  const [erro, setErro] = useState(""); const [ocupado, setOcupado] = useState(false);
-  const muda = (k: number, campo: "nome" | "item" | "link", v: string) => setLinhas(linhas.map((l, j) => j !== k ? l : { ...l, [campo]: campo === "item" ? (v === "" ? null : Number(v)) : v }));
-  async function confirmar(e: React.FormEvent) {
-    e.preventDefault(); setErro("");
-    const pecas = linhas.filter((l) => l.nome.trim() || l.link.trim()).map((l) => ({ nome: l.nome.trim(), item: l.item, link: l.link.trim() }));
-    if (!pecas.length) { setErro("Inclua ao menos uma peça."); return; }
-    const ruim = pecas.findIndex((l) => l.nome.length < 2 || !/^https:\/\/drive\.google\.com\//.test(l.link));
-    if (ruim >= 0) { setErro(`Confira a peça ${ruim + 1}: nome e link do arquivo no Google Drive (pasta 03 Provas).`); return; }
-    setOcupado(true);
-    const r = await enviar("peca", { acao: "publicar", protocolo: pedido.protocolo, pecas });
-    setOcupado(false);
-    if (r.ok) onFechar(); else setErro(r.msg);
-  }
-  const cx2 = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
-  return (
-    <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-marca-500 bg-white p-4 md:p-5" aria-labelledby="pub-t">
-      <h3 id="pub-t" className="text-base">{pedido.temPecas ? "Publicar mais peças" : "Publicar peças para aprovação"}</h3>
-      <p className="text-sm text-gray-600">Uma linha por peça, com o link do arquivo na pasta <b>03 Provas</b> do Drive. A Débora avalia peça por peça na página Aprovações.</p>
-      <div className="grid gap-3">
-        {linhas.map((l, k) => (
-          <fieldset key={k} className="grid gap-2 rounded border border-gray-200 p-3 md:grid-cols-[1fr_1fr_1.4fr_auto] md:items-end">
-            <legend className="sr-only">Peça {k + 1}</legend>
-            <div className="grid gap-1"><label htmlFor={`pn-${k}`} className="text-xs font-semibold">Peça {k + 1}</label><input id={`pn-${k}`} className={cx2} value={l.nome} onChange={(e) => muda(k, "nome", e.target.value)} /></div>
-            <div className="grid gap-1"><label htmlFor={`pi-${k}`} className="text-xs font-semibold">Serviço</label>
-              <select id={`pi-${k}`} className={cx2} value={l.item ?? ""} onChange={(e) => muda(k, "item", e.target.value)}>
-                {pedido.itens.map((it, i) => <option key={i} value={i}>{i + 1}. {it.nome}</option>)}<option value="">Sem vínculo</option>
-              </select></div>
-            <div className="grid gap-1"><label htmlFor={`pl-${k}`} className="text-xs font-semibold">Link no Drive</label><input id={`pl-${k}`} type="url" className={cx2} placeholder="https://drive.google.com/file/d/…" value={l.link} onChange={(e) => muda(k, "link", e.target.value)} /></div>
-            <Botao type="button" variante="discreto" className="!px-3" onClick={() => setLinhas(linhas.filter((_, j) => j !== k))} aria-label={`Remover peça ${k + 1}`}>Remover</Botao>
-          </fieldset>
-        ))}
-      </div>
-      <Botao type="button" variante="discreto" className="w-fit" onClick={() => setLinhas([...linhas, { nome: "", item: 0, link: "" }])}>+ Adicionar peça</Botao>
-      {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <div className="flex flex-wrap gap-3"><Botao type="submit" carregando={ocupado}>Enviar à Débora</Botao><Botao type="button" variante="linha" onClick={onFechar}>Voltar</Botao></div>
-    </form>
-  );
-}
-
 function Conteudo() {
   const s = useSessao();
   const protocolo = useSearchParams().get("p") ?? "";
@@ -234,7 +189,8 @@ function Conteudo() {
     .filter(() => !(s.papel === "solicitante" && pedido.solicitanteUid !== s.usuario?.uid))
     // Com peças, versões/ajustes/aprovação são por peça (Aprovações); cancelar o pedido inteiro só o admin.
     .filter((a) => !pedido.temPecas || !(["disponibilizarVersao", "pedirAjustes", "aprovar"].includes(a) || (a === "cancelar" && s.papel !== "admin"))) : [];
-  const podePublicar = (s.papel === "atendimento" || s.papel === "admin") && ["producao", "apresentacao"].includes(pedido.status);
+  const podePublicar = ((s.papel === "atendimento" || s.papel === "admin") && ["producao", "apresentacao"].includes(pedido.status))
+    || (s.papel === "criativo" && aguardaCriacao(pedido));
   const ehCliente = s.papel === "solicitante" || s.papel === "financeiro_cliente";
   const principais = acoes.filter((a) => a !== "cancelar");
   const cancelarAoLado = pedido.status === "apresentacao";
@@ -270,7 +226,7 @@ function Conteudo() {
             <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Ações disponíveis">
               <span className="mr-auto text-sm font-semibold">Sua próxima ação{pedido.status === "apresentacao" ? ` · versão ${pedido.versao || 1}, refações ${pedido.rodadas || 0} (${MAX_RODADAS} incluídas)` : ""}</span>
               {pedido.temPecas && s.papel !== "financeiro_cliente" && s.papel !== "financeiro_propaga" && <a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900">Abrir Aprovações</a>}
-              {podePublicar && <Botao variante={pedido.temPecas ? "linha" : "primario"} onClick={() => setPublicando(true)}>{pedido.temPecas ? "Publicar mais peças" : "Publicar peças para aprovação"}</Botao>}
+              {podePublicar && <Botao variante={pedido.temPecas ? "linha" : "primario"} onClick={() => setPublicando(true)}>{s.papel === "criativo" ? "Enviar peças criadas ao Marcelo" : pedido.temPecas ? "Publicar mais peças" : "Publicar peças para aprovação"}</Botao>}
               {principais.filter((a) => a !== "disponibilizarVersao").map((a, i) => <Botao key={a} variante={i === 0 && !podePublicar && !pedido.temPecas ? "primario" : "linha"} onClick={() => setAcao(a)}>{REGRAS[a].rotulo}</Botao>)}
               {acoes.includes("cancelar") && <Botao variante={cancelarAoLado ? "linha" : "discreto"} onClick={() => setAcao("cancelar")}>{cancelarAoLado ? "Cancelar" : "Cancelar pedido"}</Botao>}
             </section>

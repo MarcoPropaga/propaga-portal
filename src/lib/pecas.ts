@@ -17,7 +17,7 @@ export type TarefaCriativo = "refazer" | "final" | "ciencia";
 export type TipoDecisao = "aprovada" | "refacao" | "cancelada";
 
 export interface DecisaoPeca { tipo: TipoDecisao; itens?: string[]; nota?: string; por: string; em: string }
-export interface VersaoPeca { v: number; link: string; em: string; por: string; interna?: boolean; nota?: string; feitos?: number; decisao?: DecisaoPeca | null }
+export interface VersaoPeca { v: number; link: string; em: string; por: string; interna?: boolean; devolvida?: boolean; nota?: string; feitos?: number; decisao?: DecisaoPeca | null }
 export interface Orientacao { itens: string[]; prazo: string; por: string; em: string }
 export interface Peca {
   id: string; nome: string; item: number | null; etapa: EtapaPeca; tarefa?: TarefaCriativo | null;
@@ -52,6 +52,9 @@ export function prazoEtapa(p: Peca): string | null {
   return null;
 }
 export const atrasada = (p: Peca, hoje: string) => { const z = prazoEtapa(p); return !!z && z < hoje; };
+
+/** Pedido aceito aguardando a Mariane criar as peças (primeira versão). */
+export const aguardaCriacao = (p: { status: string; temPecas?: boolean }) => p.status === "producao" && !p.temPecas;
 
 /** A peça pede ação deste perfil? */
 export function pendentePara(papel: Papel | string | null | undefined, p: Peca): boolean {

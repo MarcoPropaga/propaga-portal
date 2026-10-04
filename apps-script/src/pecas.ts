@@ -3,7 +3,7 @@
 import { CLIENTES } from "@/content/clientes";
 import { MAX_RODADAS, NOME_STATUS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
-import { atrasada, pendentePara, prazoEtapa, prontoParaEntrega, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
+import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
 import { pecaAcaoSchema } from "@/lib/schemas";
 import type { Status } from "@/lib/tipos";
 import { emailAtualizacao, emailResumo } from "./emails";
@@ -19,7 +19,7 @@ interface Pedido {
 type Quem = "solicitante" | "atendimento" | "criativo" | "financeiro_propaga";
 
 const PODE: Record<string, string[]> = {
-  publicar: ["atendimento", "admin"],
+  publicar: ["criativo", "atendimento", "admin"],
   avaliar: ["solicitante", "admin"],
   encaminhar: ["atendimento", "admin"],
   enviarVersao: ["criativo", "atendimento", "admin"],
@@ -57,16 +57,19 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   switch (d.acao) {
     case "publicar": {
       if (!["producao", "apresentacao"].includes(ped.status)) throw new ErroUsuario("Publique as peças depois de aceitar o pedido.");
+      // Criativo cria → vai para a revisão do Marcelo; Atendimento/admin podem publicar direto para a Débora.
+      const doCriativo = u.papel === "criativo";
       const base = pecas.length;
       d.pecas.forEach((n, i) => {
         if (n.item != null && !ped.itens[n.item]) throw new ErroUsuario(`Serviço inválido na peça "${n.nome}".`);
-        const x: Peca = { id: `p${base + i + 1}`, nome: n.nome, item: n.item, etapa: "cliente", tarefa: null, orientacao: null, extras30: 0,
-          versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null }], hist: [], desde: agora };
-        log(x, "v1 enviada à Débora para aprovação");
+        const x: Peca = { id: `p${base + i + 1}`, nome: n.nome, item: n.item, etapa: doCriativo ? "revisao" : "cliente", tarefa: null, orientacao: null, extras30: 0,
+          versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null, interna: doCriativo || undefined }], hist: [], desde: agora };
+        log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : "v1 enviada à Débora para aprovação");
         pecas.push(x);
       });
-      rotuloEvento = `${d.pecas.length} peça(s) enviada(s) para aprovação`;
-      avisos.push({ quem: ["solicitante"], rotulo: "Peças para sua aprovação", nota: d.pecas.map((n) => `- ${n.nome}`).join("\n") });
+      const lista = d.pecas.map((n) => `- ${n.nome}`).join("\n");
+      rotuloEvento = doCriativo ? `${d.pecas.length} peça(s) criada(s) pela Mariane · revisão do Marcelo` : `${d.pecas.length} peça(s) enviada(s) para aprovação`;
+      avisos.push(doCriativo ? { quem: ["atendimento"], rotulo: "Peças criadas para revisar", nota: lista } : { quem: ["solicitante"], rotulo: "Peças para sua aprovação", nota: lista });
       break;
     }
     case "avaliar": {
@@ -119,8 +122,11 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       if (x.etapa !== "criativo" || x.tarefa !== "refazer") throw new ErroUsuario("Esta peça não está aguardando nova versão.");
       const n = x.orientacao?.itens.length ?? 0;
       if (d.feitos < n && (d.nota?.length ?? 0) < 3) throw new ErroUsuario("Marque todos os ajustes ou explique o que ficou pendente.");
-      const v = ultima(x).v + 1;
-      x.versoes.push({ v, link: d.link, em: agora, por: u.nome, interna: true, nota: d.nota || undefined, feitos: d.feitos, decisao: null });
+      // Versão ainda não vista pela Débora (devolvida na revisão): substitui; senão, cria a próxima.
+      const ul = ultima(x);
+      const v = ul.interna ? ul.v : ul.v + 1;
+      const nova = { v, link: d.link, em: agora, por: u.nome, interna: true, nota: d.nota || undefined, feitos: d.feitos, decisao: null };
+      if (ul.interna) x.versoes[x.versoes.length - 1] = nova; else x.versoes.push(nova);
       mover(x, "revisao");
       log(x, `v${v} enviada ao Marcelo para revisão (${d.feitos} de ${n} ajustes)`);
       rotuloEvento = `${x.nome}: v${v} para revisão`;
@@ -155,7 +161,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
     case "devolver": {
       const x = achar(d.id);
       if (x.etapa !== "revisao") throw new ErroUsuario("Esta peça não está em revisão.");
-      x.versoes.pop();
+      ultima(x).devolvida = true;
       x.orientacao = { itens: d.itens, prazo: x.orientacao?.prazo ?? hojeSP(p.agora()), por: u.nome, em: agora };
       mover(x, "criativo", "refazer"); log(x, "Devolvida à Mariane pelo Marcelo (ajuste interno, não conta refação)");
       rotuloEvento = `${x.nome}: devolvida ao criativo`;
@@ -225,6 +231,10 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
     for (const ped of pedidos) {
       if (!u.propaga && u.clienteId !== ped.c) continue;
       if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) continue;
+      if (u.papel === "criativo" && aguardaCriacao(ped)) {
+        const z = (ped as unknown as { prazo?: { primeira?: string } }).prazo?.primeira ?? null;
+        linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: "Criar as peças do pedido", etapa: "criar", prazo: z, atrasada: !!z && z < hoje });
+      }
       for (const x of ped.pecas ?? []) if (pendentePara(u.papel, x))
         linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: x.nome, etapa: x.etapa, prazo: prazoEtapa(x), atrasada: atrasada(x, hoje) });
     }

@@ -57,7 +57,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const extras: { caminho: string; dados: Record<string, unknown>; mesclar?: boolean }[] = [];
   let rotulo = "";
   let notaEvento = nota;
-  let avisar: ("solicitante" | "atendimento" | "financeiro_propaga")[] = [];
+  let avisar: ("solicitante" | "atendimento" | "financeiro_propaga" | "criativo")[] = [];
 
   switch (acao) {
     case "aceitarPedido": {
@@ -82,7 +82,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         d.driveVerificado ? "Acesso à pasta do Drive conferido." : "Acesso à pasta do Drive ainda não conferido.",
         nota,
       ].filter(Boolean).join(" ");
-      avisar = ["solicitante"];
+      avisar = ["solicitante", "criativo"]; // a Mariane recebe o job para criar as peças
       break;
     }
     case "disponibilizarVersao": {
@@ -166,7 +166,8 @@ function avisarPessoas(
     const dest = todos.filter((x) => x.uid !== autor.uid && (
       (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
-      (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga")));
+      (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
+      (quem.includes("criativo") && x.papel === "criativo")));
     if (!dest.length) return;
     const msg = emailAtualizacao({
       cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
