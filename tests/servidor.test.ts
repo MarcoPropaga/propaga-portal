@@ -329,6 +329,7 @@ describe("aprovação por peça (fila 'peca')", () => {
       drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
     });
     fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "aceitarPedido", cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" }, driveVerificado: true });
+    expect(para()).toContain("mariane@propaga.com"); // o aceite entrega o job à Mariane
     f.emails.length = 0;
   });
 
@@ -361,7 +362,7 @@ describe("aprovação por peça (fila 'peca')", () => {
 
     // devolver (ajuste interno) não conta refação
     expect(peca(mcl, "devolver", { id: "p2", itens: ["Alinhar o logo"] }).status).toBe("ok");
-    expect([pc("p2").etapa, pc("p2").versoes.length, ped().rodadas]).toEqual(["criativo", 1, 1]);
+    expect([pc("p2").etapa, pc("p2").versoes.length, ped().rodadas]).toEqual(["criativo", 2, 1]); // v2 fica marcada como devolvida e é substituída
     peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 1 });
     f.emails.length = 0;
     expect(peca(mcl, "liberar", { ids: ["p2"] }).status).toBe("ok");
@@ -380,6 +381,21 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).status).toBe("ok");
     // ações antigas por pedido ficam bloqueadas
     expect(fila("acao", deb, { protocolo: "BML-2026-0001", acao: "aprovar" }).mensagem).toMatch(/Aprovações|disponível/);
+  });
+
+  it("Mariane cria as peças → Marcelo revisa (devolve a v1, ela substitui) → Débora recebe", () => {
+    expect(peca(mri, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).status).toBe("ok");
+    expect([pc("p1").etapa, pc("p1").versoes[0].interna]).toEqual(["revisao", true]);
+    expect(ped().status).toBe("producao");
+    expect(para()).toEqual(["marcelo@propaga.com"]);
+    peca(mcl, "devolver", { id: "p1", itens: ["Usar a foto do caminhão"] });
+    expect([pc("p1").etapa, pc("p1").tarefa, pc("p1").versoes.length]).toEqual(["criativo", "refazer", 1]);
+    peca(mri, "enviarVersao", { id: "p1", link: link("a2"), feitos: 1 });
+    expect([pc("p1").etapa, pc("p1").versoes.length, pc("p1").versoes[0].v, pc("p1").versoes[0].link]).toEqual(["revisao", 1, 1, link("a2")]);
+    f.emails.length = 0;
+    peca(mcl, "liberar", { ids: ["p1"] });
+    expect([pc("p1").etapa, ped().status, ped().rodadas]).toEqual(["cliente", "apresentacao", 0]);
+    expect(para()).toEqual(["deborabmlog@gmail.com"]);
   });
 
   it("resumo diário: uma vez por dia, só para quem tem pendência", () => {

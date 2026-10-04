@@ -5,7 +5,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
 import { NOMES_PAPEIS } from "@/content/clientes";
 import { VE_APROVACOES, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
-import { pendentePara } from "@/lib/pecas";
+import { aguardaCriacao, pendentePara } from "@/lib/pecas";
 import { usePedidos } from "@/lib/usarFila";
 
 const ITENS = [
@@ -28,7 +28,8 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   const nomePortal = "Portal MKT B&M Log";
   const veAprov = !!s.papel && (VE_APROVACOES as string[]).includes(s.papel);
   const { lista } = usePedidos(veAprov);
-  const pend = (lista ?? []).flatMap((p) => p.pecas ?? []).filter((x) => pendentePara(s.papel, x)).length;
+  const pend = (lista ?? []).flatMap((p) => p.pecas ?? []).filter((x) => pendentePara(s.papel, x)).length
+    + (s.papel === "criativo" ? (lista ?? []).filter(aguardaCriacao).length : 0);
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">

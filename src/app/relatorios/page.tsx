@@ -115,7 +115,7 @@ function Conteudo() {
       p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : f > 1 ? `${p.refacoesExtrasCobradas} refação(ões) extra: +${Math.round((f - 1) * 100)}%` : "",
       v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não"].map(q).join(";"));
     const corpoPecas = pecasSel.map(({ p, x, u, aj, sit }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], "peça", x.nome,
-      sit.rotulo, "1", n(u), "", n(aj), x.extras30 ? `${x.extras30} refação(ões) extra: +30%` : "", ""].map(q).join(";"));
+      sit.rotulo, "1", n(u), "", n(aj), [x.extras30 ? `${x.extras30} refação(ões) extra: +30%` : "", x.hist.length ? `Última ação: ${x.hist[x.hist.length - 1].txt} (${x.hist[x.hist.length - 1].por}, ${brData(x.hist[x.hist.length - 1].em)})` : ""].filter(Boolean).join(" · "), ""].map(q).join(";"));
     const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo, ...corpoPecas].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -179,7 +179,7 @@ function Conteudo() {
               <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
                 <table className="w-full min-w-[640px] text-sm">
                   <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
-                    <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5 text-right">Ajuste no valor</th></tr>
+                    <tr><th className="px-3 py-2.5">Protocolo</th><th className="px-3 py-2.5">Peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5">Última ação</th><th className="px-3 py-2.5 text-right">Ajuste no valor</th></tr>
                   </thead>
                   <tbody>
                     {pecasSel.map(({ p, x, aj, sit }) => (
@@ -187,6 +187,7 @@ function Conteudo() {
                         <td className="whitespace-nowrap px-3 py-2.5">{p.protocolo}</td>
                         <td className="px-3 py-2.5">{x.nome}<div className="text-xs text-gray-600">v{x.versoes.length ? x.versoes[x.versoes.length - 1].v : 1}{x.extras30 ? ` · ${x.extras30} refação(ões) extra` : ""}</div></td>
                         <td className="px-3 py-2.5">{sit.rotulo}</td>
+                        <td className="px-3 py-2.5 text-xs">{(() => { const h = x.hist[x.hist.length - 1]; return h ? <>{h.txt}<div className="text-gray-600">{h.por} · {brData(h.em)}</div></> : "—"; })()}</td>
                         <td className={`whitespace-nowrap px-3 py-2.5 text-right tabular-nums ${aj < 0 ? "text-gray-600" : aj > 0 ? "text-aviso-700" : ""}`}>{aj ? `${aj > 0 ? "+" : "−"} ${moeda(Math.abs(aj))}` : "—"}</td>
                       </tr>
                     ))}
