@@ -1,7 +1,8 @@
 "use client";
 /* Fluxos de acesso: senha, segundo fator (TOTP) e cadastro do autenticador. */
 import {
-  signInWithEmailAndPassword, getMultiFactorResolver, multiFactor,
+  signInWithEmailAndPassword, getMultiFactorResolver, multiFactor, setPersistence,
+  browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence,
   TotpMultiFactorGenerator, type MultiFactorResolver, type TotpSecret, type User, type MultiFactorError,
 } from "firebase/auth";
 import QRCode from "qrcode";
@@ -9,8 +10,11 @@ import { auth } from "./firebase";
 
 export type ResultadoEntrada = { tipo: "ok"; usuario: User } | { tipo: "segundoFator"; resolver: MultiFactorResolver };
 
-export async function entrarComSenha(email: string, senha: string): Promise<ResultadoEntrada> {
+/** permanecer = true: conectado neste aparelho até "Sair"; false: só até fechar o navegador. */
+export async function entrarComSenha(email: string, senha: string, permanecer = true): Promise<ResultadoEntrada> {
   try {
+    await setPersistence(auth(), permanecer ? indexedDBLocalPersistence : browserSessionPersistence)
+      .catch(() => setPersistence(auth(), permanecer ? browserLocalPersistence : browserSessionPersistence));
     const c = await signInWithEmailAndPassword(auth(), email.trim(), senha);
     return { tipo: "ok", usuario: c.user };
   } catch (e) {

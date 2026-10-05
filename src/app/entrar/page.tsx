@@ -13,6 +13,7 @@ export default function Entrar() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [permanecer, setPermanecer] = useState(true);
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -38,7 +39,7 @@ export default function Entrar() {
     if (!email.trim() || !senha) return setErro("Preencha e-mail e senha.");
     setEnviando(true); setErro("");
     try {
-      const r = await entrarComSenha(email, senha);
+      const r = await entrarComSenha(email, senha, permanecer);
       if (r.tipo === "segundoFator") return setResolver(r.resolver);
       router.replace(multiFactor(r.usuario).enrolledFactors.length ? "/inicio/" : "/ativar-2fa/");
     } catch (er) { setErro(mensagemErroAuth(er)); }
@@ -60,7 +61,13 @@ export default function Entrar() {
       <form onSubmit={enviar} className="grid gap-4" noValidate>
         <Campo id="email" rotulo="E-mail" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         <Campo id="senha" rotulo="Senha" type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} erro={erro} />
-        <p className="text-sm text-gray-600">Você continua conectado neste aparelho até tocar em <b>Sair</b>.</p>
+        <label className="flex items-start gap-2.5">
+          <input type="checkbox" className="mt-1 size-4 accent-marca-700" checked={permanecer} onChange={(e) => setPermanecer(e.target.checked)} aria-describedby="permanecer-ajuda" />
+          <span><span className="font-semibold">Permanecer conectado</span>
+            <span id="permanecer-ajuda" className="block text-sm text-gray-600">{permanecer
+              ? <>Você não precisará entrar de novo neste aparelho até tocar em <b>Sair</b>.</>
+              : "O acesso termina ao fechar o navegador. Use em computador compartilhado."}</span></span>
+        </label>
         <Botao type="submit" carregando={enviando}>Entrar</Botao>
       </form>
       <a href="/recuperar/" className="text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Esqueci minha senha</a>
