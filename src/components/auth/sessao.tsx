@@ -28,7 +28,9 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => onIdTokenChanged(auth(), async (u) => {
     if (!u) return set({ carregando: false, usuario: null, papel: null, clienteId: null, propaga: false, temSegundoFator: false, entrouComSegundoFator: false });
-    const t = await u.getIdTokenResult();
+    let t = await u.getIdTokenResult();
+    // Credencial emitida antes de o perfil ser gravado (ou aba antiga): renova uma vez para o menu completo.
+    if (!t.claims.papel) { try { t = await u.getIdTokenResult(true); } catch { /* segue com a atual */ } }
     const fb = t.claims.firebase as { sign_in_second_factor?: string } | undefined;
     set({
       carregando: false, usuario: u,
