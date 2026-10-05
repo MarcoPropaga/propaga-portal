@@ -6,7 +6,15 @@
    O servidor (Apps Script) aplica estas regras; o navegador só mostra os botões permitidos. */
 import type { Papel, Status } from "./tipos";
 
-export type Acao = "aceitarPedido" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
+export type Acao = "aprovarProposta" | "ajustarProposta" | "recusarProposta"
+  | "aceitarPedido" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
+
+/* Solicitação criada pelo Marcelo (decisão de Marco, 05/10/2026): fica em nome da Débora e começa como
+   "proposta"; a Débora aprova (vai para o Marcelo aceitar e enviar à Mariane), pede ajuste (volta ao Marcelo)
+   ou recusa (encerra sem custo). Ações que exigem justificativa: */
+export const ACOES_COM_MOTIVO: Acao[] = ["ajustarProposta", "recusarProposta", "cancelar"];
+/** Quem cria solicitação: a Débora (direto ao Marcelo) e o Marcelo (vai à Débora aprovar). */
+export const VE_NOVA_SOLICITACAO: Papel[] = ["solicitante", "atendimento", "admin"];
 
 export const MAX_RODADAS = 2;
 
@@ -30,25 +38,29 @@ export interface Ctx { rodadas?: number }
 interface Regra { de: Status[]; para: Status; papeis: Papel[]; rotulo: string }
 
 export const REGRAS: Record<Acao, Regra> = {
-  aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar pedido" },
-  entregar: { de: ["aprovada"], para: "entregue", papeis: ["atendimento", "admin"], rotulo: "Registrar entrega" },
+  aprovarProposta: { de: ["proposta"], para: "enviada", papeis: ["solicitante", "admin"], rotulo: "Aprovar solicitação" },
+  ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao Marcelo" },
+  recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
+  aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar à Mariane" },
+  entregar: { de: ["aprovada"], para: "entregue", papeis: ["atendimento", "admin"], rotulo: "Encaminhar para veiculação/impressão" },
   faturar: { de: ["entregue"], para: "faturada", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar faturamento" },
   registrarPagamento: { de: ["faturada"], para: "paga", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar pagamento" },
-  cancelar: { de: ["enviada", "producao", "apresentacao", "aprovada"], para: "cancelada", papeis: ["solicitante", "atendimento", "admin"], rotulo: "Cancelar pedido" },
+  cancelar: { de: ["proposta", "ajuste", "enviada", "producao", "apresentacao", "aprovada"], para: "cancelada", papeis: ["solicitante", "atendimento", "admin"], rotulo: "Cancelar pedido" },
 };
 
 export const ETAPAS: { status: Status; rotulo: string }[] = [
   { status: "enviada", rotulo: "Enviada" },
   { status: "producao", rotulo: "Em produção" },
   { status: "apresentacao", rotulo: "Em aprovação" },
-  { status: "aprovada", rotulo: "Pronto para entrega" },
-  { status: "entregue", rotulo: "Entregue" },
+  { status: "aprovada", rotulo: "Pronto para veiculação" },
+  { status: "entregue", rotulo: "Realizado" },
   { status: "faturada", rotulo: "Faturada" },
   { status: "paga", rotulo: "Paga" },
 ];
 export const NOME_STATUS: Record<Status, string> = {
   ...(Object.fromEntries(ETAPAS.map((e) => [e.status, e.rotulo])) as Record<Status, string>),
   rascunho: "Rascunho", cancelada: "Cancelada",
+  proposta: "Aguardando aprovação da Débora", ajuste: "Ajuste pedido pela Débora",
 };
 
 export function podeExecutar(acao: Acao, status: Status, papel: Papel, _ctx: Ctx = {}): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -56,7 +68,8 @@ export function podeExecutar(acao: Acao, status: Status, papel: Papel, _ctx: Ctx
   if (!r.de.includes(status) || !r.papeis.includes(papel)) return false;
   // Pedido inteiro: Solicitante e Atendimento só cancelam antes do aceite; depois, só o admin.
   // (Depois das peças, a Débora cancela peça por peça, com 50%.)
-  if (acao === "cancelar" && papel !== "admin" && status !== "enviada") return false;
+  // A proposta do Marcelo: a Débora recusa (recusarProposta); o Marcelo pode cancelar a dele antes da aprovação.
+  if (acao === "cancelar" && papel !== "admin" && !["enviada", ...(papel === "atendimento" ? ["proposta", "ajuste"] : [])].includes(status)) return false;
   return true;
 }
 

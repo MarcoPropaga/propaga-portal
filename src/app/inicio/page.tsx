@@ -1,4 +1,5 @@
 "use client";
+import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
 import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
@@ -18,7 +19,7 @@ const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] 
 function Conteudo() {
   const s = useSessao();
   const nome = (s.usuario?.displayName || "").split(" ")[0];
-  const podeSolicitar = s.papel === "solicitante" || s.papel === "admin";
+  const podeSolicitar = !!s.papel && (VE_NOVA_SOLICITACAO as string[]).includes(s.papel);
   return (
     <Casca titulo={nome ? `Olá, ${nome}.` : "Olá."}>
       <div className="grid max-w-3xl gap-6">
@@ -33,7 +34,7 @@ function Conteudo() {
         {podeSolicitar && (
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <h2 className="text-lg">Precisa de uma peça ou campanha?</h2>
-            <p className="text-sm text-gray-600">Escolha os serviços do catálogo, organize o briefing e envie para a Propaga.</p>
+            <p className="text-sm text-gray-600">{s.papel === "atendimento" ? "Monte a solicitação em nome da Débora. Ela recebe para aprovar antes de seguir para a Mariane." : "Escolha os serviços do catálogo, organize o briefing e envie para a Propaga."}</p>
             <a href="/nova-solicitacao/" className="inline-flex min-h-11 w-fit items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Nova solicitação</a>
           </section>
         )}

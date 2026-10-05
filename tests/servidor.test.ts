@@ -253,6 +253,81 @@ describe("ações do pedido (fila 'acao')", () => {
 
 });
 
+describe("solicitação criada pelo Marcelo (proposta em nome da Débora)", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, deb: string, mcl: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `m${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const base = {
+    titulo: "Outubro Rosa", unidade: "Matriz · Itajaí/SC", email: "marcelo@propaga.com", objetivo: "Engajar", publico: "Ambos os públicos",
+    itens: [{ cod: "01", variante: 0, qtd: 2, opcao: "4:5" }],
+    drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+  };
+  const acao = (uid: string, acao: string, extra: Record<string, unknown> = {}) => fila("acao", uid, { protocolo: "BML-2026-0001", acao, ...extra });
+  const ped = () => f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidar(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo H. Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    convidar(f.p, { nome: "Mariane Garcia", email: "contato@mondesign.com.br", papel: "criativo" }, { uid: adm, nome: "Marco" });
+    f.emails.length = 0;
+  });
+
+  it("Marcelo cria → fica em nome da Débora como proposta e só ela é avisada", () => {
+    expect(fila("enviar", mcl, base).resultado).toEqual({ protocolo: "BML-2026-0001", proposta: true });
+    expect(ped()).toMatchObject({ status: "proposta", solicitanteUid: deb, solicitanteNome: "Débora", criadoPor: { uid: mcl, nome: "Marcelo H. Brum" } });
+    expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
+    expect(f.emails[0].html).toContain("/aprovacoes/");
+    expect(acao(mcl, "aceitarPedido", { cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" } }).mensagem).toMatch(/não está disponível/);
+  });
+
+  it("Débora pede ajuste → Marcelo edita e reenvia → Débora aprova → Marcelo aceita e a Mariane recebe", () => {
+    fila("enviar", mcl, base); f.emails.length = 0;
+    expect(acao(deb, "ajustarProposta").mensagem).toMatch(/ajustado/);
+    expect(acao(deb, "ajustarProposta", { nota: "Trocar para 3 posts" }).status).toBe("ok");
+    expect(ped().status).toBe("ajuste");
+    expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
+    f.emails.length = 0;
+    expect(fila("enviar", deb, { ...base, editar: "BML-2026-0001" }).mensagem).toMatch(/atendimento/);
+    expect(fila("enviar", mcl, { ...base, itens: [{ cod: "01", variante: 0, qtd: 3, opcao: "4:5" }], editar: "BML-2026-0001" }).status).toBe("ok");
+    expect(ped().status).toBe("proposta");
+    expect(ped().itens[0].qtd).toBe(3);
+    expect(f.doc("clientes/bmlog/valores/BML-2026-0001").total).toBe(510);
+    expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
+    expect(f.emails[0].html).toMatch(/2× .* → 3×/);
+    f.emails.length = 0;
+    expect(acao(deb, "aprovarProposta").status).toBe("ok");
+    expect(ped().status).toBe("enviada");
+    expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
+    f.emails.length = 0;
+    expect(acao(mcl, "aceitarPedido", { cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" } }).status).toBe("ok");
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["contato@mondesign.com.br", "deborabmlog@gmail.com"]);
+  });
+
+  it("Débora recusa: cancelada sem cobrança; proposta não pode ser editada nem a da Débora depois do aceite", () => {
+    fila("enviar", mcl, base);
+    expect(acao(deb, "recusarProposta").mensagem).toMatch(/motivo/);
+    acao(deb, "recusarProposta", { nota: "Não é prioridade" });
+    expect(ped().status).toBe("cancelada");
+    expect(fila("enviar", mcl, { ...base, editar: "BML-2026-0001" }).mensagem).toMatch(/antes do aceite/);
+  });
+
+  it("Marcelo edita a solicitação da Débora antes do aceite: ela é avisada do que mudou", () => {
+    fila("enviar", deb, base); f.emails.length = 0;
+    expect(fila("enviar", mcl, { ...base, editar: "BML-2026-0001" }).mensagem).toMatch(/Nada foi alterado/);
+    expect(fila("enviar", mcl, { ...base, titulo: "Outubro Rosa 2026", editar: "BML-2026-0001" }).status).toBe("ok");
+    expect(ped()).toMatchObject({ status: "enviada", titulo: "Outubro Rosa 2026", solicitanteUid: deb });
+    expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
+    expect(f.emails[0].html).toContain("Outubro Rosa 2026");
+  });
+});
+
 describe("aprovação por peça (fila 'peca')", () => {
   let f: ReturnType<typeof fake>;
   let deb: string, adm: string, mcl: string, mri: string, seq = 0;

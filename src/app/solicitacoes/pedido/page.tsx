@@ -48,7 +48,7 @@ function Conteudo() {
   }, [protocolo, clienteId, veValores]);
 
   if (pedido === undefined) return <Casca titulo="Solicitação"><p className="text-gray-600" aria-busy="true">Carregando…</p></Casca>;
-  if (pedido && s.papel === "criativo" && pedido.status === "enviada") return <Casca titulo="Solicitação"><Aviso>Este pedido ainda está com o Atendimento. Ele aparece para você quando o Marcelo aceitar.</Aviso></Casca>;
+  if (pedido && s.papel === "criativo" && ["proposta", "ajuste", "enviada"].includes(pedido.status)) return <Casca titulo="Solicitação"><Aviso>Este pedido ainda está com o Atendimento. Ele aparece para você quando o Marcelo aceitar.</Aviso></Casca>;
   if (pedido === null) return <Casca titulo="Solicitação"><Aviso tipo="erro">Pedido não encontrado ou sem acesso para o seu perfil.</Aviso><a href="/solicitacoes/" className="mt-4 inline-block underline">Voltar para Solicitações</a></Casca>;
 
   // Consulta: ações ficam em Minhas tarefas. Aqui só o admin tem atalhos (cancelar o pedido / publicar em emergência).
@@ -74,10 +74,13 @@ function Conteudo() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-display text-xl font-semibold">{pedido.protocolo}</span>
           <SeloStatus status={pedido.status} />
-          <span className="text-sm text-gray-600">Enviada por {pedido.solicitanteNome} em {brDataHora(pedido.criadoEm)}</span>
+          <span className="text-sm text-gray-600">{pedido.criadoPor ? `Criada por ${pedido.criadoPor.nome} em nome de ${pedido.solicitanteNome}` : `Enviada por ${pedido.solicitanteNome}`} em {brDataHora(pedido.criadoEm)}</span>
         </div>
 
         {/* Etapas */}
+        {(pedido.status === "proposta" || pedido.status === "ajuste") && <Aviso>{pedido.status === "proposta"
+          ? "Solicitação criada pelo Marcelo, aguardando a Débora aprovar, pedir ajuste ou recusar."
+          : "A Débora pediu ajuste. O Marcelo edita e reenvia para a aprovação dela. O pedido de ajuste está no histórico."}</Aviso>}
         {pedido.status === "cancelada" ? <Aviso>Este pedido foi cancelado{fatorCobranca(pedido) > 0 ? " depois de apresentado e é cobrado em 50% do seu valor, conforme o contrato" : ""}. O motivo está no histórico.</Aviso> : (
           <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Etapas do pedido">
             {ETAPAS.map((e, i) => (

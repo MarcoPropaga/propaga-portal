@@ -30,6 +30,8 @@ export const solicitacaoSchema = z.object({
     urgente: z.boolean(),
   }),
   conferido: z.literal(true, { message: "Confirme que conferiu serviços, materiais e informações." }),
+  /** Edição pelo Marcelo de uma solicitação existente (protocolo). */
+  editar: z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/).optional(),
 });
 
 export type SolicitacaoInput = z.infer<typeof solicitacaoSchema>;
@@ -62,7 +64,7 @@ export const REGRAS_SENHA: { texto: string; ok: (s: string) => boolean }[] = [
 
 /* Ações sobre um pedido (fila tipo "acao"). Exigências por ação ficam no servidor (acoes.ts). */
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.");
-export const ACOES = ["aceitarPedido", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
+export const ACOES = ["aprovarProposta", "ajustarProposta", "recusarProposta", "aceitarPedido", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
 export const acaoSchema = z.object({
   protocolo: z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/, "Protocolo inválido."),
   acao: z.enum(ACOES),

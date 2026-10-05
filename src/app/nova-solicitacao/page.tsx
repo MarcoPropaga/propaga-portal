@@ -13,6 +13,8 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { CLIENTES, type Cliente } from "@/content/clientes";
+import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
+import type { PedidoDoc } from "@/components/pedido";
 
 /* ---------- tipos ---------- */
 interface ServicoPublico extends ServicoBase { descricao: string; escopo: string; nota?: string; variantes: { rotulo: string; modalidade: string; preco: number | null }[] }
@@ -167,6 +169,11 @@ function Conteudo() {
   const dialogo = useRef<HTMLDialogElement>(null);
   const caixaErros = useRef<HTMLDivElement>(null);
   const refRascunho = useMemo(() => doc(db(), "clientes", clienteId, "rascunhos", uid), [clienteId, uid]);
+  // Edição pelo Marcelo (?editar=PROTOCOLO): carrega o pedido, sem rascunho automático.
+  const [editar] = useState(() => (typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("editar") ?? ""));
+  const [statusOrig, setStatusOrig] = useState("");
+  const [solicitanteOrig, setSolicitanteOrig] = useState("");
+  const marcelo = s.papel === "atendimento";
 
   // Catálogo vigente (do Firestore, protegido por login e 2FA) + rascunho salvo.
   useEffect(() => {
@@ -176,22 +183,35 @@ function Conteudo() {
       const k = await getDoc(doc(db(), "clientes", clienteId, "catalogo", versao));
       if (!k.exists()) throw new Error("sem catálogo");
       setCat(k.data() as CatalogoPublico);
+      if (editar) {
+        const pd = await getDoc(doc(db(), "clientes", clienteId, "solicitacoes", editar));
+        if (!pd.exists()) throw new Error("pedido");
+        const x = pd.data() as PedidoDoc;
+        setStatusOrig(x.status); setSolicitanteOrig(x.solicitanteNome);
+        setR({
+          titulo: x.titulo, unidade: x.unidade, email: x.email, objetivo: x.objetivo, publico: x.publico,
+          itens: x.itens.map((i) => ({ cod: i.cod, variante: i.variante, qtd: i.qtd, opcao: i.opcao ?? "", canal: i.canal ?? "", audio: i.audio ?? "", obs: i.obs ?? "" })),
+          drive: { link: x.drive.link, conferido: true }, obs: x.obs ?? "", prazo: { desejada: x.prazo.desejada, urgente: x.prazo.urgente }, conferido: false,
+        });
+        carregado.current = true;
+        return;
+      }
       const salvo = await getDoc(refRascunho);
       setR(salvo.exists() ? { ...vazio(s.usuario?.email ?? ""), ...(salvo.data().dados as Rascunho) } : vazio(s.usuario?.email ?? ""));
       carregado.current = true;
     })().catch(() => setFalhaCarga("Não foi possível carregar o catálogo. Atualize a página; se continuar, fale com a Propaga."));
-  }, [clienteId, cliente.catalogoVersao, refRascunho, s.usuario?.email]);
+  }, [clienteId, cliente.catalogoVersao, refRascunho, s.usuario?.email, editar]);
 
   // Rascunho automático (1 s depois da última alteração).
   useEffect(() => {
-    if (!r || !carregado.current || envio.tipo === "ok") return;
+    if (!r || !carregado.current || envio.tipo === "ok" || editar) return;
     const t = setTimeout(() => {
       setDoc(refRascunho, { dados: limpo(r), salvoEm: serverTimestamp() })
         .then(() => setSalvoEm(new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })))
         .catch(() => setSalvoEm(""));
     }, 1000);
     return () => clearTimeout(t);
-  }, [r, refRascunho, envio.tipo]);
+  }, [r, refRascunho, envio.tipo, editar]);
 
   // Acompanha o envio na fila até o servidor responder.
   useEffect(() => {
@@ -201,7 +221,7 @@ function Conteudo() {
       const x = d.data() as { status: string; mensagem?: string; resultado?: { protocolo: string } } | undefined;
       if (x?.status === "ok" && x.resultado) {
         setEnvio({ tipo: "ok", protocolo: x.resultado.protocolo });
-        deleteDoc(refRascunho).catch(() => {});
+        if (!editar) deleteDoc(refRascunho).catch(() => {});
         window.scrollTo({ top: 0 });
       }
       if (x?.status === "erro") setEnvio({ tipo: "erro", msg: x.mensagem || "Não foi possível enviar a solicitação." });
@@ -212,6 +232,9 @@ function Conteudo() {
   const mudar = useCallback((p: Partial<Rascunho>) => setR((a) => (a ? { ...a, ...p } : a)), []);
   const limparErro = (k: string) => setErros((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
+  const tituloTela = editar ? `Editar solicitação ${editar}` : marcelo ? "Nova solicitação (em nome da Débora)" : "Nova solicitação";
+  if (editar && statusOrig && !["enviada", "ajuste"].includes(statusOrig))
+    return <Casca titulo={tituloTela}><Aviso tipo="erro">Esta solicitação já foi aceita e não pode mais ser editada.</Aviso></Casca>;
   if (falhaCarga) return <Casca titulo="Nova solicitação"><Aviso tipo="erro">{falhaCarga}</Aviso></Casca>;
   if (!cat || !r) return <Casca titulo="Nova solicitação"><p className="text-gray-600" aria-busy="true">Carregando o catálogo…</p></Casca>;
 
@@ -246,7 +269,7 @@ function Conteudo() {
     setErros(e);
     if (Object.keys(e).length) { setTimeout(() => { caixaErros.current?.scrollIntoView({ block: "center" }); caixaErros.current?.querySelector("a")?.focus(); }, 30); return; }
     try {
-      const ref = await addDoc(collection(db(), "fila"), { tipo: "enviar", uid, clienteId, dados: montar(), status: "pendente", criadoEm: serverTimestamp() });
+      const ref = await addDoc(collection(db(), "fila"), { tipo: "enviar", uid, clienteId, dados: { ...montar(), ...(editar ? { editar } : {}) }, status: "pendente", criadoEm: serverTimestamp() });
       avisarServidor();
       setDemorando(false);
       setEnvio({ tipo: "aguardando", id: ref.id, desde: Date.now() });
@@ -266,21 +289,27 @@ function Conteudo() {
   /* ---- envio concluído ---- */
   if (envio.tipo === "ok") {
     return (
-      <Casca titulo="Solicitação enviada">
+      <Casca titulo={editar ? "Solicitação atualizada" : marcelo ? "Enviada para a Débora aprovar" : "Solicitação enviada"}>
         <div className="grid max-w-2xl gap-5">
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <p className="text-sm text-gray-600">Protocolo</p>
             <p className="font-display text-3xl font-semibold">{envio.protocolo}</p>
+            {editar || marcelo ? (
+              <p>{editar && statusOrig === "enviada"
+                ? "Alterações salvas. A Débora foi avisada por e-mail do que mudou. Agora é só aceitar e enviar à Mariane em Minhas tarefas."
+                : "A Débora recebeu por e-mail para aprovar, pedir ajuste ou recusar. Quando ela aprovar, a solicitação aparece em Minhas tarefas › Aceitar pedidos."}</p>
+            ) : <>
             <p>A Propaga recebeu sua solicitação. As pessoas responsáveis foram avisadas por e-mail.</p>
             <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-gray-600">
               <li>A Propaga confere o briefing e o acesso à pasta do Drive.</li>
               <li>A Propaga aceita o pedido e confirma o cronograma. A produção começa.</li>
               <li>As versões chegam para aprovação, com até 2 refações incluídas.</li>
-            </ol>
+            </ol></>}
           </section>
           <div className="flex flex-wrap gap-3">
           <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(envio.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-ink-900 bg-white px-5 font-semibold">Acompanhar este pedido</a>
-          <Botao onClick={() => { setR(vazio(s.usuario?.email ?? "")); setErros({}); setEnvio({ tipo: "ocioso" }); }}>Nova solicitação</Botao>
+          {editar ? <a href="/aprovacoes/" className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900">Ir para Minhas tarefas</a>
+            : <Botao onClick={() => { setR(vazio(s.usuario?.email ?? "")); setErros({}); setEnvio({ tipo: "ocioso" }); }}>Nova solicitação</Botao>}
           </div>
         </div>
       </Casca>
@@ -291,14 +320,17 @@ function Conteudo() {
   const aguardando = envio.tipo === "aguardando";
 
   return (
-    <Casca titulo="Nova solicitação">
+    <Casca titulo={tituloTela}>
       <form noValidate onSubmit={(e) => { e.preventDefault(); enviar(); }} className="grid max-w-5xl gap-4">
-        <p className="max-w-[70ch] text-gray-600">Organize o briefing, escolha os serviços e confira o prazo antes de enviar. Tudo o que você preenche fica salvo como rascunho.</p>
+        <p className="max-w-[70ch] text-gray-600">{editar
+          ? (statusOrig === "ajuste" ? "Faça os ajustes pedidos pela Débora e reenvie para a aprovação dela. O que mudou fica registrado no histórico." : "Ajuste a solicitação da Débora antes de aceitar. Ela recebe um e-mail com o que mudou, e tudo fica registrado no histórico.")
+          : marcelo ? "Monte a solicitação em nome da Débora. Ao enviar, ela recebe para aprovar, pedir ajuste ou recusar. Tudo o que você preenche fica salvo como rascunho."
+          : "Organize o briefing, escolha os serviços e confira o prazo antes de enviar. Tudo o que você preenche fica salvo como rascunho."}</p>
 
         <Secao n={1} chave="dados" titulo="Dados da solicitação">
           <div className="grid gap-4 md:grid-cols-3">
             <Texto id="titulo" rotulo="Título da solicitação" maxLength={120} valor={r.titulo} erro={erros.titulo} onChange={(v) => { mudar({ titulo: v }); limparErro("titulo"); }} />
-            <Texto id="solicitante" rotulo="Solicitante" valor={s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#C9D7DC] bg-paper`} />
+            <Texto id="solicitante" rotulo={marcelo || editar ? "Em nome de" : "Solicitante"} valor={editar ? solicitanteOrig : marcelo ? "Débora · marketing B&M Log" : s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#C9D7DC] bg-paper`} />
             <Selecao id="unidade" rotulo="Unidade (matriz ou filial)" valor={r.unidade} vazio="Selecione" erro={erros.unidade}
               opcoes={cliente.unidades.map((u) => [u, u])} onChange={(v) => { mudar({ unidade: v }); limparErro("unidade"); }} />
             <Texto id="email" rotulo="E-mail de contato" type="email" autoComplete="email" valor={r.email} erro={erros.email} onChange={(v) => { mudar({ email: v }); limparErro("email"); }} />
@@ -428,8 +460,8 @@ function Conteudo() {
                 onChange={(e) => { mudar({ conferido: e.target.checked }); limparErro("conferido"); }} />
               <span>Conferi os serviços, os materiais e as informações.</span>
             </label>
-            <span className="text-sm text-gray-600" aria-live="polite">{salvoEm ? `Rascunho salvo às ${salvoEm}` : "Rascunho automático ativo"}</span>
-            <Botao type="submit" disabled={!r.conferido} carregando={aguardando}>Enviar solicitação</Botao>
+            {!editar && <span className="text-sm text-gray-600" aria-live="polite">{salvoEm ? `Rascunho salvo às ${salvoEm}` : "Rascunho automático ativo"}</span>}
+            <Botao type="submit" disabled={!r.conferido} carregando={aguardando}>{editar ? (statusOrig === "ajuste" ? "Reenviar para aprovação da Débora" : "Salvar alterações") : marcelo ? "Enviar para aprovação da Débora" : "Enviar solicitação"}</Botao>
           </div>
           <p className="text-sm text-gray-600">Ao enviar, as pessoas responsáveis da {cliente.nome} e da Propaga recebem um aviso por e-mail. Recebimento, aprovações e entregas ficam registrados no acompanhamento.</p>
         </Secao>
@@ -439,5 +471,5 @@ function Conteudo() {
 }
 
 export default function NovaSolicitacao() {
-  return <Protegido papeis={["solicitante", "admin"]}><Conteudo /></Protegido>;
+  return <Protegido papeis={VE_NOVA_SOLICITACAO}><Conteudo /></Protegido>;
 }

@@ -7,10 +7,10 @@ import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 import { catalogoVigente } from "@/content/catalogos";
 import { calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
-import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput } from "@/lib/schemas";
+import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput, type SolicitacaoInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
-import { executarAcao } from "./acoes";
+import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
@@ -153,8 +153,8 @@ export function enviarSolicitacao(
   u: { uid: string; nome: string; papel: string; email: string; clienteId: string | null },
   clienteId: string, dadosBrutos: unknown,
 ) {
-  if (!["solicitante", "admin"].includes(u.papel)) throw new ErroUsuario("Seu perfil não envia solicitações.");
-  if (u.papel !== "admin" && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
+  if (!["solicitante", "atendimento", "admin"].includes(u.papel)) throw new ErroUsuario("Seu perfil não envia solicitações.");
+  if (u.papel === "solicitante" && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
   const cliente = CLIENTES[clienteId];
   if (!cliente) throw new ErroUsuario("Cliente não encontrado.");
 
@@ -174,6 +174,18 @@ export function enviarSolicitacao(
     return { ...n, nome: s.nome, varianteRotulo: s.variantes[it.variante].rotulo, sobOrcamento: exigeOrcamento(cat, it) };
   });
 
+  if (d.editar) return editarSolicitacao(p, fs, u, clienteId, d, itens, cat);
+
+  // Criada pelo Marcelo: fica em nome da Débora (Solicitante do cliente) e vai para ela aprovar.
+  let titular = { uid: u.uid, nome: u.nome };
+  const proposta = u.papel === "atendimento";
+  if (proposta) {
+    const sol = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; clienteId: string | null }) }))
+      .find((x) => x.papel === "solicitante" && x.clienteId === clienteId);
+    if (!sol) throw new ErroUsuario("Não há Solicitante cadastrada para este cliente.");
+    titular = { uid: sol.uid, nome: sol.nome };
+  }
+
   const cfg = lerConfig(p);
   const agora = p.agora();
   const ano = hojeSP(agora).slice(0, 4);
@@ -192,21 +204,32 @@ export function enviarSolicitacao(
         {
           caminho: `${base}/solicitacoes/${protocolo}`, seNaoExiste: true,
           dados: {
-            protocolo, clienteId, titulo: d.titulo, solicitanteUid: u.uid, solicitanteNome: u.nome,
+            protocolo, clienteId, titulo: d.titulo, solicitanteUid: titular.uid, solicitanteNome: titular.nome,
+            ...(proposta ? { criadoPor: { uid: u.uid, nome: u.nome } } : {}),
             unidade: d.unidade, email: d.email, objetivo: d.objetivo, publico: d.publico, itens,
             drive: { link: d.drive.link, conferido: true, verificado: false }, obs: d.obs,
             prazo: { desejada: d.prazo.desejada, urgente: d.prazo.urgente },
-            status: "enviada", rodadas: 0, versao: 0, catalogoVersao: cat.versao,
+            status: proposta ? "proposta" : "enviada", rodadas: 0, versao: 0, catalogoVersao: cat.versao,
             criadoEm: agora, atualizadoEm: agora,
           },
         },
         { caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
-        ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
+        proposta
+          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome de ${titular.nome}; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
+          : ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
       ]);
       break;
     } catch (e) {
       if (tentativa >= 2) throw e; // contador disputado: tenta de novo com o número seguinte
     }
+  }
+
+  // Proposta do Marcelo: só a Débora é avisada (para aprovar) e o Marcelo recebe o recibo.
+  if (proposta) {
+    const ped = { protocolo, titulo: d.titulo, solicitanteUid: titular.uid } as Parameters<typeof avisarPessoas>[4];
+    avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"], "Nova solicitação para sua aprovação",
+      `${u.nome} criou esta solicitação em seu nome. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
+    return { protocolo, proposta: true };
   }
 
   // Avisos por e-mail (falha de e-mail não desfaz o pedido; fica registrada no histórico).
@@ -245,4 +268,58 @@ export function enviarSolicitacao(
     p.log(`Avisos da ${protocolo} falharam: ${(e as Error).message}`); // o pedido já está gravado
   }
   return { protocolo };
+}
+
+/* ---------------- Edição pelo Marcelo ---------------- */
+
+/** O Marcelo ajusta a solicitação antes do aceite (status enviada) ou depois do pedido de ajuste da Débora (ajuste).
+    A alteração fica no histórico e a Débora é avisada; no caso do ajuste, volta para ela aprovar. */
+function editarSolicitacao(
+  p: Plataforma, fs: Firestore,
+  u: { uid: string; nome: string; papel: string; email: string; clienteId: string | null },
+  clienteId: string, d: SolicitacaoInput, itens: Record<string, unknown>[], cat: ReturnType<typeof catalogoVigente>,
+) {
+  if (!["atendimento", "admin"].includes(u.papel)) throw new ErroUsuario("Só o atendimento da Propaga edita a solicitação.");
+  const caminho = `clientes/${clienteId}/solicitacoes/${d.editar}`;
+  const doc = fs.ler(caminho);
+  if (!doc) throw new ErroUsuario("Pedido não encontrado.");
+  const ant = doc.dados as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  if (!["enviada", "ajuste"].includes(ant.status)) throw new ErroUsuario("A solicitação só pode ser editada antes do aceite.");
+
+  const lista = (xs: { qtd: number; nome: string; varianteRotulo?: string }[]) => xs.map((i) => `${i.qtd}× ${i.nome}${i.varianteRotulo ? ` (${i.varianteRotulo})` : ""}`).join("; ");
+  const mud: string[] = [];
+  const cmp = (rot: string, a: unknown, b: unknown) => { if (String(a ?? "") !== String(b ?? "")) mud.push(`${rot}: "${a ?? ""}" → "${b ?? ""}"`); };
+  cmp("Título", ant.titulo, d.titulo); cmp("Unidade", ant.unidade, d.unidade); cmp("Objetivo", ant.objetivo, d.objetivo);
+  cmp("Público", ant.publico, d.publico); cmp("Data desejada", ant.prazo?.desejada, d.prazo.desejada);
+  cmp("Urgente", ant.prazo?.urgente ? "sim" : "não", d.prazo.urgente ? "sim" : "não"); cmp("Pasta do Drive", ant.drive?.link, d.drive.link);
+  if (String(ant.obs ?? "") !== d.obs) mud.push("Observações atualizadas");
+  const li = lista(ant.itens ?? []), ln = lista(itens as never);
+  if (li !== ln) mud.push(`Serviços: ${li} → ${ln}`);
+  if (!mud.length && ant.status === "enviada") throw new ErroUsuario("Nada foi alterado.");
+
+  const agora = p.agora();
+  const reenvio = ant.status === "ajuste";
+  const novo = reenvio ? "proposta" : "enviada";
+  const rotulo = reenvio ? `Solicitação ajustada por ${u.nome} e reenviada para aprovação` : `Solicitação editada por ${u.nome}`;
+  const nota = mud.length ? mud.join(" · ") : "Sem alterações; reenviada para aprovação.";
+  try {
+    fs.gravar([
+      { caminho, mesclar: true, seAtualizadoEm: doc.atualizadoEm, dados: {
+        titulo: d.titulo, unidade: d.unidade, email: d.email, objetivo: d.objetivo, publico: d.publico, itens,
+        drive: { ...(ant.drive ?? {}), link: d.drive.link, conferido: true }, obs: d.obs,
+        prazo: { ...(ant.prazo ?? {}), desejada: d.prazo.desejada, urgente: d.prazo.urgente },
+        status: novo, catalogoVersao: cat.versao, atualizadoEm: agora,
+        editadoPor: { uid: u.uid, nome: u.nome, em: agora },
+      } },
+      { caminho: `clientes/${clienteId}/valores/${d.editar}`, dados: { ...calcularValores(d.editar!, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
+      { caminho: `${caminho}/eventos/${agora.getTime()}-edicao`, dados: { em: agora, uid: u.uid, nome: u.nome, rotulo, nota, chave: reenvio, acao: "editar" } },
+    ]);
+  } catch {
+    throw new ErroUsuario("O pedido foi atualizado por outra pessoa agora há pouco. Recarregue a página e tente de novo.");
+  }
+  const ped = { protocolo: d.editar!, titulo: d.titulo, solicitanteUid: ant.solicitanteUid } as Parameters<typeof avisarPessoas>[4];
+  avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"],
+    reenvio ? "Solicitação ajustada para sua aprovação" : "O Marcelo ajustou sua solicitação", nota, novo as never,
+    reenvio ? "/aprovacoes/" : "/solicitacoes/pedido/");
+  return { protocolo: d.editar, editado: true, status: novo };
 }

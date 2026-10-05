@@ -76,7 +76,8 @@ function Conteudo() {
     return "0000-00-00";
   }, [periodo]);
 
-  const sel = useMemo(() => (pedidos ?? []).filter((p) => protocolo ? p.protocolo === protocolo
+  // Solicitação do Marcelo ainda sem aprovação da Débora não entra no relatório.
+  const sel = useMemo(() => (pedidos ?? []).filter((p) => p.status !== "proposta" && p.status !== "ajuste").filter((p) => protocolo ? p.protocolo === protocolo
     : isoSP(dataDe(p.criadoEm)) >= inicio && (unidade === "todas" || p.unidade === unidade)), [pedidos, protocolo, inicio, unidade]);
 
   // Valor cobrado: integral, ou 50% se o pedido foi cancelado depois de apresentado (contrato).
@@ -109,11 +110,11 @@ function Conteudo() {
   function exportarPlanilha() {
     const n = (v: number | null | undefined) => (v == null ? "" : v.toFixed(2).replace(".", ","));
     const q = (t: string) => `"${String(t ?? "").replace(/"/g, '""')}"`;
-    const cab = ["Protocolo", "Título", "Unidade", "Enviada em", "Etapa", "Código", "Serviço", "Modalidade e faixa", "Qtd.", "Unitário (R$)", "Subtotal (R$)", "Cobrado (R$)", "Observação", "Valor cotado"];
+    const cab = ["Protocolo", "Título", "Unidade", "Enviada em", "Etapa", "Código", "Serviço", "Modalidade e faixa", "Qtd.", "Unitário (R$)", "Subtotal (R$)", "Cobrado (R$)", "Observação", "Valor cotado", "Realização"];
     const corpo = linhas.map(({ p, it, v, f }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], it.cod, it.nome,
       it.varianteRotulo, String(it.qtd), n(v?.unitario), n(v?.subtotal), n(cobrado(v, f)),
       p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : f > 1 ? `${p.refacoesExtrasCobradas} refação(ões) extra: +${Math.round((f - 1) * 100)}%` : "",
-      v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não"].map(q).join(";"));
+      v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não", obsRealizado(p)].map(q).join(";"));
     const corpoPecas = pecasSel.map(({ p, x, u, aj, sit }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], "peça", x.nome,
       sit.rotulo, "1", n(u), "", n(aj), [x.extras30 ? `${x.extras30} refação(ões) extra: +30%` : "", x.hist.length ? `Última ação: ${x.hist[x.hist.length - 1].txt} (${x.hist[x.hist.length - 1].por}, ${brData(x.hist[x.hist.length - 1].em)})` : ""].filter(Boolean).join(" · "), ""].map(q).join(";"));
     const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo, ...corpoPecas].join("\r\n")], { type: "text/csv;charset=utf-8" });
@@ -214,7 +215,7 @@ function Conteudo() {
                       <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{moeda(v?.unitario)}</td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{v?.subtotal == null ? "—" : moeda(cobrado(v, f))}{p.status === "cancelada" && f > 0 && <div className="text-xs">50% de {moeda(v?.subtotal)}</div>}{f > 1 && <div className="text-xs text-aviso-700">+{Math.round((f - 1) * 100)}% refação extra</div>}</td>
                       <td className="px-3 py-2.5">{p.unidade}</td>
-                      <td className="px-3 py-2.5"><SeloStatus status={p.status} /></td>
+                      <td className="px-3 py-2.5"><SeloStatus status={p.status} />{obsRealizado(p) && <div className="mt-1 text-xs text-gray-600">{obsRealizado(p)}</div>}</td>
                     </tr>
                   ))}
                   {!linhas.length && <tr><td colSpan={7} className="px-3 py-8 text-center text-gray-600">Sem pedidos no período.</td></tr>}
@@ -227,6 +228,14 @@ function Conteudo() {
       </div>
     </Casca>
   );
+}
+
+/** Realizado (veiculado ou impresso): observação de refações para a conferência do financeiro. */
+function obsRealizado(p: PedidoDoc): string {
+  if (!["entregue", "faturada", "paga"].includes(p.status)) return "";
+  const n = p.rodadas || 0;
+  const extras = (p.pecas ?? []).reduce((t, x) => t + (x.extras30 || 0), 0);
+  return `${p.criadoPor ? `Criada por ${p.criadoPor.nome} · ` : ""}${n ? `${n} refação(ões)${extras ? `, ${extras} extra(s) cobrada(s)` : ", dentro das incluídas"}` : "Sem refação"}`;
 }
 
 export default function Relatorios() {
