@@ -58,7 +58,7 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'enviar', 'acao', 'peca'] : ['enviar', 'acao', 'peca'];
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca'] : ['enviar', 'acao', 'peca'];
       }
       allow create: if logado() && doisFatores()
         && request.resource.data.uid == request.auth.uid

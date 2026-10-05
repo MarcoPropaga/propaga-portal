@@ -125,6 +125,12 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       const r = convidar(p, dados, { uid, nome: u.nome });
       return { uid: r.uid, novo: r.novo };
     }
+    case "acessos": {
+      if (u.papel !== "admin") throw new ErroUsuario("Somente o administrador consulta os acessos.");
+      const cfg = lerConfig(p);
+      const ids = fs.listar("usuarios").map((d) => d.caminho.split("/").pop()!);
+      return { acessos: new Identidade(p, cfg.projeto).situacaoAcesso(ids) };
+    }
     case "enviar":
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "acao":

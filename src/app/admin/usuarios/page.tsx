@@ -10,6 +10,7 @@ import { Aviso, Botao, Campo } from "@/components/ui";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 
 interface Usuario { id: string; nome: string; email: string; papel: string; clienteId: string | null; status: string }
+type Acesso = { senha: boolean; doisFatores: boolean; ultimoAcesso: string | null };
 type Estado = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
 function Conteudo() {
@@ -19,9 +20,27 @@ function Conteudo() {
   const [erros, setErros] = useState<Record<string, string>>({});
   const [estado, setEstado] = useState<Estado>({ tipo: "ocioso" });
 
+  const [acessos, setAcessos] = useState<Record<string, Acesso> | null>(null);
+  const [erroAcessos, setErroAcessos] = useState(false);
+
   async function carregar() {
     const snap = await getDocs(query(collection(db(), "usuarios"), orderBy("nome")));
     setLista(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Usuario, "id">) })));
+    carregarAcessos();
+  }
+
+  // Situação de acesso vem do cadastro de login (só o servidor consulta): senha criada, verificação e último acesso.
+  async function carregarAcessos() {
+    setErroAcessos(false);
+    try {
+      const ref = await addDoc(collection(db(), "fila"), { tipo: "acessos", uid: s.usuario!.uid, clienteId: null, dados: {}, status: "pendente", criadoEm: serverTimestamp() });
+      avisarServidor();
+      const fim = onSnapshot(doc(db(), "fila", ref.id), (d) => {
+        const x = d.data() as { status: string; resultado?: { acessos?: Record<string, Acesso> } } | undefined;
+        if (x?.status === "ok") { fim(); setAcessos(x.resultado?.acessos ?? {}); }
+        if (x?.status === "erro") { fim(); setErroAcessos(true); }
+      }, () => setErroAcessos(true));
+    } catch { setErroAcessos(true); }
   }
   useEffect(() => { carregar().catch(() => setEstado({ tipo: "erro", msg: "Não foi possível carregar a lista de usuários." })); }, []);
 
@@ -89,11 +108,15 @@ function Conteudo() {
         </form>
 
         <section className="grid gap-3">
-          <h2 className="text-lg">Pessoas com acesso</h2>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-lg">Pessoas com acesso</h2>
+            <button type="button" onClick={() => { setAcessos(null); carregarAcessos(); }} className="text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Atualizar situação</button>
+          </div>
+          <p className="max-w-[70ch] text-sm text-gray-600"><b>Convite aceito</b> = a pessoa criou a senha e ativou a verificação em duas etapas. <b>Acesso ao portal</b> mostra a data e a hora do último login.</p>
           <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full text-sm">
               <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
-                <tr><th className="px-3 py-2.5">Pessoa</th><th className="px-3 py-2.5">Perfil</th><th className="px-3 py-2.5">Empresa</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5"><span className="sr-only">Ações</span></th></tr>
+                <tr><th className="px-3 py-2.5">Pessoa</th><th className="px-3 py-2.5">Perfil</th><th className="px-3 py-2.5">Empresa</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5">Acesso ao portal</th><th className="px-3 py-2.5"><span className="sr-only">Ações</span></th></tr>
               </thead>
               <tbody>
                 {lista.map((u) => (
@@ -101,11 +124,12 @@ function Conteudo() {
                     <td className="px-3 py-2.5"><b>{u.nome}</b><div className="text-gray-600">{u.email}</div></td>
                     <td className="px-3 py-2.5">{NOMES_PAPEIS[u.papel] ?? u.papel}</td>
                     <td className="px-3 py-2.5">{u.clienteId ? CLIENTES[u.clienteId]?.nome : "Propaga"}</td>
-                    <td className="px-3 py-2.5">{u.status === "convidado" ? "Convite enviado" : u.status}</td>
-                    <td className="px-3 py-2.5 text-right">{u.id !== s.usuario?.uid && <Botao variante="discreto" className="min-h-9 px-3 text-sm" onClick={(e) => convidar(e, u)}>Reenviar convite</Botao>}</td>
+                    <td className="px-3 py-2.5">{situacao(acessos?.[u.id], !!acessos)}</td>
+                    <td className="px-3 py-2.5">{acesso(acessos?.[u.id], !!acessos, erroAcessos)}</td>
+                    <td className="px-3 py-2.5 text-right">{u.id !== s.usuario?.uid && !acessos?.[u.id]?.doisFatores && <Botao variante="discreto" className="min-h-9 px-3 text-sm" onClick={(e) => convidar(e, u)}>Reenviar convite</Botao>}</td>
                   </tr>
                 ))}
-                {!lista.length && <tr><td colSpan={5} className="px-3 py-6 text-center text-gray-600">Nenhuma pessoa cadastrada ainda.</td></tr>}
+                {!lista.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-600">Nenhuma pessoa cadastrada ainda.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -113,6 +137,23 @@ function Conteudo() {
       </div>
     </Casca>
   );
+}
+
+const dataHora = (iso: string) => new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", " às");
+const Selo = ({ cor, children }: { cor: "ok" | "aviso" | "neutro"; children: React.ReactNode }) => (
+  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${{ ok: "bg-[#E3F2EA] text-[#1E7047]", aviso: "bg-alerta-100 text-alerta-700", neutro: "bg-[#EAF3F5] text-ink-900" }[cor]}`}>{children}</span>
+);
+function situacao(a: Acesso | undefined, carregado: boolean) {
+  if (!carregado) return <span className="text-gray-600">…</span>;
+  if (a?.doisFatores) return <Selo cor="ok">✓ Convite aceito</Selo>;
+  if (a?.senha) return <Selo cor="aviso">Senha criada · falta o código</Selo>;
+  return <Selo cor="neutro">Convite enviado</Selo>;
+}
+function acesso(a: Acesso | undefined, carregado: boolean, erro: boolean) {
+  if (erro) return <span className="text-gray-600">Não foi possível consultar</span>;
+  if (!carregado) return <span className="text-gray-600">Consultando…</span>;
+  if (a?.doisFatores && a.ultimoAcesso) return <span>Ativo<span className="block text-xs text-gray-600">último acesso {dataHora(a.ultimoAcesso)}</span></span>;
+  return <span className="text-gray-600">Ainda não acessou</span>;
 }
 
 export default function Usuarios() {
