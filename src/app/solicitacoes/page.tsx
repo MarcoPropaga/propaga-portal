@@ -1,4 +1,5 @@
 "use client";
+import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
 /* Lista de solicitações. Solicitante vê só as próprias (regra do banco); demais perfis veem todas do cliente. */
 import { useEffect, useMemo, useState } from "react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
@@ -31,14 +32,14 @@ function Conteudo() {
 
   const filtrada = useMemo(() => (lista ?? []).filter((p) => {
     // O criativo só recebe o pedido depois que o Atendimento aceita (Débora → Marcelo → Mariane).
-    if (s.papel === "criativo" && p.status === "enviada") return false;
+    if (s.papel === "criativo" && ["proposta", "ajuste", "enviada"].includes(p.status)) return false;
     if (etapa === "abertas" && ["paga", "cancelada"].includes(p.status)) return false;
     if (etapa !== "abertas" && etapa !== "todas" && p.status !== etapa) return false;
     const t = busca.trim().toLowerCase();
     return !t || [p.protocolo, p.titulo, p.unidade, p.solicitanteNome].some((x) => x?.toLowerCase().includes(t));
   }), [lista, etapa, busca, s.papel]);
 
-  const podeSolicitar = s.papel === "solicitante" || s.papel === "admin";
+  const podeSolicitar = !!s.papel && (VE_NOVA_SOLICITACAO as string[]).includes(s.papel);
   return (
     <Casca titulo="Solicitações">
       <div className="grid max-w-6xl gap-4">

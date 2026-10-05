@@ -4,13 +4,13 @@ import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
 import { NOMES_PAPEIS } from "@/content/clientes";
-import { VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
+import { VE_NOVA_SOLICITACAO, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
 import { contarPendencias } from "@/lib/pecas";
 import { usePedidos } from "@/lib/usarFila";
 
 const ITENS = [
   { href: "/inicio/", rotulo: "Início" },
-  { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: ["solicitante", "admin"] },
+  { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: VE_NOVA_SOLICITACAO as string[] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
   { href: "/aprovacoes/", rotulo: "Minhas tarefas", papeis: VE_TAREFAS as string[] },
   { href: "/valores/", rotulo: "Jobs Propaga", papeis: VE_VALORES as string[] },

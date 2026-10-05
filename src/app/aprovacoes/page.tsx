@@ -15,6 +15,9 @@ import { atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type Tare
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
 
 /* Abas de "Minhas tarefas": `t` = tarefa do pedido (aceitar, criar, entregar, faturar, receber); `f` = filtro de peças. */
@@ -23,9 +26,10 @@ const nenhuma = () => false;
 const decidida = (t: TipoDecisao) => (p: Peca) => p.etapa !== "cliente" && ultimaDecisao(p)?.tipo === t;
 const ATEND: Aba[] = [
   { k: "aceitar", rotulo: "Aceitar pedidos", f: nenhuma, t: "aceitar" },
+  { k: "ajustar", rotulo: "Ajustar solicitação", f: nenhuma, t: "ajustar" },
   { k: "revisao", rotulo: "Revisar criativo", f: (p) => p.etapa === "revisao" },
   { k: "triagem", rotulo: "Orientar refação", f: (p) => p.etapa === "triagem" },
-  { k: "entregar", rotulo: "Pronto para entrega", f: nenhuma, t: "entregar" },
+  { k: "entregar", rotulo: "Veiculação/impressão", f: nenhuma, t: "entregar" },
   { k: "criativo", rotulo: "Com a Mariane", f: (p) => p.etapa === "criativo" },
   { k: "cliente", rotulo: "Com a Débora", f: (p) => p.etapa === "cliente" },
   { k: "concluidas", rotulo: "Concluídas", f: decidida("aprovada") },
@@ -37,7 +41,8 @@ const FIN: Aba[] = [
 ];
 const ABAS: Record<string, Aba[]> = {
   solicitante: [
-    { k: "aguardando", rotulo: "Aguardando você", f: (p) => p.etapa === "cliente" },
+    { k: "propostas", rotulo: "Solicitações para aprovar", f: nenhuma, t: "proposta" },
+    { k: "aguardando", rotulo: "Peças para aprovar", f: (p) => p.etapa === "cliente" },
     { k: "andamento", rotulo: "Na Propaga", f: decidida("refacao") },
     { k: "concluidas", rotulo: "Concluídas", f: decidida("aprovada") },
     { k: "canceladas", rotulo: "Canceladas", f: decidida("cancelada") },
@@ -51,7 +56,7 @@ const ABAS: Record<string, Aba[]> = {
     { k: "feitas", rotulo: "Concluídas", f: (p) => p.etapa === "concluida" },
   ],
   financeiro_propaga: FIN,
-  admin: [...ATEND.slice(0, 4), ...FIN, ...ATEND.slice(4)],
+  admin: [{ k: "propostas", rotulo: "Com a Débora (solicitação)", f: nenhuma, t: "proposta" }, ...ATEND.slice(0, 5), ...FIN, ...ATEND.slice(5)],
 };
 const abasDo = (papel: Papel | null) => ABAS[papel ?? ""] ?? ATEND;
 const ACAO_DA_TAREFA: Partial<Record<TarefaPedido, Acao>> = { aceitar: "aceitarPedido", entregar: "entregar", faturar: "faturar", receber: "registrarPagamento" };
@@ -197,6 +202,7 @@ function Conteudo() {
     .sort((a, b) => b.protocolo.localeCompare(a.protocolo)), [lista, filtro, papel, s.usuario?.uid]);
   const pedidos = useMemo(() => todos.filter((p) => p.temPecas), [todos]);
   const [abrindo, setAbrindo] = useState<string | null>(null); // formulário de tarefa de pedido aberto
+  const [acaoAberta, setAcaoAberta] = useState<Acao | null>(null);
   const pendentes = contarPendencias(papel, todos);
   const abaAtual = abas.find((a) => a.k === aba) ?? abas[0];
   const doPedido = (t?: TarefaPedido) => (t ? todos.filter((p) => tarefasDoPedido(papel, p).includes(t)) : []);
@@ -224,7 +230,7 @@ function Conteudo() {
   const abrir = (pd: PedidoDoc, pecas: Peca[], id: string) => setVis({ prot: pd.protocolo, ids: pecas.map((x) => x.id), i: Math.max(0, pecas.findIndex((x) => x.id === id)) });
 
   const texto = ({
-    solicitante: pendentes ? `${pendentes} ${pendentes > 1 ? "peças aguardam" : "peça aguarda"} sua avaliação. Aprove, peça refação ou cancele e envie a avaliação do pedido.` : "Nada aguardando você agora.",
+    solicitante: pendentes ? `${pendentes} ${pendentes > 1 ? "itens aguardam" : "item aguarda"} você: solicitações criadas pelo Marcelo para aprovar e peças para avaliar.` : "Nada aguardando você agora.",
     criativo: pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: criar peças, refazer e preparar arquivos finais.` : "Nenhuma tarefa pendente.",
     financeiro_propaga: pendentes ? `${pendentes} ${pendentes > 1 ? "pedidos aguardam" : "pedido aguarda"} faturamento ou registro de pagamento.` : "Nenhuma tarefa pendente.",
 } as Record<string, string>)[papel ?? ""] ?? (pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: aceitar pedidos, revisar o criativo, orientar refações e registrar entregas.` : "Nenhuma tarefa pendente.");
@@ -234,7 +240,7 @@ function Conteudo() {
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">{texto}</p>
         <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
-          {["Débora solicita", "Marcelo aceita", "Mariane cria", "Marcelo revisa", "Débora aprova, pede refação ou cancela"].map((t, k) => (
+          {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia à Mariane", "Mariane cria", "Marcelo revisa", "Débora aprova, pede refação ou cancela", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
             <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
         </ol>
@@ -254,9 +260,11 @@ function Conteudo() {
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="font-display text-sm font-semibold text-marca-700 underline-offset-4 hover:underline">{pd.protocolo}</a>
               <h2 className="text-lg">{pd.titulo}</h2>
-              <span className="text-sm text-gray-600">{pd.unidade} · {abaAtual.t === "aceitar" ? `desejada ${brData(pd.prazo.desejada)}` : `entrega final ${brData(pd.prazo.final)}`}</span>
+              <span className="text-sm text-gray-600">{pd.unidade} · {["aceitar", "proposta", "ajustar"].includes(abaAtual.t!) ? `desejada ${brData(pd.prazo.desejada)}` : `entrega final ${brData(pd.prazo.final)}`}</span>
             </div>
-            {(abaAtual.t === "aceitar" || abaAtual.t === "criar") && (
+            {pd.criadoPor && abaAtual.t !== "criar" && <p className="text-sm text-gray-600">Criada por <b>{pd.criadoPor.nome}</b> em nome de {pd.solicitanteNome}{pd.status === "enviada" ? " · aprovada pela Débora" : ""}.</p>}
+            {abaAtual.t === "ajustar" && <AjustePedido protocolo={pd.protocolo} />}
+            {["aceitar", "criar", "proposta", "ajustar"].includes(abaAtual.t!) && (
               <dl className="grid gap-x-3 gap-y-1 text-sm sm:grid-cols-[120px_minmax(0,1fr)]">
                 <dt className="text-gray-600">Solicitante</dt><dd>{pd.solicitanteNome}</dd>
                 <dt className="text-gray-600">Objetivo</dt><dd>{pd.objetivo}</dd>
@@ -270,10 +278,23 @@ function Conteudo() {
             {abrindo === pd.protocolo
               ? (abaAtual.t === "criar"
                 ? <FormPublicar pedido={pd} onFechar={() => setAbrindo(null)} onOk={(m) => setAviso({ tipo: "ok", msg: m })} />
-                : <FormAcao acao={ACAO_DA_TAREFA[abaAtual.t!]!} pedido={pd} onFechar={() => setAbrindo(null)} onOk={(m) => setAviso({ tipo: "ok", msg: m })} />)
-              : (
+                : <FormAcao acao={acaoAberta ?? ACAO_DA_TAREFA[abaAtual.t!]!} pedido={pd} onFechar={() => { setAbrindo(null); setAcaoAberta(null); }} onOk={(m) => setAviso({ tipo: "ok", msg: m })} />)
+              : abaAtual.t === "proposta" ? (
                 <div className="flex flex-wrap gap-3">
-                  <Botao onClick={() => setAbrindo(pd.protocolo)}>{{ aceitar: "Aceitar pedido", criar: "Enviar peças criadas ao Marcelo", entregar: "Registrar entrega", faturar: "Registrar faturamento", receber: "Registrar pagamento" }[abaAtual.t!]}</Botao>
+                  <Botao onClick={() => { setAcaoAberta("aprovarProposta"); setAbrindo(pd.protocolo); }}>Aprovar solicitação</Botao>
+                  <Botao variante="linha" onClick={() => { setAcaoAberta("ajustarProposta"); setAbrindo(pd.protocolo); }}>Pedir ajuste ao Marcelo</Botao>
+                  <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => { setAcaoAberta("recusarProposta"); setAbrindo(pd.protocolo); }}>Recusar</Botao>
+                  <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver solicitação completa</a>
+                </div>
+              ) : abaAtual.t === "ajustar" ? (
+                <div className="flex flex-wrap gap-3">
+                  <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Editar e reenviar à Débora</a>
+                  <Botao variante="linha" onClick={() => { setAcaoAberta("cancelar"); setAbrindo(pd.protocolo); }}>Cancelar solicitação</Botao>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-3">
+                  <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar à Mariane", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>
+                  {abaAtual.t === "aceitar" && <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Editar solicitação</a>}
                   {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={pd.drive.link} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver pedido completo</a>
                 </div>
@@ -478,4 +499,18 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
 
 export default function Aprovacoes() {
   return <Protegido papeis={VE_TAREFAS}><Suspense><Conteudo /></Suspense></Protegido>;
+}
+
+/** Último pedido de ajuste da Débora (histórico do pedido), para o Marcelo ver o que mudar. */
+function AjustePedido({ protocolo }: { protocolo: string }) {
+  const s = useSessao();
+  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const [txt, setTxt] = useState<{ nota: string; nome: string } | null>(null);
+  useEffect(() => {
+    getDocs(query(collection(db(), "clientes", clienteId, "solicitacoes", protocolo, "eventos"), where("acao", "==", "ajustarProposta")))
+      .then((q) => { const e = q.docs.map((d) => d.data() as { nota: string; nome: string; em: { seconds: number } }).sort((a, b) => b.em.seconds - a.em.seconds)[0]; if (e) setTxt(e); })
+      .catch(() => {});
+  }, [clienteId, protocolo]);
+  if (!txt) return null;
+  return <p className="whitespace-pre-wrap rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm"><b>{txt.nome} pediu:</b> {txt.nota}</p>;
 }

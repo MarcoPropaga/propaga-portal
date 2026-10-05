@@ -56,6 +56,20 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   let criativoJob = false;
 
   switch (acao) {
+    case "aprovarProposta":
+      rotulo = `Solicitação aprovada por ${u.nome}; enviada ao atendimento`;
+      avisar = ["atendimento"];
+      break;
+    case "ajustarProposta":
+      if (nota.length < 3) throw new ErroUsuario("Escreva o que precisa ser ajustado.");
+      rotulo = `${u.nome} pediu ajuste na solicitação`;
+      avisar = ["atendimento"];
+      break;
+    case "recusarProposta":
+      if (nota.length < 3) throw new ErroUsuario("Informe o motivo da recusa.");
+      rotulo = `Solicitação recusada por ${u.nome} · sem cobrança`;
+      avisar = ["atendimento"];
+      break;
     case "aceitarPedido": {
       if (!d.cronograma) throw new ErroUsuario("Informe o cronograma: início, 1ª apresentação e entrega final.");
       if (d.cronograma.inicio < hojeSP(agora)) throw new ErroUsuario("A data de início não pode estar no passado.");
@@ -84,7 +98,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
     }
     case "entregar":
       mudancas.prazo = { ...ped.prazo, entrega: hojeSP(agora) };
-      rotulo = "Arquivos finais entregues em 04 Aprovados";
+      rotulo = "Encaminhado para veiculação/impressão · realizado";
       avisar = ["solicitante", "financeiro_propaga"];
       break;
     case "faturar":
@@ -117,7 +131,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   return { status: novo };
 }
 
-function avisarPessoas(
+export function avisarPessoas(
   p: Plataforma, fs: Firestore, autor: Usuario, clienteId: string, ped: Pedido,
   quem: string[], rotulo: string, nota: string, status: Status, rota = "/solicitacoes/pedido/",
 ) {

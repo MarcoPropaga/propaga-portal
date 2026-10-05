@@ -13,6 +13,8 @@ export const moeda = (v: number | null | undefined) =>
   v == null ? "A cotar" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const COR: Partial<Record<Status, string>> = {
+  proposta: "bg-aviso-100 text-aviso-700",
+  ajuste: "bg-alerta-100 text-alerta-700",
   enviada: "bg-marca-100 text-marca-900",
   producao: "bg-[#E8EEF7] text-[#24456B]",
   apresentacao: "bg-aviso-100 text-aviso-700",
@@ -45,5 +47,7 @@ export interface PedidoDoc {
   rodadas: number; versao: number; catalogoVersao: string; recebidoPeloCliente?: boolean;
   refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
   temPecas?: boolean; pecas?: Peca[];
+  /** Solicitação criada pelo Marcelo em nome da Débora. */
+  criadoPor?: { uid: string; nome: string };
   criadoEm: unknown; atualizadoEm: unknown;
 }

@@ -101,10 +101,12 @@ export function previewDrive(link: string): string | null {
 export const linhasParaItens = (t: string) => t.split(/\n+/).map((x) => x.replace(/^\s*(\d+[.)-]|[-•*])\s*/, "").trim()).filter(Boolean);
 
 /** Tarefas do pedido (fora das peças) que cabem a cada perfil — base de "Minhas tarefas" e do contador. */
-export type TarefaPedido = "aceitar" | "criar" | "entregar" | "faturar" | "receber";
+export type TarefaPedido = "proposta" | "ajustar" | "aceitar" | "criar" | "entregar" | "faturar" | "receber";
 export function tarefasDoPedido(papel: Papel | string | null | undefined, p: { status: string; temPecas?: boolean }): TarefaPedido[] {
   const t: TarefaPedido[] = [];
   const atend = papel === "atendimento" || papel === "admin", fin = papel === "financeiro_propaga" || papel === "admin";
+  if ((papel === "solicitante" || papel === "admin") && p.status === "proposta") t.push("proposta");
+  if (atend && p.status === "ajuste") t.push("ajustar");
   if (atend && p.status === "enviada") t.push("aceitar");
   if (papel === "criativo" && aguardaCriacao(p)) t.push("criar");
   if (atend && p.status === "aprovada") t.push("entregar");

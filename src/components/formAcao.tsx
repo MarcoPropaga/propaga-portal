@@ -1,7 +1,7 @@
 "use client";
 /* Formulário das ações do pedido (aceitar, entregar, faturar, pagamento, cancelar). Usado em Minhas tarefas. */
 import { useState } from "react";
-import { REGRAS, type Acao } from "@/lib/fluxo";
+import { ACOES_COM_MOTIVO, REGRAS, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis, PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
 import { useFila } from "@/lib/usarFila";
@@ -9,8 +9,11 @@ import { Aviso, Botao } from "@/components/ui";
 import { brData, type PedidoDoc } from "@/components/pedido";
 
 const AJUDA: Partial<Record<Acao, string>> = {
-  aceitarPedido: "Confirme o cronograma e informe o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e a Mariane recebe o job para criar as peças.",
-  entregar: "Todas as peças estão com arquivo final em 04 Aprovados ou canceladas. Ao registrar, a Débora e o Financeiro da Propaga são avisados.",
+  aprovarProposta: "A solicitação segue para o Marcelo conferir, definir o cronograma e enviar à Mariane criar as peças.",
+  ajustarProposta: "Escreva o que precisa mudar. A solicitação volta para o Marcelo ajustar e reenviar para sua aprovação.",
+  recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o Marcelo.",
+  aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e a Mariane recebe o job para criar as peças.",
+  entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e a Débora e o Financeiro da Propaga são avisados.",
   faturar: "Registre o faturamento (ex.: número da nota fiscal).",
   registrarPagamento: "Registre o recebimento do pagamento.",
   cancelar: "O cancelamento encerra o pedido inteiro. Informe o motivo.",
@@ -33,7 +36,7 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
 
   async function confirmar(e: React.FormEvent) {
     e.preventDefault(); setErro("");
-    if (acao === "cancelar" && nota.trim().length < 3) { setErro("Informe o motivo do cancelamento."); return; }
+    if (ACOES_COM_MOTIVO.includes(acao) && nota.trim().length < 3) { setErro(acao === "ajustarProposta" ? "Escreva o que precisa ser ajustado." : "Informe o motivo."); return; }
     const num = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
     const dados: Record<string, unknown> = { protocolo: pedido.protocolo, acao };
     if (nota.trim()) dados.nota = nota.trim();
@@ -84,7 +87,7 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
           <span>Conferi o acesso à pasta do Drive e os materiais.</span></label>
       </>}
       <div className="grid gap-1.5">
-        <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "cancelar" ? "Motivo" : "Observação (opcional)"}{acao === "cancelar" && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
+        <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "ajustarProposta" ? "O que ajustar" : ACOES_COM_MOTIVO.includes(acao) ? "Motivo" : acao === "entregar" ? "Onde foi veiculado ou impresso (opcional)" : "Observação (opcional)"}{ACOES_COM_MOTIVO.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
         <textarea id={`${id}-nota`} rows={3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#C9D7DC] bg-white p-3" />
       </div>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}

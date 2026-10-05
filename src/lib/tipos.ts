@@ -40,7 +40,7 @@ export type Papel =
   | "admin";               // Marco — acesso geral, catálogo, usuários
 
 export type Status =
-  | "rascunho" | "enviada" | "producao"
+  | "rascunho" | "proposta" | "ajuste" | "enviada" | "producao"
   | "apresentacao" | "aprovada" | "entregue" | "faturada" | "paga" | "cancelada";
 
 export interface ItemSolicitacao {
