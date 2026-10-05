@@ -13,6 +13,23 @@ export class Identidade {
     return r.users?.[0] ?? null;
   }
 
+  /** Situação de acesso de cada conta: senha criada, verificação em duas etapas e último acesso. */
+  situacaoAcesso(ids: string[]): Record<string, { senha: boolean; doisFatores: boolean; ultimoAcesso: string | null }> {
+    const out: Record<string, { senha: boolean; doisFatores: boolean; ultimoAcesso: string | null }> = {};
+    for (let i = 0; i < ids.length; i += 100) {
+      const r = json<{ users?: { localId: string; passwordUpdatedAt?: number; passwordHash?: string; mfaInfo?: unknown[]; lastLoginAt?: string }[] }>(
+        this.p.http(`${V1}/projects/${this.projeto}/accounts:lookup`, "post", { localId: ids.slice(i, i + 100) }), "consultar acessos");
+      for (const u of r.users ?? []) {
+        out[u.localId] = {
+          senha: !!(u.passwordUpdatedAt || u.passwordHash),
+          doisFatores: (u.mfaInfo?.length ?? 0) > 0,
+          ultimoAcesso: u.lastLoginAt ? new Date(Number(u.lastLoginAt)).toISOString() : null,
+        };
+      }
+    }
+    return out;
+  }
+
   /** O e-mail fica verificado: o acesso só se completa pelo link enviado a ele, e o 2FA exige e-mail verificado. */
   criar(email: string, nome: string): string {
     const r = json<{ localId: string }>(
