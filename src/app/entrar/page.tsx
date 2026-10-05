@@ -7,6 +7,7 @@ import { confirmarCodigo, entrarComSenha } from "@/lib/acesso";
 import { mensagemErroAuth } from "@/lib/erros-auth";
 import { Aviso, Botao, Campo, TelaAcesso } from "@/components/ui";
 import { DesafioTotp } from "@/components/auth/totp";
+import { useSessao } from "@/components/auth/sessao";
 
 export default function Entrar() {
   const router = useRouter();
@@ -16,6 +17,12 @@ export default function Entrar() {
   const [aviso, setAviso] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [resolver, setResolver] = useState<MultiFactorResolver | null>(null);
+
+  // Já conectado neste aparelho (senha + código): vai direto ao portal, sem pedir login de novo.
+  const s = useSessao();
+  useEffect(() => {
+    if (!s.carregando && s.usuario && (s.entrouComSegundoFator || process.env.NEXT_PUBLIC_USAR_EMULADOR === "true") && !resolver) router.replace("/inicio/");
+  }, [s.carregando, s.usuario, s.entrouComSegundoFator, resolver, router]);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -53,6 +60,7 @@ export default function Entrar() {
       <form onSubmit={enviar} className="grid gap-4" noValidate>
         <Campo id="email" rotulo="E-mail" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         <Campo id="senha" rotulo="Senha" type="password" autoComplete="current-password" value={senha} onChange={(e) => setSenha(e.target.value)} erro={erro} />
+        <p className="text-sm text-gray-600">Você continua conectado neste aparelho até tocar em <b>Sair</b>.</p>
         <Botao type="submit" carregando={enviando}>Entrar</Botao>
       </form>
       <a href="/recuperar/" className="text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Esqueci minha senha</a>
