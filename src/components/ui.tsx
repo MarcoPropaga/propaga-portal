@@ -1,5 +1,7 @@
+"use client";
 /* Componentes de interface básicos, com os tokens da marca. */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
+import { useState } from "react";
 
 export function Logo({ className = "w-[170px]" }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
@@ -25,11 +27,26 @@ export function Botao({ variante = "primario", className = "", carregando, child
 export function Campo({ id, rotulo, erro, ajuda, ...p }:
   InputHTMLAttributes<HTMLInputElement> & { id: string; rotulo: string; erro?: string; ajuda?: ReactNode }) {
   const desc = [erro ? `${id}-erro` : "", ajuda ? `${id}-ajuda` : ""].filter(Boolean).join(" ") || undefined;
+  const senha = p.type === "password";
+  const [ver, setVer] = useState(false);
   return (
     <div className="grid gap-1.5">
       <label htmlFor={id} className="text-sm font-semibold">{rotulo}</label>
-      <input id={id} {...p} aria-invalid={erro ? true : undefined} aria-describedby={desc}
-        className={`min-h-11 w-full rounded border bg-white px-3 ${erro ? "border-alerta-700 ring-1 ring-alerta-700" : "border-[#C9D7DC]"}`} />
+      <div className="relative">
+        <input id={id} {...p} type={senha && ver ? "text" : p.type} aria-invalid={erro ? true : undefined} aria-describedby={desc}
+          className={`min-h-11 w-full rounded border bg-white px-3 ${senha ? "pr-24" : ""} ${erro ? "border-alerta-700 ring-1 ring-alerta-700" : "border-[#C9D7DC]"}`} />
+        {senha && (
+          <button type="button" onClick={() => setVer(!ver)} aria-pressed={ver} aria-controls={id}
+            aria-label={ver ? "Ocultar senha" : "Mostrar senha"}
+            className="absolute inset-y-1 right-1 inline-flex items-center gap-1.5 rounded px-2.5 text-sm font-semibold text-marca-700 hover:bg-[#EAF3F5]">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" />
+              {ver && <path d="M4 4l16 16" />}
+            </svg>
+            {ver ? "Ocultar" : "Mostrar"}
+          </button>
+        )}
+      </div>
       {ajuda && <p id={`${id}-ajuda`} className="text-sm text-gray-600">{ajuda}</p>}
       {erro && <p id={`${id}-erro`} className="text-sm font-medium text-alerta-700" role="alert">{erro}</p>}
     </div>
