@@ -11,7 +11,7 @@ import type { Peca } from "./pecas";
 export type Coluna = "adaptacao" | "nova";
 export const NOME_COLUNA: Record<Coluna, string> = { adaptacao: "Adaptação", nova: "Nova criação" };
 
-export interface ItemTabelaCriativo { id: string; nome: string; adaptacao: number | null; nova: number | null; sobConsulta?: boolean; obs?: string }
+export interface ItemTabelaCriativo { id: string; nome: string; adaptacao: number | null; nova: number | null; sobConsulta?: boolean; obs?: string; /** Item acordado pelo portal (proposto pelo criativo, aprovado pelo admin). */ acordado?: string }
 export interface TabelaCriativo {
   versao: string; nome: string; itens: ItemTabelaCriativo[];
   /** "cod:índice da variante" → sugestão. */
@@ -121,6 +121,29 @@ export interface RelatorioCriativo {
   /** Nome dos itens usados (para a Marisa ler sem ter a tabela). */
   itens: Record<string, string>;
 }
+
+/* Serviço fora da tabela (Marco, 15/10/2026): quando o Marcelo pede um serviço que não está na tabela do criativo,
+   o criativo propõe o valor; com a aprovação do admin, o serviço entra na tabela com o valor acordado e passa a valer
+   para os próximos pedidos e relatórios. Fica em criativo/adicionais (lido só pelos criativos e pelo admin). */
+export interface PropostaItem {
+  id: string; uid: string; criativo: string; protocolo: string;
+  chave: string;              // cod:variante do catálogo da Propaga
+  servico: string;            // nome do serviço como o Marcelo pediu
+  nome: string; coluna: Coluna; valor: number; obs?: string;
+  status: "pendente" | "aprovada" | "recusada";
+  em: unknown; decididoPor?: string; decididoEm?: unknown; motivo?: string; itemId?: string;
+}
+export interface AdicionaisCriativo { itens: ItemTabelaCriativo[]; mapa: TabelaCriativo["mapa"]; propostas: PropostaItem[] }
+export const chaveServico = (it: { cod: string; variante: number }) => `${it.cod}:${it.variante}`;
+/** O serviço não tem item próprio na tabela (cai em "projeto complexo"). */
+export const foraDaTabela = (tab: TabelaCriativo, chave: string) => !tab.mapa[chave] || tab.mapa[chave].item === "complexo";
+/** Tabela-base + itens acordados (antes do "projeto complexo", que fica por último). */
+export function mesclarAdicionais(tab: TabelaCriativo, ad?: Partial<AdicionaisCriativo> | null): TabelaCriativo {
+  if (!ad?.itens?.length) return tab;
+  const cx = tab.itens.filter((i) => i.sobConsulta);
+  return { ...tab, itens: [...tab.itens.filter((i) => !i.sobConsulta), ...ad.itens, ...cx], mapa: { ...tab.mapa, ...(ad.mapa ?? {}) } };
+}
+export const REGRA_FORA_TABELA = "Serviço que não está na sua tabela: proponha o valor. Com a aprovação da administração da Propaga, ele entra na sua tabela com o valor acordado e vale para os próximos pedidos.";
 
 /** Quem vê o quê. A tabela e o contrato da Mariane: só ela e o admin. Os relatórios enviados: ela, a Marisa e o admin. */
 export const VE_TABELA_CRIATIVO = ["criativo", "admin"];

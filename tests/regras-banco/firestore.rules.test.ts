@@ -123,5 +123,8 @@ describe("regras do Firestore", () => {
     await assertFails(fila("marcelo", marcelo, "relatorioCriativo"));
     await assertSucceeds(fila("marisa", marisa, "pagarCriativo"));
     await assertFails(fila("mariane", mariane, "pagarCriativo"));
+    await assertSucceeds(fila("mariane", mariane, "tabelaCriativo"));
+    await assertFails(fila("marcelo", marcelo, "tabelaCriativo"));
+    await assertFails(fila("marisa", marisa, "tabelaCriativo"));
   });
 });

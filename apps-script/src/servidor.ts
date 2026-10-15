@@ -12,7 +12,7 @@ import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
-import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo } from "./criativo";
+import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo, tabelaCriativoFila } from "./criativo";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
 import { ErroUsuario, type Plataforma } from "./plataforma";
@@ -146,6 +146,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       return enviarRelatorioCriativo(p, fs, { uid, ...u }, dados);
     case "pagarCriativo":
       return pagarRelatorioCriativo(p, fs, { uid, ...u }, dados);
+    case "tabelaCriativo":
+      return tabelaCriativoFila(p, fs, { uid, ...u }, dados);
     case "enviar":
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "acao":

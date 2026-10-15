@@ -58,8 +58,8 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'relatorioCriativo', 'pagarCriativo']
-          : papel() == 'criativo' ? ['peca', 'relatorioCriativo']
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo']
+          : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo']
           : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']
           : ['enviar', 'acao', 'peca'];
       }
@@ -74,7 +74,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // Tabela de valores e contrato da Mariane (Criativo): só ela e o administrador (Marco, 15/10/2026).
+    // Tabela de valores dos criativos (criativo/tabela) e serviços acordados (criativo/adicionais): só os criativos e o administrador (Marco, 15/10/2026).
     match /criativo/{doc} {
       allow read: if logado() && doisFatores() && equipePropaga() && papel() in ['criativo', 'admin'];
       allow write: if false;
