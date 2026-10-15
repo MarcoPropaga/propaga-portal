@@ -49,5 +49,7 @@ export interface PedidoDoc {
   temPecas?: boolean; pecas?: Peca[];
   /** Solicitação criada pelo Marcelo em nome da Débora. */
   criadoPor?: { uid: string; nome: string };
+  /** Pedido cancelado faturado a 50% pelo Financeiro da Propaga. */
+  canceladoCobrado?: boolean;
   criadoEm: unknown; atualizadoEm: unknown;
 }

@@ -14,7 +14,7 @@ const AJUDA: Partial<Record<Acao, string>> = {
   recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o Marcelo.",
   aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e a Mariane recebe o job para criar as peças.",
   entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e a Débora e o Financeiro da Propaga são avisados.",
-  faturar: "Registre o faturamento (ex.: número da nota fiscal).",
+  faturar: "Registre o faturamento (ex.: número da nota fiscal). Pedido cancelado depois de apresentado é faturado com 50% do valor das peças canceladas.",
   registrarPagamento: "Registre o recebimento do pagamento.",
   cancelar: "O cancelamento encerra o pedido inteiro. Informe o motivo.",
 };
