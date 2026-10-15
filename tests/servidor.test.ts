@@ -224,7 +224,7 @@ describe("ações do pedido (fila 'acao')", () => {
 
   it("aceite com valor a cotar; nova solicitação avisa o Atendimento e manda só um recibo para quem enviou", () => {
     expect(acao(mcl, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/valor do item 2/);
-    expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 510 }], driveVerificado: true }).status).toBe("ok");
+    expect(acao(mcl, "aceitarPedido", { cronograma: cron, valores: [{ indice: 1, valor: 510 }], driveVerificado: true, pastaPropaga: "https://drive.google.com/drive/folders/propaga1" }).status).toBe("ok");
     expect(ped().status).toBe("producao");
     expect(ped().prazo.primeira).toBe("2026-10-09");
     const v = f.doc("clientes/bmlog/valores/BML-2026-0001");
@@ -306,7 +306,7 @@ describe("solicitação criada pelo Marcelo (proposta em nome da Débora)", () =
     expect(ped().status).toBe("enviada");
     expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
     f.emails.length = 0;
-    expect(acao(mcl, "aceitarPedido", { cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" } }).status).toBe("ok");
+    expect(acao(mcl, "aceitarPedido", { cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" }, pastaPropaga: "https://drive.google.com/drive/folders/propaga1" }).status).toBe("ok");
     expect(f.emails.map((e) => e.para).sort()).toEqual(["contato@mondesign.com.br", "deborabmlog@gmail.com"]);
   });
 
@@ -354,7 +354,7 @@ describe("aprovação por peça (fila 'peca')", () => {
       itens: [{ cod: "01", variante: 0, qtd: 3, opcao: "4:5" }],
       drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
     });
-    fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "aceitarPedido", cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" }, driveVerificado: true });
+    fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "aceitarPedido", cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" }, driveVerificado: true, pastaPropaga: "https://drive.google.com/drive/folders/propaga1" });
     expect(para()).toContain("mariane@propaga.com"); // o aceite entrega o job à Mariane
     f.emails.length = 0;
   });
@@ -400,9 +400,10 @@ describe("aprovação por peça (fila 'peca')", () => {
     peca(deb, "avaliar", { decisoes: [{ id: "p2", tipo: "aprovada" }] });
     expect(ped().status).toBe("producao"); // aprovadas, mas arquivos finais ainda em preparação
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).mensagem).toMatch(/peças em andamento/);
-    peca(mri, "finalizar", { id: "p1" });
+    expect(peca(mri, "finalizar", { id: "p1" }).mensagem).toMatch(/05 Arquivos abertos/);
+    peca(mri, "finalizar", { id: "p1", abertos: true });
     f.emails.length = 0;
-    expect(peca(mri, "finalizar", { id: "p2" }).resultado.pronto).toBe(true);
+    expect(peca(mri, "finalizar", { id: "p2", abertos: true }).resultado.pronto).toBe(true);
     expect(ped().status).toBe("aprovada"); // "Pronto para entrega"
     expect(f.emails.some((e) => e.para === "marcelo@propaga.com" && /pronto para entrega/.test(e.assunto))).toBe(true);
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).status).toBe("ok");
@@ -498,15 +499,15 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
   it("Mariane envia: só peças fechadas no mês, valores da tabela dela, sob consulta exige valor; Marisa e Marco são avisados", () => {
     expect(fila("relatorioCriativo", mri, { mes: "2026-10" }).mensagem).toMatch(/Informe o valor de Peça p2/);
     const r = fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: [{ chave: "BML-2026-0001:p2", item: "complexo", coluna: "nova", valor: 300 }] });
-    expect(r.resultado).toEqual({ mes: "2026-10", total: 205, pecas: 3 }); // 45 + 50% de 300 + 10
-    const rel = f.doc("relatoriosCriativo/2026-10");
+    expect(r.resultado).toEqual({ id: `${mri}_2026-10`, mes: "2026-10", total: 205, pecas: 3 }); // 45 + 50% de 300 + 10
+    const rel = f.doc(`relatoriosCriativo/${mri}_2026-10`);
     expect(rel.status).toBe("enviado");
     expect(rel.linhas.map((l: any) => [l.peca, l.situacao, l.valor, l.refacoes])).toEqual([
       ["Peça p1", "aprovada", 45, 1], ["Peça p2", "cancelada", 300, 0], ["Peça p3", "aprovada", 10, 0]]);
     expect(rel.linhas[1].cobrado).toBe(150);
-    const rel2 = f.emails.filter((e) => e.assunto.startsWith("Relatório da Mariane"));
+    const rel2 = f.emails.filter((e) => e.assunto.startsWith("Relatório de Mariane"));
     expect(rel2.map((e) => e.para).sort()).toEqual(["marco@propaga.com", "marisa@propaga.com"]);
-    expect(rel2[0].assunto).toBe("Relatório da Mariane · outubro/2026");
+    expect(rel2[0].assunto).toBe("Relatório de Mariane · outubro/2026");
     const cx = f.emails.filter((e) => e.assunto.startsWith("Valor de projeto complexo"));
     expect(cx.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
     expect((cx[0] as any).texto).toMatch(/Peça p2: R\$\s300,00 \(cancelada: 50%\)/);
@@ -527,11 +528,11 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
     expect(fila("relatorioCriativo", mcl, { mes: "2026-10", ajustes: aj }).mensagem).toMatch(/Só o criativo/);
     fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: aj });
     expect(fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: aj }).status).toBe("ok"); // correção antes do pagamento
-    expect(f.doc("relatoriosCriativo/2026-10").envios).toBe(2);
-    expect(fila("pagarCriativo", mri, { mes: "2026-10" }).mensagem).toMatch(/Financeiro/);
+    expect(f.doc(`relatoriosCriativo/${mri}_2026-10`).envios).toBe(2);
+    expect(fila("pagarCriativo", mri, { id: `${mri}_2026-10` }).mensagem).toMatch(/Financeiro/);
     f.emails.length = 0;
-    expect(fila("pagarCriativo", mrs, { mes: "2026-10", nota: "PIX 05/11" }).status).toBe("ok");
-    expect(f.doc("relatoriosCriativo/2026-10")).toMatchObject({ status: "pago", pagoPor: "Marisa Coelho", notaPagamento: "PIX 05/11" });
+    expect(fila("pagarCriativo", mrs, { id: `${mri}_2026-10`, nota: "PIX 05/11" }).status).toBe("ok");
+    expect(f.doc(`relatoriosCriativo/${mri}_2026-10`)).toMatchObject({ status: "pago", pagoPor: "Marisa Coelho", notaPagamento: "PIX 05/11" });
     expect(f.emails.filter((e) => e.assunto.startsWith("Pagamento registrado")).map((e) => e.para)).toEqual(["contato@mondesign.com.br"]);
     expect(fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: aj }).mensagem).toMatch(/já foi pago/);
     expect(fila("relatorioCriativo", mri, { mes: "2026-08" }).mensagem).toMatch(/Nenhuma peça/);
@@ -553,5 +554,83 @@ describe("pedido cancelado com cobrança de 50%: Financeiro da Propaga fatura", 
     expect(acao(mrs, "faturar").status).toBe("ok");
     expect(f.doc("clientes/bmlog/solicitacoes/BML-2026-0001")).toMatchObject({ status: "faturada", canceladoCobrado: true });
     expect(acao(mrs, "registrarPagamento").status).toBe("ok");
+  });
+});
+
+describe("dois criativos (criativo2): o Marcelo escolhe no aceite, só quem está com o pedido trabalha, troca e relatórios separados", () => {
+  let f: ReturnType<typeof fake>;
+  let deb: string, mcl: string, mri: string, cr2: string, mrs: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `k${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const ped = () => f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+  const link = (n: string) => `https://drive.google.com/file/d/${n}/view`;
+  const cron = { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" };
+  const pasta = "https://drive.google.com/drive/folders/propaga1";
+  beforeEach(() => {
+    f = fake();
+    const adm = convidar(f.p, { nome: "Marco Antônio", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidar(f.p, { nome: "Débora", email: "marcopropaga7@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo H. Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    mri = convidar(f.p, { nome: "Mariane Garcia", email: "contato@mondesign.com.br", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    cr2 = convidar(f.p, { nome: "Paula Criativa", email: "paula@exemplo.com", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    mrs = convidar(f.p, { nome: "Marisa Coelho", email: "marisa@propaga.com", papel: "financeiro_propaga" }, { uid: adm, nome: "Marco" }).uid;
+    fila("enviar", deb, {
+      titulo: "Campanha", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos",
+      itens: [{ cod: "01", variante: 0, qtd: 1, opcao: "4:5" }],
+      drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+    });
+    f.emails.length = 0;
+  });
+
+  it("a equipe de criativos fica publicada para o formulário do aceite", () => {
+    expect(f.doc("equipe/criativos").lista.map((x: any) => x.nome).sort()).toEqual(["Mariane Garcia", "Paula Criativa"]);
+  });
+
+  it("aceite exige a pasta no Drive da Propaga e, com dois criativos, a escolha de um", () => {
+    const base = { protocolo: "BML-2026-0001", acao: "aceitarPedido", cronograma: cron, driveVerificado: true };
+    expect(fila("acao", mcl, base).mensagem).toMatch(/Drive da Propaga|pasta/i);
+    expect(fila("acao", mcl, { ...base, pastaPropaga: pasta }).mensagem).toMatch(/criativo/i);
+    expect(fila("acao", mcl, { ...base, pastaPropaga: pasta, criativoUid: cr2 }).status).toBe("ok");
+    expect(ped().criativo).toEqual({ uid: cr2, nome: "Paula Criativa" });
+    expect(ped().drive.propaga).toBe(pasta);
+    expect(f.emails.map((e) => e.para)).toContain("paula@exemplo.com");
+    expect(f.emails.map((e) => e.para)).not.toContain("contato@mondesign.com.br");
+
+    // só quem está com o pedido cria as peças
+    expect(fila("peca", mri, { protocolo: "BML-2026-0001", acao: "publicar", pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).mensagem).toMatch(/está com Paula/);
+    expect(fila("peca", cr2, { protocolo: "BML-2026-0001", acao: "publicar", pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).status).toBe("ok");
+
+    // troca: só Atendimento/Admin; a Mariane assume e é avisada
+    expect(fila("acao", cr2, { protocolo: "BML-2026-0001", acao: "trocarCriativo", criativoUid: mri }).status).toBe("erro");
+    f.emails.length = 0;
+    expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "trocarCriativo", criativoUid: mri }).status).toBe("ok");
+    expect(ped().criativo.uid).toBe(mri);
+    expect(f.emails.map((e) => e.para)).toEqual(["contato@mondesign.com.br"]);
+    expect(fila("peca", cr2, { protocolo: "BML-2026-0001", acao: "devolver", id: "p1", itens: ["x"] }).status).toBe("erro");
+  });
+
+  it("cada criativo envia o próprio relatório; a Marisa paga cada um separadamente", () => {
+    const pecaFechada = (id: string, uid: string, nome: string) => ({
+      id, nome: `Peça ${id}`, item: 0, etapa: "concluida", extras30: 0, desde: "2026-10-10T15:00:00Z", criativo: { uid, nome },
+      versoes: [{ v: 1, link: "x", em: "2026-10-10T15:00:00Z", por: nome, decisao: { tipo: "aprovada", por: "D", em: "2026-10-10T15:00:00Z" } }],
+      hist: [{ em: "2026-10-10T15:00:00Z", por: "Sistema", txt: "fechada" }],
+    });
+    f.docs.set("clientes/bmlog/solicitacoes/BML-2026-0002", { updateTime: "t0", fields: (paraValor({
+      protocolo: "BML-2026-0002", titulo: "Natal", status: "aprovada", criativo: { uid: mri, nome: "Mariane Garcia" },
+      itens: [{ cod: "01", variante: 0, qtd: 3, nome: "Post estático" }],
+      pecas: [pecaFechada("p1", mri, "Mariane Garcia"), pecaFechada("p2", cr2, "Paula Criativa"), pecaFechada("p3", cr2, "Paula Criativa")],
+    }) as any).mapValue.fields });
+    expect(fila("relatorioCriativo", mri, { mes: "2026-10" }).resultado).toMatchObject({ id: `${mri}_2026-10`, pecas: 1, total: 45 });
+    expect(fila("relatorioCriativo", cr2, { mes: "2026-10" }).resultado).toMatchObject({ id: `${cr2}_2026-10`, pecas: 2, total: 90 });
+    expect(f.doc(`relatoriosCriativo/${cr2}_2026-10`)).toMatchObject({ uid: cr2, nome: "Paula Criativa", status: "enviado" });
+    f.emails.length = 0;
+    expect(fila("pagarCriativo", mrs, { id: `${cr2}_2026-10` }).status).toBe("ok");
+    expect(f.emails.filter((e) => e.assunto.startsWith("Pagamento registrado")).map((e) => e.para)).toEqual(["paula@exemplo.com"]);
+    expect(f.doc(`relatoriosCriativo/${mri}_2026-10`).status).toBe("enviado");
   });
 });

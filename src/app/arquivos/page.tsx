@@ -30,7 +30,7 @@ function Conteudo() {
     <Casca titulo="Arquivos no Drive">
       <div className="grid max-w-5xl gap-4">
         <p className="max-w-[75ch] text-gray-600">Cada solicitação tem uma pasta no Drive compartilhado da {CLIENTES[clienteId].nome}. O portal guarda os links; os arquivos ficam no Drive.</p>
-        <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">Estrutura padrão por pedido: <b>01 Briefing</b>, <b>02 Materiais</b>, <b>03 Provas</b> e <b>04 Aprovados</b>. Compartilhe só com o grupo da Propaga, nunca com link público.</p>
+        <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">Estrutura padrão por pedido no Drive compartilhado da Propaga: <b>01 Briefing</b>, <b>02 Materiais</b>, <b>03 Provas</b>, <b>04 Aprovados</b> e <b>05 Arquivos abertos</b> (só equipe Propaga). Compartilhe só com o grupo da Propaga, nunca com link público.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {lista && (
@@ -44,7 +44,7 @@ function Conteudo() {
                   <tr key={p.protocolo} className="border-t border-gray-200">
                     <td className="whitespace-nowrap px-3 py-2.5 font-semibold"><a className="underline-offset-4 hover:underline" href={`/solicitacoes/pedido/?p=${encodeURIComponent(p.protocolo)}`}>{p.protocolo}</a></td>
                     <td className="px-3 py-2.5">{p.titulo}<div className="mt-1"><SeloStatus status={p.status} /></div></td>
-                    <td className="px-3 py-2.5"><a href={p.drive.link} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Abrir pasta<span className="sr-only"> de {p.protocolo} (abre em nova aba)</span></a></td>
+                    <td className="px-3 py-2.5"><a href={s.papel === "solicitante" || s.papel === "financeiro_cliente" ? p.drive.link : (p.drive.propaga || p.drive.link)} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Abrir pasta<span className="sr-only"> de {p.protocolo} (abre em nova aba)</span></a></td>
                     <td className="px-3 py-2.5">{p.drive.verificado
                       ? <span className="rounded-full bg-[#E3F2EA] px-2.5 py-0.5 text-xs font-semibold text-[#1E7047]">Conferido pela Propaga</span>
                       : <span className="rounded-full bg-aviso-100 px-2.5 py-0.5 text-xs font-semibold text-aviso-700">A conferir</span>}</td>

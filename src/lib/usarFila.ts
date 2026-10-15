@@ -40,7 +40,9 @@ export function usePedidos(ativo = true) {
     if (!ativo || !uid) return;
     const col = collection(db(), "clientes", clienteId, "solicitacoes");
     return onSnapshot(s.papel === "solicitante" ? query(col, where("solicitanteUid", "==", uid)) : col,
-      (q) => setLista(q.docs.map((d) => d.data() as PedidoDoc)), () => setErro("Não foi possível carregar os pedidos."));
+      // Criativo vê só os pedidos atribuídos a ele (ou ainda sem criativo definido).
+      (q) => setLista(q.docs.map((d) => d.data() as PedidoDoc).filter((p) => s.papel !== "criativo" || !p.criativo || p.criativo.uid === uid)),
+      () => setErro("Não foi possível carregar os pedidos."));
   }, [ativo, clienteId, s.papel, uid]);
   return { lista, erro, clienteId };
 }

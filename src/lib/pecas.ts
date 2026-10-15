@@ -23,7 +23,15 @@ export interface Peca {
   id: string; nome: string; item: number | null; etapa: EtapaPeca; tarefa?: TarefaCriativo | null;
   orientacao?: Orientacao | null; extras30: number; versoes: VersaoPeca[];
   hist: { em: string; por: string; txt: string }[]; desde: string;
+  /** Criativo que fez a última entrega desta peça (entra no relatório dele). */
+  criativo?: { uid: string; nome: string } | null;
 }
+
+/** Criativo do pedido (escolhido pelo Marcelo no aceite; decisão de 15/10/2026). Sem criativo definido = qualquer criativo. */
+export type CriativoRef = { uid: string; nome: string };
+export const doCriativo = (p: { criativo?: CriativoRef | null }, uid?: string | null) => !p.criativo || p.criativo.uid === uid;
+/** Link da pasta do pedido para a equipe Propaga: o Drive compartilhado da Propaga quando informado. */
+export const pastaEquipe = (p: { drive: { link: string; propaga?: string } }) => p.drive.propaga || p.drive.link;
 
 export const ultima = (p: Peca) => p.versoes[p.versoes.length - 1];
 export const ultimaDecisao = (p: Peca): DecisaoPeca | null => [...p.versoes].reverse().find((v) => v.decisao)?.decisao ?? null;
@@ -39,7 +47,7 @@ export function situacaoRelatorio(p: Peca): { chave: "aguardando" | "concluida" 
 
 /** Situação interna (Marcelo e Mariane). */
 export function situacaoInterna(p: Peca): string {
-  if (p.etapa === "criativo") return { refazer: "Mariane refaz", final: "Mariane prepara o arquivo final", ciencia: "Mariane: ciência do cancelamento" }[p.tarefa ?? "refazer"];
+  if (p.etapa === "criativo") return { refazer: "Criativo refaz", final: "Criativo prepara o arquivo final", ciencia: "Criativo: ciência do cancelamento" }[p.tarefa ?? "refazer"];
   return { cliente: "Com a Débora", triagem: "Marcelo orienta a refação", revisao: "Marcelo revisa", concluida: "Concluída", encerrada: "Cancelada · encerrada" }[p.etapa] ?? "";
 }
 

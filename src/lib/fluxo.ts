@@ -7,7 +7,7 @@
 import type { Papel, Status } from "./tipos";
 
 export type Acao = "aprovarProposta" | "ajustarProposta" | "recusarProposta"
-  | "aceitarPedido" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
+  | "aceitarPedido" | "trocarCriativo" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
 
 /* Solicitação criada pelo Marcelo (decisão de Marco, 05/10/2026): fica em nome da Débora e começa como
    "proposta"; a Débora aprova (vai para o Marcelo aceitar e enviar à Mariane), pede ajuste (volta ao Marcelo)
@@ -43,7 +43,9 @@ export const REGRAS: Record<Acao, Regra> = {
   aprovarProposta: { de: ["proposta"], para: "enviada", papeis: ["solicitante", "admin"], rotulo: "Aprovar solicitação" },
   ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao Marcelo" },
   recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
-  aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar à Mariane" },
+  aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar ao criativo" },
+  // Troca de criativo: o status não muda (o servidor mantém o atual).
+  trocarCriativo: { de: ["producao", "apresentacao", "aprovada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Trocar o criativo" },
   entregar: { de: ["aprovada"], para: "entregue", papeis: ["atendimento", "admin"], rotulo: "Encaminhar para veiculação/impressão" },
   faturar: { de: ["entregue", "cancelada"], para: "faturada", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar faturamento" },
   registrarPagamento: { de: ["faturada"], para: "paga", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar pagamento" },

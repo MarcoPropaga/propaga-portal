@@ -109,6 +109,13 @@ function Conteudo() {
           </section>
         )}
 
+        {!acao && (s.papel === "atendimento" || s.papel === "admin") && ["producao", "apresentacao", "aprovada"].includes(pedido.status) && (
+          <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Criativo do pedido">
+            <span className="mr-auto text-sm">Criativo: <b>{pedido.criativo?.nome ?? "não definido"}</b></span>
+            <Botao variante="discreto" onClick={() => setAcao("trocarCriativo")}>Trocar o criativo</Botao>
+          </section>
+        )}
+
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <div className="grid min-w-0 content-start gap-5">
             <Painel titulo="Serviços" extra={<span className="text-xs text-gray-600">Catálogo v{pedido.catalogoVersao}</span>}>
@@ -191,6 +198,7 @@ function Conteudo() {
               {!p.inicio && pedido.status === "enviada" && <p className="text-xs text-gray-600">O cronograma é confirmado pela Propaga ao aceitar o pedido.</p>}
             </Painel>
             <Painel titulo="Arquivos no Drive">
+              {pedido.drive.propaga && s.papel !== "solicitante" && s.papel !== "financeiro_cliente" && <p className="text-sm">Drive da Propaga (equipe): <a href={pedido.drive.propaga} target="_blank" rel="noopener noreferrer" className="break-all underline">{pedido.drive.propaga}<span className="sr-only"> (abre em nova aba)</span></a></p>}
               <a href={pedido.drive.link} target="_blank" rel="noopener noreferrer" className="break-all text-sm underline">{pedido.drive.link}<span className="sr-only"> (abre em nova aba)</span></a>
               <p className="text-sm">{pedido.drive.verificado ? <span className="text-[#1E7047]">Acesso conferido pela Propaga.</span> : <span className="text-gray-600">Acesso ainda não conferido pela Propaga.</span>}</p>
             </Painel>

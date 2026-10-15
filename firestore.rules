@@ -80,8 +80,15 @@ service cloud.firestore {
       allow write: if false;
     }
     // Relatórios mensais da Mariane com os valores dela: ela, o Financeiro da Propaga (Marisa) e o administrador.
-    match /relatoriosCriativo/{mes} {
-      allow read: if logado() && doisFatores() && equipePropaga() && papel() in ['criativo', 'financeiro_propaga', 'admin'];
+    // Id = <uid do criativo>_<AAAA-MM>: cada criativo lê só os seus (decisão de 15/10/2026: vários criativos).
+    match /relatoriosCriativo/{id} {
+      allow read: if logado() && doisFatores() && equipePropaga() && (
+        papel() in ['financeiro_propaga', 'admin'] || (papel() == 'criativo' && id.matches(request.auth.uid + '_.*')));
+      allow write: if false;
+    }
+    // Lista dos criativos ativos (uid e nome, sem valores), para o Marcelo escolher no aceite.
+    match /equipe/{doc} {
+      allow read: if logado() && doisFatores() && equipePropaga();
       allow write: if false;
     }
 

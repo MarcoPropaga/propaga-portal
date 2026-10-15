@@ -5,10 +5,10 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Protegido } from "@/components/auth/protegido";
 import { Casca } from "@/components/casca";
+import { useSessao } from "@/components/auth/sessao";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora } from "@/components/pedido";
-import { aplicarAjustes, cobradoDe, REGRA_CANCELADA_CRIATIVO, REGRA_COMPLEXO_CRIATIVO, colunasDo, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, valorTabela, VE_TABELA_CRIATIVO,
-  type Coluna, type LinhaCriativo, type RelatorioCriativo } from "@/lib/criativo";
+import { idRelatorio, aplicarAjustes, cobradoDe, REGRA_CANCELADA_CRIATIVO, REGRA_COMPLEXO_CRIATIVO, colunasDo, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, valorTabela,   type Coluna, type LinhaCriativo, type RelatorioCriativo } from "@/lib/criativo";
 import { hojeSP } from "@/lib/datas";
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
@@ -26,6 +26,7 @@ function Conteudo() {
   const { tab, erro: erroTab } = useTabelaCriativo();
   const { lista, erro } = usePedidos();
   const enviar = useFila();
+  const uid = useSessao().usuario?.uid ?? "";
   const [rel, setRel] = useState<RelatorioCriativo | null | undefined>(undefined);
   const [edits, setEdits] = useState<Record<string, { item: string; coluna: Coluna; valor?: number }>>({});
   const [corrigir, setCorrigir] = useState(false);
@@ -33,9 +34,9 @@ function Conteudo() {
   const [ocupado, setOcupado] = useState(false);
 
   useEffect(() => { setRel(undefined); setEdits({}); setCorrigir(false); setAviso(null);
-    return onSnapshot(doc(db(), "relatoriosCriativo", mes), (d) => setRel(d.exists() ? (d.data() as RelatorioCriativo) : null), () => setRel(null)); }, [mes]);
+    return onSnapshot(doc(db(), "relatoriosCriativo", idRelatorio(uid, mes)), (d) => setRel(d.exists() ? (d.data() as RelatorioCriativo) : null), () => setRel(null)); }, [mes, uid]);
 
-  const base = useMemo(() => (tab && lista ? pecasDoMes(lista, mes, tab) : []), [tab, lista, mes]);
+  const base = useMemo(() => (tab && lista ? pecasDoMes(lista, mes, tab, uid) : []), [tab, lista, mes, uid]);
   // Ao corrigir um relatório já enviado, parte do que foi enviado.
   useEffect(() => {
     if (!corrigir || !rel) return;
@@ -148,5 +149,5 @@ function Conteudo() {
 }
 
 export default function MeuRelatorio() {
-  return <Protegido papeis={VE_TABELA_CRIATIVO as Papel[]}><Conteudo /></Protegido>;
+  return <Protegido papeis={["criativo"]}><Conteudo /></Protegido>;
 }

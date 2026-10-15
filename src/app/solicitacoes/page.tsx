@@ -33,11 +33,13 @@ function Conteudo() {
   const filtrada = useMemo(() => (lista ?? []).filter((p) => {
     // O criativo só recebe o pedido depois que o Atendimento aceita (Débora → Marcelo → Mariane).
     if (s.papel === "criativo" && ["proposta", "ajuste", "enviada"].includes(p.status)) return false;
+    // Com mais de um criativo, cada um vê só os pedidos que estão com ele.
+    if (s.papel === "criativo" && p.criativo && p.criativo.uid !== s.usuario?.uid) return false;
     if (etapa === "abertas" && ["paga", "cancelada"].includes(p.status)) return false;
     if (etapa !== "abertas" && etapa !== "todas" && p.status !== etapa) return false;
     const t = busca.trim().toLowerCase();
     return !t || [p.protocolo, p.titulo, p.unidade, p.solicitanteNome].some((x) => x?.toLowerCase().includes(t));
-  }), [lista, etapa, busca, s.papel]);
+  }), [lista, etapa, busca, s.papel, s.usuario]);
 
   const podeSolicitar = !!s.papel && (VE_NOVA_SOLICITACAO as string[]).includes(s.papel);
   return (

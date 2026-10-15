@@ -296,7 +296,7 @@ function Conteudo() {
             <p className="font-display text-3xl font-semibold">{envio.protocolo}</p>
             {editar || marcelo ? (
               <p>{editar && statusOrig === "enviada"
-                ? "Alterações salvas. A Débora foi avisada por e-mail do que mudou. Agora é só aceitar e enviar à Mariane em Minhas tarefas."
+                ? "Alterações salvas. A Débora foi avisada por e-mail do que mudou. Agora é só aceitar e enviar ao criativo em Minhas tarefas."
                 : "A Débora recebeu por e-mail para aprovar, pedir ajuste ou recusar. Quando ela aprovar, a solicitação aparece em Minhas tarefas › Aceitar pedidos."}</p>
             ) : <>
             <p>A Propaga recebeu sua solicitação. As pessoas responsáveis foram avisadas por e-mail.</p>

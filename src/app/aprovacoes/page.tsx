@@ -11,7 +11,7 @@ import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, type PedidoDoc } from "@/components/pedido";
 import { MAX_RODADAS, VE_TAREFAS, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis } from "@/lib/datas";
-import { atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
+import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
@@ -30,7 +30,7 @@ const ATEND: Aba[] = [
   { k: "revisao", rotulo: "Revisar criativo", f: (p) => p.etapa === "revisao" },
   { k: "triagem", rotulo: "Orientar refação", f: (p) => p.etapa === "triagem" },
   { k: "entregar", rotulo: "Veiculação/impressão", f: nenhuma, t: "entregar" },
-  { k: "criativo", rotulo: "Com a Mariane", f: (p) => p.etapa === "criativo" },
+  { k: "criativo", rotulo: "Com o criativo", f: (p) => p.etapa === "criativo" },
   { k: "cliente", rotulo: "Com a Débora", f: (p) => p.etapa === "cliente" },
   { k: "concluidas", rotulo: "Concluídas", f: decidida("aprovada") },
   { k: "canceladas", rotulo: "Canceladas", f: decidida("cancelada") },
@@ -240,7 +240,7 @@ function Conteudo() {
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">{texto}</p>
         <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
-          {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia à Mariane", "Mariane cria", "Marcelo revisa", "Débora aprova, pede refação ou cancela", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
+          {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", "Débora aprova, pede refação ou cancela", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
             <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
         </ol>
@@ -267,6 +267,7 @@ function Conteudo() {
             {["aceitar", "criar", "proposta", "ajustar"].includes(abaAtual.t!) && (
               <dl className="grid gap-x-3 gap-y-1 text-sm sm:grid-cols-[120px_minmax(0,1fr)]">
                 <dt className="text-gray-600">Solicitante</dt><dd>{pd.solicitanteNome}</dd>
+                {pd.criativo && papel !== "criativo" && <><dt className="text-gray-600">Criativo</dt><dd>{pd.criativo.nome}</dd></>}
                 <dt className="text-gray-600">Objetivo</dt><dd>{pd.objetivo}</dd>
                 <dt className="text-gray-600">Público</dt><dd>{pd.publico}</dd>
                 <dt className="text-gray-600">Peças</dt><dd>{pd.itens.map((it) => `${it.qtd}× ${it.nome} (${it.varianteRotulo})`).join(" · ")}</dd>
@@ -293,9 +294,9 @@ function Conteudo() {
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3">
-                  <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar à Mariane", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>
+                  <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>
                   {abaAtual.t === "aceitar" && <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Editar solicitação</a>}
-                  {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={pd.drive.link} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
+                  {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver pedido completo</a>
                 </div>
               )}
@@ -316,7 +317,7 @@ function Conteudo() {
         ))}
 
         <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">
-          As peças ficam no Drive compartilhado da B&M Log: versões em <b>03 Provas</b>, arquivos finais em <b>04 Aprovados</b>. Para ver a pré-visualização aqui, entre no Google com a conta que tem acesso ao Drive.
+          As peças ficam no Drive compartilhado da Propaga: versões em <b>03 Provas</b>, arquivos finais em <b>04 Aprovados</b>{papel !== "solicitante" && <>, arquivos abertos em <b>05 Arquivos abertos</b></>}. Para ver a pré-visualização aqui, entre no Google com a conta que tem acesso ao Drive.
           {papel !== "criativo" && "Relatório: aprovada = concluída · cancelada após apresentada = 50% do valor · a partir da 3ª refação, edições novas = +30%."}
         </p>
       </div>
@@ -344,7 +345,7 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
   executar: (d: Record<string, unknown>, ok: string) => Promise<boolean | string>; ocupado: boolean;
 }) {
   const ehCliente = papel === "solicitante";
-  const pasta = <a href={pd.drive.link} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>;
+  const pasta = <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>;
 
   // Admin também avalia (pedidos que ele mesmo abriu ou em nome da Débora), pela aba "Com a Débora".
   if ((ehCliente && aba === "aguardando") || (papel === "admin" && aba === "cliente")) {
@@ -369,18 +370,18 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
         <div className="flex flex-wrap items-center gap-3"><button type="button" className="font-semibold underline-offset-4 hover:underline" onClick={() => abrir(pd, pecas, x.id)}>{x.nome} · v{ultima(x).v}</button><Prazo p={x} /></div>
         <Nota cor="alerta"><b>Débora pediu:</b><Lista itens={d.itens} /></Nota>
       </div>); })}</div>
-    <div className="flex flex-wrap gap-3"><Botao onClick={() => acao("encaminhar")}>Orientar e encaminhar à Mariane</Botao>{pasta}</div>
+    <div className="flex flex-wrap gap-3"><Botao onClick={() => acao("encaminhar")}>Orientar e encaminhar ao criativo</Botao>{pasta}</div>
   </>;
 
   if (aba === "revisao" && papel !== "criativo") return <>
     <div className="grid gap-2">{pecas.map((x) => { const v = ultima(x); return (
       <div key={x.id} className="grid gap-2 rounded border border-gray-200 p-3">
-        <div className="flex flex-wrap items-center gap-3"><b>{x.nome} · v{v.v} da Mariane</b><Prazo p={x} />{!x.orientacao && <span className="text-xs text-gray-600">primeira versão</span>}</div>
-        {x.orientacao && <Nota><b>Orientação:</b><Lista itens={x.orientacao.itens} /><span className="text-gray-600">Mariane marcou {v.feitos ?? 0} de {x.orientacao.itens.length} como feitos.</span></Nota>}
-        {v.nota && <Nota cor="ok"><b>Mariane:</b> {v.nota}</Nota>}
+        <div className="flex flex-wrap items-center gap-3"><b>{x.nome} · v{v.v}{pd.criativo ? ` · ${pd.criativo.nome.split(" ")[0]}` : ""}</b><Prazo p={x} />{!x.orientacao && <span className="text-xs text-gray-600">primeira versão</span>}</div>
+        {x.orientacao && <Nota><b>Orientação:</b><Lista itens={x.orientacao.itens} /><span className="text-gray-600">O criativo marcou {v.feitos ?? 0} de {x.orientacao.itens.length} como feitos.</span></Nota>}
+        {v.nota && <Nota cor="ok"><b>{pd.criativo?.nome.split(" ")[0] ?? "Criativo"}:</b> {v.nota}</Nota>}
         <div className="flex flex-wrap gap-2">
           <Botao variante="discreto" onClick={() => abrir(pd, pecas, x.id)}>Ver versão</Botao>
-          <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => acao("devolver", x.id)}>Devolver à Mariane</Botao>
+          <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => acao("devolver", x.id)}>Devolver ao criativo</Botao>
           <Botao disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: [x.id] }, "Versão enviada à Débora.")}>Enviar à Débora</Botao>
         </div>
       </div>); })}</div>
@@ -397,8 +398,8 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
           <Botao className="w-fit" onClick={() => acao("enviarVersao", x.id)}>Enviar nova versão ao Marcelo</Botao>
         </>}
         {x.tarefa === "final" && <>
-          <p className="text-sm text-gray-600">Aprovada. Exporte o arquivo final e coloque na pasta <b>04 Aprovados</b>.</p>
-          <Botao className="w-fit !bg-[#1E7047] !text-white" disabled={ocupado} onClick={() => executar({ acao: "finalizar", protocolo: pd.protocolo, id: x.id }, "Arquivo final registrado.")}>Arquivo final em 04 Aprovados</Botao>
+          <p className="text-sm text-gray-600">Aprovada. Exporte o arquivo final para <b>04 Aprovados</b> e salve os arquivos abertos (com fontes e imagens) em <b>05 Arquivos abertos</b>.</p>
+          <Finalizar ocupado={ocupado} onOk={() => executar({ acao: "finalizar", protocolo: pd.protocolo, id: x.id, abertos: true }, "Arquivo final e arquivos abertos registrados.")} />
         </>}
         {x.tarefa === "ciencia" && <>
           <Nota cor="cinza"><b>Justificativa:</b> {d?.nota}</Nota>
@@ -450,20 +451,20 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
     </Modal>;
   }
 
-  if (modal.tipo === "encaminhar") return <Modal titulo="Orientar e encaminhar à Mariane" onFechar={onFechar}>
+  if (modal.tipo === "encaminhar") return <Modal titulo="Orientar e encaminhar ao criativo" onFechar={onFechar}>
     <p><b>{pd.protocolo}</b> · {pd.titulo}</p>
     {tri.map((x) => <div key={x.id} className="grid gap-2 border-t border-gray-200 pt-3">
       <b>{x.nome} · v{ultima(x).v}</b>
-      <label htmlFor={`or-${x.id}`} className="text-sm font-semibold">Orientação para a Mariane (um ajuste por linha)</label>
+      <label htmlFor={`or-${x.id}`} className="text-sm font-semibold">Orientação para o criativo (um ajuste por linha)</label>
       <textarea id={`or-${x.id}`} rows={4} className={cx} value={orient[x.id] ?? ""} onChange={(e) => setOrient({ ...orient, [x.id]: e.target.value })} />
       {(pd.rodadas || 0) > MAX_RODADAS && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-marca-700" checked={!!c30[x.id]} onChange={(e) => setC30({ ...c30, [x.id]: e.target.checked })} />
         <span>Edições novas, diferentes das pedidas antes: cobrar +30% no valor desta peça. Desmarque se repete pedido anterior ou corrige erro da Propaga.</span></label>}
     </div>)}
     <div className="grid gap-1.5"><label htmlFor="prazo" className="text-sm font-semibold">Prazo da nova versão</label><input id="prazo" type="date" min={hojeSP()} className={cx} value={prazo} onChange={(e) => setPrazo(e.target.value)} /></div>
-    {rodape("Encaminhar à Mariane", async () => {
+    {rodape("Encaminhar ao criativo", async () => {
       const refacoes = tri.map((x) => ({ id: x.id, itens: linhasParaItens(orient[x.id] ?? ""), cobrar30: (pd.rodadas || 0) > MAX_RODADAS ? !!c30[x.id] : undefined }));
       if (refacoes.some((r) => !r.itens.length)) { setErro("Escreva a orientação de cada peça."); return; }
-      const r = await executar({ acao: "encaminhar", protocolo: pd.protocolo, prazo, refacoes }, "Encaminhado à Mariane."); if (typeof r === "string") setErro(r);
+      const r = await executar({ acao: "encaminhar", protocolo: pd.protocolo, prazo, refacoes }, "Encaminhado ao criativo."); if (typeof r === "string") setErro(r);
     })}
   </Modal>;
 
@@ -485,13 +486,13 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
     </Modal>;
   }
 
-  if (modal.tipo === "devolver" && peca) return <Modal titulo="Devolver à Mariane" onFechar={onFechar}>
+  if (modal.tipo === "devolver" && peca) return <Modal titulo="Devolver ao criativo" onFechar={onFechar}>
     <p><b>{peca.nome}</b> · v{ultima(peca).v}</p>
     <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">Ajuste interno: não conta como refação da Débora.</p>
     <div className="grid gap-1.5"><label htmlFor="dv" className="text-sm font-semibold">O que ainda precisa mudar (um por linha)</label><textarea id="dv" rows={4} className={cx} value={dev} onChange={(e) => setDev(e.target.value)} /></div>
     {rodape("Devolver", async () => {
       const itens = linhasParaItens(dev); if (!itens.length) { setErro("Liste ao menos um ajuste."); return; }
-      const r = await executar({ acao: "devolver", protocolo: pd.protocolo, id: peca.id, itens }, "Devolvido à Mariane."); if (typeof r === "string") setErro(r);
+      const r = await executar({ acao: "devolver", protocolo: pd.protocolo, id: peca.id, itens }, "Devolvido ao criativo."); if (typeof r === "string") setErro(r);
     })}
   </Modal>;
   return null;
@@ -513,4 +514,16 @@ function AjustePedido({ protocolo }: { protocolo: string }) {
   }, [clienteId, protocolo]);
   if (!txt) return null;
   return <p className="whitespace-pre-wrap rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm"><b>{txt.nome} pediu:</b> {txt.nota}</p>;
+}
+
+/** Concluir a peça exige confirmar os arquivos abertos na pasta 05 (decisão de 15/10/2026). */
+function Finalizar({ ocupado, onOk }: { ocupado: boolean; onOk: () => void }) {
+  const [abertos, setAbertos] = useState(false);
+  return (
+    <div className="grid gap-2">
+      <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-0.5 size-4 accent-marca-700" checked={abertos} onChange={(e) => setAbertos(e.target.checked)} />
+        <span>Os arquivos abertos desta peça estão na pasta <b>05 Arquivos abertos</b>.</span></label>
+      <Botao className="w-fit !bg-[#1E7047] !text-white" disabled={ocupado || !abertos} onClick={onOk}>Arquivo final em 04 · abertos em 05</Botao>
+    </div>
+  );
 }
