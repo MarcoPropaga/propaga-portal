@@ -12,7 +12,7 @@ export type Resposta = { ok: true; resultado?: Record<string, unknown> } | { ok:
 export function useFila() {
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
-  return async function enviar(tipo: "peca" | "acao", dados: unknown): Promise<Resposta> {
+  return async function enviar(tipo: "peca" | "acao" | "relatorioCriativo" | "pagarCriativo", dados: unknown): Promise<Resposta> {
     try {
       // Firestore não aceita undefined: remove campos vazios antes de gravar.
       const limpo = JSON.parse(JSON.stringify(dados));
