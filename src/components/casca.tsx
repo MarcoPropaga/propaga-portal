@@ -18,6 +18,7 @@ const ITENS = [
   { href: "/criativo/relatorio/", rotulo: "Meu relatório", papeis: ["criativo"] },
   { href: "/criativo/tabela/", rotulo: "Minha tabela", papeis: ["criativo"] },
   { href: "/criativo/pagamentos/", rotulo: "Pagamento dos criativos", papeis: ["financeiro_propaga", "admin"] },
+  { href: "/criativo/visao/", rotulo: "Visão do criativo", papeis: ["admin"] },
   { href: "/criativo/tabela/", rotulo: "Tabela dos criativos", papeis: ["admin"] },
   { href: "/contrato/", rotulo: "Contrato", papeis: [...VE_CONTRATO, "criativo"] as string[] },
   { href: "/arquivos/", rotulo: "Arquivos no Drive", papeis: VE_ARQUIVOS as string[] },
