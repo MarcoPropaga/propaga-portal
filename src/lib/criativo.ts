@@ -1,7 +1,7 @@
 /* Relatório mensal do criativo (Mariane) — decisões de Marco, 15/10/2026.
    - Os valores vêm da tabela da Mariane (documento criativo/tabela), não da tabela da Propaga.
    - Entra no mês a peça fechada nele: aprovada com arquivo final (concluída) ou cancelada pela B&M Log.
-   - Peça cancelada entra com o valor cheio da tabela; refações aparecem como observação, sem valor extra.
+   - Peça cancelada pela B&M Log entra com 50% do valor da tabela (Marco, 15/10/2026); refações são observação, sem valor extra.
    - O portal sugere o item pelo serviço escolhido pelo Marcelo; a Mariane confere, pode trocar o item
      e informa o valor dos itens "sob consulta". O servidor recalcula tudo antes de gravar.
    Mesmo módulo no navegador e no servidor; não contém valores. */
@@ -26,7 +26,8 @@ export interface LinhaCriativo {
   fechadaEm: string;          // AAAA-MM-DD (São Paulo)
   refacoes: number;
   item: string; coluna: Coluna;
-  valor: number | null;       // null = sob consulta sem valor informado
+  valor: number | null;       // valor da tabela (cheio); null = sob consulta sem valor informado
+  cobrado?: number | null;    // o que entra no total: valor, ou 50% se cancelada
 }
 export interface Ajuste { chave: string; item: string; coluna: Coluna; valor?: number }
 
@@ -93,12 +94,17 @@ export function aplicarAjustes(tab: TabelaCriativo, linhas: LinhaCriativo[], aju
       if (valor == null) return `Informe o valor de ${l.peca} (${l.protocolo}), item sob consulta.`;
       if (valor > 100000) return `Valor muito alto em ${l.peca}.`;
     }
-    out.push({ ...l, item, coluna, valor });
+    out.push({ ...l, item, coluna, valor, cobrado: cobradoDe({ situacao: l.situacao, valor }) });
   }
   return out;
 }
 
-export const totalLinhas = (ls: LinhaCriativo[]) => Math.round(ls.reduce((t, l) => t + (l.valor ?? 0), 0) * 100) / 100;
+/** Peça cancelada pela B&M Log: a Mariane recebe esta fração do valor da tabela dela. */
+export const FATOR_CANCELADA_CRIATIVO = 0.5;
+export const REGRA_CANCELADA_CRIATIVO = "Peça cancelada pela B&M Log entra com 50% do valor da sua tabela. Refações aparecem como observação, sem valor extra.";
+export const cobradoDe = (l: { situacao: string; valor: number | null }) =>
+  l.valor == null ? null : Math.round(l.valor * (l.situacao === "cancelada" ? FATOR_CANCELADA_CRIATIVO : 1) * 100) / 100;
+export const totalLinhas = (ls: LinhaCriativo[]) => Math.round(ls.reduce((t, l) => t + (cobradoDe(l) ?? 0), 0) * 100) / 100;
 
 export interface RelatorioCriativo {
   mes: string; linhas: LinhaCriativo[]; total: number; tabelaVersao: string;
