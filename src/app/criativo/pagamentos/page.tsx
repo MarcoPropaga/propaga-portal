@@ -1,5 +1,5 @@
 "use client";
-/* Pagamento da Mariane — Marisa (Financeiro Propaga) confere o relatório mensal enviado e registra o pagamento.
+/* Pagamento dos criativos — Marisa (Financeiro Propaga) confere o relatório mensal enviado e registra o pagamento.
    Mostra só o que a Mariane enviou (peças, itens e valores); a tabela e o contrato dela não ficam acessíveis aqui. */
 import { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
@@ -17,7 +17,7 @@ import type { Papel } from "@/lib/tipos";
 function Conteudo() {
   const [lista, setLista] = useState<RelatorioCriativo[] | null>(null);
   const [erro, setErro] = useState("");
-  const [aberto, setAberto] = useState<string>(() => (typeof window !== "undefined" && new URLSearchParams(location.search).get("mes")) || "");
+  const [aberto, setAberto] = useState<string>(() => (typeof window !== "undefined" && new URLSearchParams(location.search).get("id")) || "");
   const [nota, setNota] = useState("");
   const [msg, setMsg] = useState<{ tipo: "ok" | "erro"; msg: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -25,33 +25,33 @@ function Conteudo() {
   const s = useSessao();
 
   useEffect(() => onSnapshot(collection(db(), "relatoriosCriativo"),
-    (q) => setLista(q.docs.map((d) => d.data() as RelatorioCriativo).sort((a, b) => b.mes.localeCompare(a.mes))),
+    (q) => setLista(q.docs.map((d) => d.data() as RelatorioCriativo).sort((a, b) => b.mes.localeCompare(a.mes) || a.nome.localeCompare(b.nome))),
     () => setErro("Não foi possível carregar os relatórios.")), []);
-  useEffect(() => { if (!aberto && lista?.length) setAberto((lista.find((r) => r.status === "enviado") ?? lista[0]).mes); }, [lista, aberto]);
+  useEffect(() => { if (!aberto && lista?.length) setAberto((lista.find((r) => r.status === "enviado") ?? lista[0]).id); }, [lista, aberto]);
 
-  const r = lista?.find((x) => x.mes === aberto);
+  const r = lista?.find((x) => x.id === aberto);
   async function pagar() {
     setOcupado(true); setMsg(null);
-    const res = await enviar("pagarCriativo", { mes: aberto, nota: nota.trim() || undefined });
+    const res = await enviar("pagarCriativo", { id: aberto, nota: nota.trim() || undefined });
     setOcupado(false);
-    setMsg(res.ok ? { tipo: "ok", msg: "Pagamento registrado. A Mariane foi avisada por e-mail." } : { tipo: "erro", msg: res.msg });
+    setMsg(res.ok ? { tipo: "ok", msg: `Pagamento registrado. ${r?.nome.split(" ")[0] ?? "O criativo"} foi avisado(a) por e-mail.` } : { tipo: "erro", msg: res.msg });
     if (res.ok) setNota("");
   }
 
   return (
-    <Casca titulo="Pagamento da Mariane">
+    <Casca titulo="Pagamento dos criativos">
       <div className="grid max-w-6xl gap-5">
-        {s.papel === "admin" && <a href="/criativo/tabela/" className="w-fit text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Ver a tabela de valores da Mariane (só administrador)</a>}
-        <p className="max-w-[75ch] text-gray-600">Relatórios mensais enviados pela Mariane (Criativo Propaga), com as peças concluídas ou canceladas e os valores que ela cobra. {REGRA_CANCELADA_CRIATIVO} Confira e registre o pagamento.</p>
+        {s.papel === "admin" && <a href="/criativo/tabela/" className="w-fit text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Ver a tabela de valores dos criativos (só administrador)</a>}
+        <p className="max-w-[75ch] text-gray-600">Relatórios mensais enviados pelos criativos da Propaga, com as peças concluídas ou canceladas e os valores que cada um cobra. {REGRA_CANCELADA_CRIATIVO} Confira e registre o pagamento.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {lista && !lista.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nenhum relatório enviado ainda.</p>}
         {lista && lista.length > 0 && (
           <div className="flex flex-wrap gap-2" role="group" aria-label="Meses">
             {lista.map((x) => (
-              <button key={x.mes} type="button" aria-pressed={x.mes === aberto} onClick={() => { setAberto(x.mes); setMsg(null); }}
-                className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium ${x.mes === aberto ? "border-ink-900 bg-ink-900 text-paper" : "border-[#C9D7DC] bg-white"}`}>
-                {nomeMes(x.mes)} <span className="opacity-80">{x.status === "pago" ? "· pago" : "· a pagar"}</span>
+              <button key={x.id} type="button" aria-pressed={x.id === aberto} onClick={() => { setAberto(x.id); setMsg(null); }}
+                className={`inline-flex min-h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium ${x.id === aberto ? "border-ink-900 bg-ink-900 text-paper" : "border-[#C9D7DC] bg-white"}`}>
+                {x.nome.split(" ")[0]} · {nomeMes(x.mes)} <span className="opacity-80">{x.status === "pago" ? "· pago" : "· a pagar"}</span>
               </button>
             ))}
           </div>
@@ -97,6 +97,6 @@ function Conteudo() {
   );
 }
 
-export default function PagamentoMariane() {
+export default function PagamentoCriativos() {
   return <Protegido papeis={VE_PAGAMENTO_CRIATIVO as Papel[]}><Conteudo /></Protegido>;
 }

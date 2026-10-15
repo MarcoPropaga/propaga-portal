@@ -18,7 +18,20 @@ interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; solicitanteNome: string;
   itens: (ItemSolicitacao & { nome: string; sobOrcamento: boolean })[]; rodadas: number; versao: number;
   catalogoVersao: string; prazo: Record<string, unknown>; drive: Record<string, unknown>;
-  temPecas?: boolean; pecas?: { etapa: string }[];
+  temPecas?: boolean; pecas?: { etapa: string }[]; criativo?: { uid: string; nome: string } | null;
+}
+
+/** Criativos ativos (Mariane e outros), para o aceite e a troca. */
+function criativos(fs: Firestore) {
+  return fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string }) }))
+    .filter((x) => x.papel === "criativo" && x.status !== "desativado");
+}
+function escolherCriativo(fs: Firestore, uid?: string) {
+  const lista = criativos(fs);
+  if (uid) { const c = lista.find((x) => x.uid === uid); if (!c) throw new ErroUsuario("Criativo não encontrado."); return { uid: c.uid, nome: c.nome }; }
+  if (lista.length === 1) return { uid: lista[0].uid, nome: lista[0].nome };
+  if (!lista.length) return null;
+  throw new ErroUsuario("Escolha o criativo que vai criar as peças.");
 }
 
 const br = (iso: string) => iso.split("-").reverse().join("/");
@@ -83,7 +96,10 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       extras.push({ caminho: `clientes/${clienteId}/valores/${d.protocolo}`, mesclar: true,
         dados: { ...val, atualizadoEm: agora } as unknown as Record<string, unknown> });
       mudancas.prazo = { ...ped.prazo, ...d.cronograma };
-      mudancas.drive = { ...ped.drive, verificado: !!d.driveVerificado };
+      if (!d.pastaPropaga) throw new ErroUsuario("Cole o link da pasta do pedido no Drive compartilhado da Propaga.");
+      mudancas.drive = { ...ped.drive, verificado: !!d.driveVerificado, propaga: d.pastaPropaga };
+      const cri = escolherCriativo(fs, d.criativoUid);
+      if (cri) mudancas.criativo = cri;
       mudancas.aceitoPor = { uid: u.uid, nome: u.nome, em: agora };
       rotulo = "Pedido aceito pela Propaga; produção iniciada";
       const qtdOrc = Object.keys(orcados).length;
@@ -91,10 +107,21 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         `Cronograma: início ${br(d.cronograma.inicio)}, 1ª apresentação ${br(d.cronograma.primeira)}, entrega final ${br(d.cronograma.final)}.`,
         qtdOrc ? `Valor de ${qtdOrc} item(ns) a cotar registrado conforme o contrato.` : "",
         d.driveVerificado ? "Acesso à pasta do Drive conferido." : "Acesso à pasta do Drive ainda não conferido.",
+        cri ? `Criativo: ${cri.nome}.` : "",
         nota,
       ].filter(Boolean).join(" ");
       avisar = ["solicitante"];
       criativoJob = true; // a Mariane recebe o job para criar as peças
+      break;
+    }
+    case "trocarCriativo": {
+      const cri = escolherCriativo(fs, d.criativoUid);
+      if (!cri) throw new ErroUsuario("Não há criativo cadastrado.");
+      if (ped.criativo?.uid === cri.uid) throw new ErroUsuario(`${cri.nome} já é o criativo deste pedido.`);
+      novo = ped.status; mudancas.status = ped.status;
+      mudancas.criativo = cri;
+      rotulo = `Criativo do pedido: ${ped.criativo?.nome ?? "—"} → ${cri.nome}`;
+      criativoJob = true;
       break;
     }
     case "entregar":
@@ -129,7 +156,8 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   }
 
   if (avisar.length) avisarPessoas(p, fs, u, clienteId, ped, avisar, rotulo, notaEvento, novo);
-  if (criativoJob) avisarPessoas(p, fs, u, clienteId, ped, ["criativo"], "Novo job para criar as peças", notaEvento, novo, "/aprovacoes/");
+  const pedAtual = { ...ped, ...(mudancas as Partial<Pedido>) };
+  if (criativoJob) avisarPessoas(p, fs, u, clienteId, pedAtual, ["criativo"], acao === "trocarCriativo" ? "Pedido passado para você" : "Novo job para criar as peças", notaEvento, novo, "/aprovacoes/");
   return { status: novo };
 }
 
@@ -144,7 +172,7 @@ export function avisarPessoas(
       (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
-      (quem.includes("criativo") && x.papel === "criativo")));
+      (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid))));
     if (!dest.length) return;
     const msg = emailAtualizacao({
       cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,

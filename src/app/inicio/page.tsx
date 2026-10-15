@@ -13,7 +13,7 @@ const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] 
   { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: VE_RELATORIOS },
   { href: "/criativo/relatorio/", rotulo: "Meu relatório", texto: "Peças do mês com os valores da sua tabela; envio à Marisa.", papeis: ["criativo"] },
   { href: "/criativo/tabela/", rotulo: "Minha tabela", texto: "Seus valores por peça e serviço.", papeis: ["criativo"] },
-  { href: "/criativo/pagamentos/", rotulo: "Pagamento da Mariane", texto: "Relatórios mensais do criativo para conferir e pagar.", papeis: ["financeiro_propaga", "admin"] },
+  { href: "/criativo/pagamentos/", rotulo: "Pagamento dos criativos", texto: "Relatórios mensais dos criativos para conferir e pagar.", papeis: ["financeiro_propaga", "admin"] },
   { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado.", papeis: [...VE_CONTRATO, "criativo"] },
   { href: "/arquivos/", rotulo: "Arquivos no Drive", texto: "Pastas de cada pedido.", papeis: VE_ARQUIVOS },
   { href: "/ajuda/", rotulo: "Ajuda", texto: "Dúvidas frequentes e contato." },
@@ -37,7 +37,7 @@ function Conteudo() {
         {podeSolicitar && (
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <h2 className="text-lg">Precisa de uma peça ou campanha?</h2>
-            <p className="text-sm text-gray-600">{s.papel === "atendimento" ? "Monte a solicitação em nome da Débora. Ela recebe para aprovar antes de seguir para a Mariane." : "Escolha os serviços do catálogo, organize o briefing e envie para a Propaga."}</p>
+            <p className="text-sm text-gray-600">{s.papel === "atendimento" ? "Monte a solicitação em nome da Débora. Ela recebe para aprovar antes de seguir para o criativo." : "Escolha os serviços do catálogo, organize o briefing e envie para a Propaga."}</p>
             <a href="/nova-solicitacao/" className="inline-flex min-h-11 w-fit items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Nova solicitação</a>
           </section>
         )}

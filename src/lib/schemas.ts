@@ -64,7 +64,7 @@ export const REGRAS_SENHA: { texto: string; ok: (s: string) => boolean }[] = [
 
 /* Ações sobre um pedido (fila tipo "acao"). Exigências por ação ficam no servidor (acoes.ts). */
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.");
-export const ACOES = ["aprovarProposta", "ajustarProposta", "recusarProposta", "aceitarPedido", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
+export const ACOES = ["aprovarProposta", "ajustarProposta", "recusarProposta", "aceitarPedido", "trocarCriativo", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
 export const acaoSchema = z.object({
   protocolo: z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/, "Protocolo inválido."),
   acao: z.enum(ACOES),
@@ -74,6 +74,10 @@ export const acaoSchema = z.object({
     .optional(),
   valores: z.array(z.object({ indice: z.number().int().min(0), valor: z.number().positive("Informe um valor maior que zero.").max(1_000_000) })).max(30).optional(),
   driveVerificado: z.boolean().optional(),
+  /** Aceite / troca: criativo escolhido pelo Marcelo. */
+  criativoUid: z.string().min(1).max(128).regex(/^[\w-]+$/).optional(),
+  /** Aceite: pasta do pedido no Drive compartilhado da Propaga. */
+  pastaPropaga: z.string().trim().regex(/^https:\/\/drive\.google\.com\//, "Cole o link da pasta do pedido no Drive da Propaga.").optional(),
 });
 export type AcaoInput = z.infer<typeof acaoSchema>;
 
@@ -91,7 +95,8 @@ export const pecaAcaoSchema = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("encaminhar"), protocolo, prazo: data,
     refacoes: z.array(z.object({ id: idPeca, itens: itensRefacao, cobrar30: z.boolean().optional() })).min(1).max(50) }),
   z.object({ acao: z.literal("enviarVersao"), protocolo, id: idPeca, link: linkDrive, feitos: z.number().int().min(0), nota: z.string().trim().max(2000).optional() }),
-  z.object({ acao: z.literal("finalizar"), protocolo, id: idPeca }),
+  z.object({ acao: z.literal("finalizar"), protocolo, id: idPeca,
+    abertos: z.literal(true, { message: "Confirme que os arquivos abertos estão na pasta 05 Arquivos abertos." }) }),
   z.object({ acao: z.literal("ciente"), protocolo, id: idPeca }),
   z.object({ acao: z.literal("liberar"), protocolo, ids: z.array(idPeca).min(1).max(50) }),
   z.object({ acao: z.literal("devolver"), protocolo, id: idPeca, itens: itensRefacao }),

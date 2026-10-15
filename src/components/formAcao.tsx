@@ -1,6 +1,8 @@
 "use client";
 /* Formulário das ações do pedido (aceitar, entregar, faturar, pagamento, cancelar). Usado em Minhas tarefas. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { ACOES_COM_MOTIVO, REGRAS, type Acao } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis, PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
@@ -9,10 +11,11 @@ import { Aviso, Botao } from "@/components/ui";
 import { brData, type PedidoDoc } from "@/components/pedido";
 
 const AJUDA: Partial<Record<Acao, string>> = {
-  aprovarProposta: "A solicitação segue para o Marcelo conferir, definir o cronograma e enviar à Mariane criar as peças.",
+  aprovarProposta: "A solicitação segue para o Marcelo conferir, definir o cronograma e enviar ao criativo criar as peças.",
   ajustarProposta: "Escreva o que precisa mudar. A solicitação volta para o Marcelo ajustar e reenviar para sua aprovação.",
   recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o Marcelo.",
-  aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e a Mariane recebe o job para criar as peças.",
+  trocarCriativo: "O pedido passa para o criativo escolhido, que recebe um e-mail. As peças já concluídas continuam no relatório de quem as concluiu.",
+  aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e o criativo escolhido recebe o job para criar as peças.",
   entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e a Débora e o Financeiro da Propaga são avisados.",
   faturar: "Registre o faturamento (ex.: número da nota fiscal). Pedido cancelado depois de apresentado é faturado com 50% do valor das peças canceladas.",
   registrarPagamento: "Registre o recebimento do pagamento.",
@@ -29,6 +32,17 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
   const [cron, setCron] = useState({ inicio: hoje, primeira: primeiraPadrao, final: finalPadrao });
   const [valores, setValores] = useState<Record<number, string>>({});
   const [driveOk, setDriveOk] = useState(false);
+  const [pasta, setPasta] = useState(pedido.drive.propaga ?? "");
+  const [equipe, setEquipe] = useState<{ uid: string; nome: string }[]>([]);
+  const [criativoUid, setCriativoUid] = useState("");
+  const escolhe = acao === "aceitarPedido" || acao === "trocarCriativo";
+  useEffect(() => {
+    if (!escolhe) return;
+    getDoc(doc(db(), "equipe", "criativos")).then((d) => {
+      const l = ((d.data()?.lista ?? []) as { uid: string; nome: string }[]).filter((x) => acao !== "trocarCriativo" || x.uid !== pedido.criativo?.uid);
+      setEquipe(l); if (l.length === 1) setCriativoUid(l[0].uid);
+    }).catch(() => {});
+  }, [escolhe, acao, pedido.criativo?.uid]);
   const [erro, setErro] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const aCotar = pedido.itens.map((it, i) => ({ it, i })).filter((x) => x.it.sobOrcamento);
@@ -44,8 +58,13 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
       if (cron.inicio < hoje) { setErro("A data de início não pode estar no passado."); return; }
       const faltando = aCotar.filter(({ i }) => !(num(valores[i] ?? "") > 0));
       if (faltando.length) { setErro(`Informe o valor do item ${faltando.map((x) => x.i + 1).join(", ")} (a cotar).`); return; }
-      dados.cronograma = cron; dados.driveVerificado = driveOk;
+      if (!/^https:\/\/drive\.google\.com\//.test(pasta.trim())) { setErro("Cole o link da pasta do pedido no Drive compartilhado da Propaga."); return; }
+      dados.cronograma = cron; dados.driveVerificado = driveOk; dados.pastaPropaga = pasta.trim();
       dados.valores = aCotar.map(({ i }) => ({ indice: i, valor: num(valores[i]) }));
+    }
+    if (escolhe) {
+      if (!criativoUid && (equipe.length > 1 || acao === "trocarCriativo")) { setErro("Escolha o criativo."); return; }
+      if (criativoUid) dados.criativoUid = criativoUid;
     }
     const r = acaoSchema.safeParse(dados);
     if (!r.success) { setErro(r.error.issues[0]?.message ?? "Confira os dados."); return; }
@@ -83,9 +102,24 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
             ))}
           </fieldset>
         )}
+        <div className="grid gap-1.5">
+          <label htmlFor={`${id}-pasta`} className="text-sm font-semibold">Pasta do pedido no Drive da Propaga<span className="text-alerta-700" aria-hidden="true"> *</span></label>
+          <input id={`${id}-pasta`} value={pasta} onChange={(e) => setPasta(e.target.value)} placeholder="https://drive.google.com/drive/folders/…" className={cx} aria-describedby={`${id}-pasta-a`} />
+          <p id={`${id}-pasta-a`} className="text-sm text-gray-600">Drive compartilhado da Propaga, pasta {pedido.protocolo} com 01 Briefing, 02 Materiais, 03 Provas, 04 Aprovados e 05 Arquivos abertos. O criativo trabalha nela.</p>
+        </div>
         <label className="flex items-start gap-2.5"><input type="checkbox" className="mt-1 size-4 accent-marca-700" checked={driveOk} onChange={(e) => setDriveOk(e.target.checked)} />
           <span>Conferi o acesso à pasta do Drive e os materiais.</span></label>
       </>}
+      {escolhe && (equipe.length > 1 || acao === "trocarCriativo") && (
+        <div className="grid gap-1.5">
+          <label htmlFor={`${id}-cri`} className="text-sm font-semibold">{acao === "trocarCriativo" ? `Passar para (hoje: ${pedido.criativo?.nome ?? "—"})` : "Criativo que vai criar as peças"}</label>
+          <select id={`${id}-cri`} value={criativoUid} onChange={(e) => setCriativoUid(e.target.value)} className={cx}>
+            <option value="">Selecione</option>
+            {equipe.map((x) => <option key={x.uid} value={x.uid}>{x.nome}</option>)}
+          </select>
+          {!equipe.length && <p className="text-sm text-alerta-700">Nenhum outro criativo cadastrado.</p>}
+        </div>
+      )}
       <div className="grid gap-1.5">
         <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "ajustarProposta" ? "O que ajustar" : ACOES_COM_MOTIVO.includes(acao) ? "Motivo" : acao === "entregar" ? "Onde foi veiculado ou impresso (opcional)" : "Observação (opcional)"}{ACOES_COM_MOTIVO.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
         <textarea id={`${id}-nota`} rows={3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#C9D7DC] bg-white p-3" />

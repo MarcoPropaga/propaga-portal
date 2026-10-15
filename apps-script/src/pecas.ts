@@ -14,7 +14,7 @@ import { lerConfig } from "./servidor";
 interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
 interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; rodadas: number; versao: number;
-  itens: { nome: string }[]; pecas?: Peca[]; temPecas?: boolean;
+  itens: { nome: string }[]; pecas?: Peca[]; temPecas?: boolean; criativo?: { uid: string; nome: string } | null;
 }
 type Quem = "solicitante" | "atendimento" | "criativo" | "financeiro_propaga";
 
@@ -42,6 +42,9 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
   if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Este pedido não é seu.");
+  if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) throw new ErroUsuario(`Este pedido está com ${ped.criativo.nome}.`);
+  const autoria = u.papel === "criativo" ? { uid: u.uid, nome: u.nome } : null;
+  const cri = ped.criativo?.nome.split(" ")[0] ?? "o criativo";
   if (["entregue", "faturada", "paga"].includes(ped.status) || (ped.status === "cancelada" && !ped.temPecas))
     throw new ErroUsuario("Este pedido já foi encerrado.");
 
@@ -63,12 +66,13 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       d.pecas.forEach((n, i) => {
         if (n.item != null && !ped.itens[n.item]) throw new ErroUsuario(`Serviço inválido na peça "${n.nome}".`);
         const x: Peca = { id: `p${base + i + 1}`, nome: n.nome, item: n.item, etapa: doCriativo ? "revisao" : "cliente", tarefa: null, orientacao: null, extras30: 0,
-          versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null, interna: doCriativo || undefined }], hist: [], desde: agora };
+          versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null, interna: doCriativo || undefined }], hist: [], desde: agora,
+          criativo: autoria ?? ped.criativo ?? null };
         log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : "v1 enviada à Débora para aprovação");
         pecas.push(x);
       });
       const lista = d.pecas.map((n) => `- ${n.nome}`).join("\n");
-      rotuloEvento = doCriativo ? `${d.pecas.length} peça(s) criada(s) pela Mariane · revisão do Marcelo` : `${d.pecas.length} peça(s) enviada(s) para aprovação`;
+      rotuloEvento = doCriativo ? `${d.pecas.length} peça(s) criada(s) por ${u.nome} · revisão do Marcelo` : `${d.pecas.length} peça(s) enviada(s) para aprovação`;
       avisos.push(doCriativo ? { quem: ["atendimento"], rotulo: "Peças criadas para revisar", nota: lista } : { quem: ["solicitante"], rotulo: "Peças para sua aprovação", nota: lista });
       break;
     }
@@ -86,14 +90,14 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         if (dec.tipo === "refacao" && !dec.itens?.length) throw new ErroUsuario(`Liste os ajustes de "${x.nome}".`);
         if (dec.tipo === "cancelada" && (dec.nota?.length ?? 0) < 3) throw new ErroUsuario(`Justifique o cancelamento de "${x.nome}".`);
         ultima(x).decisao = { tipo: dec.tipo, itens: dec.tipo === "refacao" ? dec.itens : undefined, nota: dec.nota || undefined, por: u.nome, em: agora };
-        if (dec.tipo === "aprovada") { mover(x, "criativo", "final"); log(x, "Aprovada · relatório: concluída · Mariane prepara o arquivo final"); ap.push(x.nome); }
+        if (dec.tipo === "aprovada") { mover(x, "criativo", "final"); log(x, `Aprovada · relatório: concluída · ${cri} prepara o arquivo final`); ap.push(x.nome); }
         if (dec.tipo === "cancelada") { mover(x, "encerrada"); log(x, "Cancelada · relatório: 50% · peça encerrada"); cn.push(`${x.nome} (${dec.nota})`); }
         if (dec.tipo === "refacao") { mover(x, "triagem"); log(x, `Refação pedida (${rodadas}ª)${rodadas > MAX_RODADAS ? " · sujeita a +30%" : ""}`); rf.push(`${x.nome}: ${dec.itens!.join("; ")}`); }
       }
       rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões), ${cn.length} cancelada(s)`;
       const resumo = [ap.length ? `Aprovadas: ${ap.join(", ")}` : "", rf.length ? `Refação:\n${rf.map((t) => `- ${t}`).join("\n")}` : "", cn.length ? `Canceladas (50%): ${cn.join(", ")}` : ""].filter(Boolean).join("\n");
       // E-mail só para quem recebe a vez: Marcelo (refações) e Mariane (finais; canceladas como aviso).
-      if (rf.length) avisos.push({ quem: ["atendimento"], rotulo: "Refação pedida · oriente a Mariane", nota: resumo });
+      if (rf.length) avisos.push({ quem: ["atendimento"], rotulo: "Refação pedida · oriente o criativo", nota: resumo });
       if (ap.length || cn.length) avisos.push({ quem: ["criativo"], rotulo: ap.length ? "Peças aprovadas · preparar arquivo final" : "Peça cancelada pela Débora",
         nota: [ap.length ? `Preparar arquivo final em 04 Aprovados: ${ap.join(", ")}` : "", cn.length ? `Canceladas (interromper, nada a entregar): ${cn.join(", ")}` : ""].filter(Boolean).join("\n") });
       break;
@@ -110,7 +114,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         x.orientacao = { itens: o.itens, prazo: d.prazo, por: u.nome, em: agora };
         if (o.cobrar30 && rodadas > MAX_RODADAS) { x.extras30 = (x.extras30 || 0) + 1; cobradas.push(x.nome); log(x, "Refação extra com edições novas: +30% no valor"); }
         mover(x, "criativo", "refazer");
-        log(x, `Encaminhada à Mariane · prazo ${d.prazo.split("-").reverse().join("/")}`);
+        log(x, `Encaminhada a ${cri} · prazo ${d.prazo.split("-").reverse().join("/")}`);
       }
       rotuloEvento = `${naVez.length} refação(ões) encaminhada(s) ao criativo`;
       avisos.push({ quem: ["criativo"], rotulo: "Refação para fazer", nota: naVez.map((x) => `- ${x.nome}: ${x.orientacao!.itens.join("; ")}`).join("\n") + `\nPrazo: ${d.prazo.split("-").reverse().join("/")}` });
@@ -127,6 +131,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       const v = ul.interna ? ul.v : ul.v + 1;
       const nova = { v, link: d.link, em: agora, por: u.nome, interna: true, nota: d.nota || undefined, feitos: d.feitos, decisao: null };
       if (ul.interna) x.versoes[x.versoes.length - 1] = nova; else x.versoes.push(nova);
+      if (autoria) x.criativo = autoria;
       mover(x, "revisao");
       log(x, `v${v} enviada ao Marcelo para revisão (${d.feitos} de ${n} ajustes)`);
       rotuloEvento = `${x.nome}: v${v} para revisão`;
@@ -136,7 +141,8 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
     case "finalizar": {
       const x = achar(d.id);
       if (x.etapa !== "criativo" || x.tarefa !== "final") throw new ErroUsuario("Esta peça não está aguardando arquivo final.");
-      mover(x, "concluida"); log(x, "Arquivo final em 04 Aprovados");
+      mover(x, "concluida"); log(x, "Arquivo final em 04 Aprovados · arquivos abertos em 05");
+      if (autoria) x.criativo = autoria; else if (!x.criativo && ped.criativo) x.criativo = ped.criativo;
       rotuloEvento = `${x.nome}: arquivo final entregue`;
       break;
     }
@@ -163,7 +169,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       if (x.etapa !== "revisao") throw new ErroUsuario("Esta peça não está em revisão.");
       ultima(x).devolvida = true;
       x.orientacao = { itens: d.itens, prazo: x.orientacao?.prazo ?? hojeSP(p.agora()), por: u.nome, em: agora };
-      mover(x, "criativo", "refazer"); log(x, "Devolvida à Mariane pelo Marcelo (ajuste interno, não conta refação)");
+      mover(x, "criativo", "refazer"); log(x, `Devolvida a ${cri} pelo Marcelo (ajuste interno, não conta refação)`);
       rotuloEvento = `${x.nome}: devolvida ao criativo`;
       avisos.push({ quem: ["criativo"], rotulo: `Ajuste interno · ${x.nome}`, nota: d.itens.map((t) => `- ${t}`).join("\n") });
       break;
@@ -201,7 +207,7 @@ function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: string,
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
       (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
-      (quem.includes("criativo") && x.papel === "criativo") ||
+      (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid)) ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga")));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
@@ -231,6 +237,7 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
     for (const ped of pedidos) {
       if (!u.propaga && u.clienteId !== ped.c) continue;
       if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) continue;
+      if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) continue;
       if (u.papel === "criativo" && aguardaCriacao(ped)) {
         const z = (ped as unknown as { prazo?: { primeira?: string } }).prazo?.primeira ?? null;
         linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: "Criar as peças do pedido", etapa: "criar", prazo: z, atrasada: !!z && z < hoje });

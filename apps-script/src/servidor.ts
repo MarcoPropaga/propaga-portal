@@ -41,6 +41,7 @@ export function configurarProjeto(p: Plataforma) {
   });
   fs.gravar(ops);
   publicarTabelaCriativo(fs, agora);
+  atualizarEquipe(fs);
   p.log(`Projeto ${cfg.projeto} configurado: TOTP, política de senha e ${Object.keys(CLIENTES).length} cliente(s).`);
 }
 
@@ -74,7 +75,15 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
       status: "convidado", convidadoEm: p.agora(), convidadoPor: convidadoPor.uid,
     },
   }]);
+  atualizarEquipe(new Firestore(p, cfg.projeto));
   return { uid, novo: !existente };
+}
+
+/** Lista pública (só equipe Propaga) dos criativos ativos, usada pelo Marcelo no aceite e na troca. Sem valores. */
+export function atualizarEquipe(fs: Firestore) {
+  const lista = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string }) }))
+    .filter((x) => x.papel === "criativo" && x.status !== "desativado").map((x) => ({ uid: x.uid, nome: x.nome }));
+  fs.gravar([{ caminho: "equipe/criativos", dados: { lista } }]);
 }
 
 /** Primeiro administrador (Marco). Executar uma vez, depois de configurarProjeto. */

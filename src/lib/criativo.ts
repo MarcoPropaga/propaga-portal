@@ -31,7 +31,12 @@ export interface LinhaCriativo {
 }
 export interface Ajuste { chave: string; item: string; coluna: Coluna; valor?: number }
 
-type PedidoMin = { protocolo: string; titulo: string; status: string; itens: { cod: string; variante: number; nome: string; varianteRotulo?: string }[]; pecas?: Peca[] };
+type PedidoMin = { protocolo: string; titulo: string; status: string; itens: { cod: string; variante: number; nome: string; varianteRotulo?: string }[]; pecas?: Peca[]; criativo?: { uid: string; nome: string } | null };
+
+/** Id do relatório mensal de um criativo: uid_AAAA-MM. */
+export const idRelatorio = (uid: string, mes: string) => `${uid}_${mes}`;
+/** A peça é deste criativo? Quem fez a última entrega; senão o criativo do pedido; peça antiga sem registro entra para todos. */
+export const pecaDo = (x: Peca, p: PedidoMin, uid?: string) => { const a = x.criativo?.uid ?? p.criativo?.uid; return !uid || !a || a === uid; };
 
 export const mesDe = (iso: string) => hojeSP(new Date(iso)).slice(0, 7);
 export const nomeMes = (mes: string) => {
@@ -54,11 +59,12 @@ export function colunasDo(tab: TabelaCriativo, item: string): Coluna[] {
 }
 
 /** Peças fechadas no mês, com a sugestão da tabela. */
-export function pecasDoMes(pedidos: PedidoMin[], mes: string, tab: TabelaCriativo): LinhaCriativo[] {
+export function pecasDoMes(pedidos: PedidoMin[], mes: string, tab: TabelaCriativo, uid?: string): LinhaCriativo[] {
   const linhas: LinhaCriativo[] = [];
   for (const p of pedidos) {
     for (const x of p.pecas ?? []) {
       if (x.etapa !== "concluida" && x.etapa !== "encerrada") continue;
+      if (!pecaDo(x, p, uid)) continue;
       const fim = x.hist[x.hist.length - 1]?.em ?? x.desde;
       if (!fim || mesDe(fim) !== mes) continue;
       const it = x.item != null ? p.itens[x.item] : undefined;
@@ -108,6 +114,7 @@ export const cobradoDe = (l: { situacao: string; valor: number | null }) =>
 export const totalLinhas = (ls: LinhaCriativo[]) => Math.round(ls.reduce((t, l) => t + (cobradoDe(l) ?? 0), 0) * 100) / 100;
 
 export interface RelatorioCriativo {
+  id: string; uid: string; nome: string;
   mes: string; linhas: LinhaCriativo[]; total: number; tabelaVersao: string;
   status: "enviado" | "pago"; enviadoEm: unknown; enviadoPor: string; envios: number;
   pagoEm?: unknown; pagoPor?: string; notaPagamento?: string;

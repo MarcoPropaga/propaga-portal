@@ -42,7 +42,7 @@ export interface PedidoDoc {
   protocolo: string; clienteId: string; titulo: string; status: Status; solicitanteUid: string; solicitanteNome: string;
   unidade: string; email: string; objetivo: string; publico: string;
   itens: { cod: string; variante: number; qtd: number; opcao?: string; canal?: string; audio?: string; obs?: string; nome: string; varianteRotulo: string; sobOrcamento: boolean }[];
-  drive: { link: string; conferido: boolean; verificado: boolean }; obs: string;
+  drive: { link: string; conferido: boolean; verificado: boolean; propaga?: string }; obs: string;
   prazo: { desejada: string; urgente: boolean; inicio?: string; primeira?: string; final?: string; entrega?: string };
   rodadas: number; versao: number; catalogoVersao: string; recebidoPeloCliente?: boolean;
   refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
@@ -51,5 +51,7 @@ export interface PedidoDoc {
   criadoPor?: { uid: string; nome: string };
   /** Pedido cancelado faturado a 50% pelo Financeiro da Propaga. */
   canceladoCobrado?: boolean;
+  /** Criativo que cria as peças (escolhido no aceite; pode ser trocado). */
+  criativo?: { uid: string; nome: string } | null;
   criadoEm: unknown; atualizadoEm: unknown;
 }
