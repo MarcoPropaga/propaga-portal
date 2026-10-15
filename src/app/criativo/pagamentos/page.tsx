@@ -9,7 +9,7 @@ import { Casca } from "@/components/casca";
 import { useSessao } from "@/components/auth/sessao";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora } from "@/components/pedido";
-import { NOME_COLUNA, nomeMes, VE_PAGAMENTO_CRIATIVO, type RelatorioCriativo } from "@/lib/criativo";
+import { cobradoDe, REGRA_CANCELADA_CRIATIVO, NOME_COLUNA, nomeMes, VE_PAGAMENTO_CRIATIVO, type RelatorioCriativo } from "@/lib/criativo";
 import { useFila } from "@/lib/usarFila";
 import { moeda } from "@/lib/usarTabelaCriativo";
 import type { Papel } from "@/lib/tipos";
@@ -42,7 +42,7 @@ function Conteudo() {
     <Casca titulo="Pagamento da Mariane">
       <div className="grid max-w-6xl gap-5">
         {s.papel === "admin" && <a href="/criativo/tabela/" className="w-fit text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Ver a tabela de valores da Mariane (só administrador)</a>}
-        <p className="max-w-[75ch] text-gray-600">Relatórios mensais enviados pela Mariane (Criativo Propaga), com as peças concluídas ou canceladas e os valores que ela cobra. Confira e registre o pagamento.</p>
+        <p className="max-w-[75ch] text-gray-600">Relatórios mensais enviados pela Mariane (Criativo Propaga), com as peças concluídas ou canceladas e os valores que ela cobra. {REGRA_CANCELADA_CRIATIVO} Confira e registre o pagamento.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {lista && !lista.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nenhum relatório enviado ainda.</p>}
@@ -74,7 +74,7 @@ function Conteudo() {
                     <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div></td>
                     <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : "Cancelada pela B&M Log"}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                     <td className="px-3 py-2.5">{r.itens?.[l.item] ?? l.item}<div className="text-xs text-gray-600">{NOME_COLUNA[l.coluna]}</div></td>
-                    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{moeda(l.valor)}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{moeda(l.cobrado ?? cobradoDe(l))}{l.situacao === "cancelada" && <div className="text-xs text-gray-600">50% de {moeda(l.valor)}</div>}</td>
                   </tr>
                 ))}
               </tbody>

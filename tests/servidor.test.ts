@@ -498,15 +498,16 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
   it("Mariane envia: só peças fechadas no mês, valores da tabela dela, sob consulta exige valor; Marisa e Marco são avisados", () => {
     expect(fila("relatorioCriativo", mri, { mes: "2026-10" }).mensagem).toMatch(/Informe o valor de Peça p2/);
     const r = fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: [{ chave: "BML-2026-0001:p2", item: "complexo", coluna: "nova", valor: 300 }] });
-    expect(r.resultado).toEqual({ mes: "2026-10", total: 355, pecas: 3 }); // 45 + 300 + 10
+    expect(r.resultado).toEqual({ mes: "2026-10", total: 205, pecas: 3 }); // 45 + 50% de 300 + 10
     const rel = f.doc("relatoriosCriativo/2026-10");
     expect(rel.status).toBe("enviado");
     expect(rel.linhas.map((l: any) => [l.peca, l.situacao, l.valor, l.refacoes])).toEqual([
       ["Peça p1", "aprovada", 45, 1], ["Peça p2", "cancelada", 300, 0], ["Peça p3", "aprovada", 10, 0]]);
+    expect(rel.linhas[1].cobrado).toBe(150);
     const rel2 = f.emails.filter((e) => e.assunto.startsWith("Relatório da Mariane"));
     expect(rel2.map((e) => e.para).sort()).toEqual(["marco@propaga.com", "marisa@propaga.com"]);
     expect(rel2[0].assunto).toBe("Relatório da Mariane · outubro/2026");
-    expect((rel2[0] as any).texto ?? rel2[0].html).toMatch(/R\$\s355,00/);
+    expect((rel2[0] as any).texto ?? rel2[0].html).toMatch(/R\$\s205,00/);
   });
 
   it("Mariane pode trocar o item; não pode inventar valor de item com preço fixo", () => {
@@ -514,7 +515,7 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
       { chave: "BML-2026-0001:p1", item: "carrossel", coluna: "nova", valor: 999 },
       { chave: "BML-2026-0001:p2", item: "manipulacao", coluna: "nova" },
     ] });
-    expect(r.resultado.total).toBe(90 + 45 + 10);
+    expect(r.resultado.total).toBe(90 + 22.5 + 10); // manipulação cancelada: 50% de 45
     expect(fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: [{ chave: "BML-2026-0001:p1", item: "carrossel", coluna: "adaptacao" }] }).mensagem).toMatch(/não tem valor de Adaptação/);
   });
 
