@@ -17,4 +17,14 @@ describe("sigilo dos valores de referência", () => {
     const culpados = publicos.filter((f) => /from\s+["'][^"']*content\/catalogos/.test(readFileSync(f, "utf8")));
     expect(culpados).toEqual([]);
   });
+  it("a tabela de valores da Mariane não entra no código do navegador", () => {
+    const publicos = [...arquivos("src/app"), ...arquivos("src/components"), ...arquivos("src/lib"), "src/content/clientes.ts"];
+    const culpados = publicos.filter((f) => /content\/criativo/.test(readFileSync(f, "utf8")));
+    expect(culpados).toEqual([]);
+  });
+  it("a tabela de valores da Mariane não entra no código do navegador", () => {
+    const publicos = [...arquivos("src/app"), ...arquivos("src/components"), ...arquivos("src/lib"), "src/content/clientes.ts"];
+    const culpados = publicos.filter((f) => /content\/criativo/.test(readFileSync(f, "utf8")));
+    expect(culpados).toEqual([]);
+  });
 });

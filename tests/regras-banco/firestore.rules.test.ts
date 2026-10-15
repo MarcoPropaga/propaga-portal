@@ -27,6 +27,8 @@ beforeEach(async () => {
     await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-2"), { solicitanteUid: "outra", titulo: "y" });
     await setDoc(doc(d, "clientes/bmlog/valores/BML-1"), { total: 100 });
     await setDoc(doc(d, "interno/catalogos/versoes/bmlog-1.0"), { x: 1 });
+    await setDoc(doc(d, "criativo/tabela"), { itens: [] });
+    await setDoc(doc(d, "relatoriosCriativo/2026-10"), { total: 355 });
   });
 });
 
@@ -94,5 +96,27 @@ describe("regras do Firestore", () => {
     await assertFails(getDoc(doc(db("mariana", mariana), "usuarios/debora")));
     await assertSucceeds(getDoc(doc(db("marco", marco), "usuarios/debora")));
     await assertFails(setDoc(doc(db("debora", debora), "usuarios/debora"), { papel: "admin" }));
+  });
+  it("tabela da Mariane: só ela e o admin; relatório dela: ela, a Marisa e o admin; ninguém grava", async () => {
+    const t2 = { firebase: { sign_in_second_factor: "totp" } };
+    const mariane = { papel: "criativo", propaga: true, ...t2 };
+    const marisa = { papel: "financeiro_propaga", propaga: true, ...t2 };
+    const marcelo = { papel: "atendimento", propaga: true, ...t2 };
+    await assertSucceeds(getDoc(doc(db("mariane", mariane), "criativo/tabela")));
+    await assertSucceeds(getDoc(doc(db("marco", marco), "criativo/tabela")));
+    for (const [uid, c] of [["marisa", marisa], ["marcelo", marcelo], ["debora", debora], ["mariana", mariana]] as const)
+      await assertFails(getDoc(doc(db(uid, c), "criativo/tabela")));
+    await assertFails(getDoc(doc(db("mariane", { papel: "criativo", propaga: true }), "criativo/tabela"))); // sem 2FA
+    await assertSucceeds(getDoc(doc(db("mariane", mariane), "relatoriosCriativo/2026-10")));
+    await assertSucceeds(getDoc(doc(db("marisa", marisa), "relatoriosCriativo/2026-10")));
+    for (const [uid, c] of [["marcelo", marcelo], ["debora", debora], ["mariana", mariana]] as const)
+      await assertFails(getDoc(doc(db(uid, c), "relatoriosCriativo/2026-10")));
+    await assertFails(setDoc(doc(db("mariane", mariane), "relatoriosCriativo/2026-11"), { total: 1 }));
+    await assertFails(setDoc(doc(db("mariane", mariane), "criativo/tabela"), { itens: [] }));
+    const fila = (uid: string, c: Record<string, unknown>, tipo: string) => addDoc(collection(db(uid, c), "fila"), { tipo, uid, clienteId: null, dados: {}, status: "pendente", criadoEm: serverTimestamp() });
+    await assertSucceeds(fila("mariane", mariane, "relatorioCriativo"));
+    await assertFails(fila("marcelo", marcelo, "relatorioCriativo"));
+    await assertSucceeds(fila("marisa", marisa, "pagarCriativo"));
+    await assertFails(fila("mariane", mariane, "pagarCriativo"));
   });
 });

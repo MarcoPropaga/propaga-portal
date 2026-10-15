@@ -58,7 +58,10 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca'] : ['enviar', 'acao', 'peca'];
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'relatorioCriativo', 'pagarCriativo']
+          : papel() == 'criativo' ? ['peca', 'relatorioCriativo']
+          : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']
+          : ['enviar', 'acao', 'peca'];
       }
       allow create: if logado() && doisFatores()
         && request.resource.data.uid == request.auth.uid
@@ -69,6 +72,17 @@ service cloud.firestore {
         && request.resource.size() < 100000;
       allow read: if logado() && (resource.data.uid == request.auth.uid || admin());
       allow update, delete: if false;
+    }
+
+    // Tabela de valores e contrato da Mariane (Criativo): só ela e o administrador (Marco, 15/10/2026).
+    match /criativo/{doc} {
+      allow read: if logado() && doisFatores() && equipePropaga() && papel() in ['criativo', 'admin'];
+      allow write: if false;
+    }
+    // Relatórios mensais da Mariane com os valores dela: ela, o Financeiro da Propaga (Marisa) e o administrador.
+    match /relatoriosCriativo/{mes} {
+      allow read: if logado() && doisFatores() && equipePropaga() && papel() in ['criativo', 'financeiro_propaga', 'admin'];
+      allow write: if false;
     }
 
     match /usuarios/{uid} {

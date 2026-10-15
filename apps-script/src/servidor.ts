@@ -12,6 +12,7 @@ import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
+import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo } from "./criativo";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
 import { ErroUsuario, type Plataforma } from "./plataforma";
@@ -39,6 +40,7 @@ export function configurarProjeto(p: Plataforma) {
     ];
   });
   fs.gravar(ops);
+  publicarTabelaCriativo(fs, agora);
   p.log(`Projeto ${cfg.projeto} configurado: TOTP, política de senha e ${Object.keys(CLIENTES).length} cliente(s).`);
 }
 
@@ -131,6 +133,10 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       const ids = fs.listar("usuarios").map((d) => d.caminho.split("/").pop()!);
       return { acessos: new Identidade(p, cfg.projeto).situacaoAcesso(ids) };
     }
+    case "relatorioCriativo":
+      return enviarRelatorioCriativo(p, fs, { uid, ...u }, dados);
+    case "pagarCriativo":
+      return pagarRelatorioCriativo(p, fs, { uid, ...u }, dados);
     case "enviar":
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "acao":

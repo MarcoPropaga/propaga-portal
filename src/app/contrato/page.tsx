@@ -8,8 +8,45 @@ import { CLIENTES } from "@/content/clientes";
 import { REGRA_CANCELAMENTO, REGRA_REFACAO, VE_CONTRATO } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 
+/* Contrato da Mariane (Criativo Propaga): só ela vê esta versão da página (Marco, 15/10/2026). */
+function ContratoCriativo() {
+  const pontos: [string, string][] = [
+    ["Partes", "Prestação de serviços de criação para a Propaga, nos jobs do Portal MKT B&M Log."],
+    ["Como chega o trabalho", "O Marcelo (Atendimento Propaga) envia a solicitação pelo portal, sem valores. Você cria as peças, envia ao Marcelo e acompanha a aprovação, refação ou cancelamento pelo marketing da B&M Log."],
+    ["Valores", "Os da sua tabela de valores (Minha tabela), por peça/serviço. Projetos complexos são avaliados individualmente e o valor é informado por você no relatório."],
+    ["O que entra no mês", "Cada peça entra no relatório do mês em que foi concluída (arquivo final em 04 Aprovados) ou cancelada pela B&M Log. Peça cancelada entra com o valor da tabela. Refações são registradas como observação, sem valor extra."],
+    ["Relatório e pagamento", "No fim do mês você confere o relatório e envia à Marisa (Financeiro Propaga), que confere e registra o pagamento. Você é avisada por e-mail."],
+    ["Sigilo", "Sua tabela e este contrato são vistos só por você e pela administração da Propaga. O marketing e o financeiro da B&M Log e o Atendimento não têm acesso."],
+  ];
+  return (
+    <Casca titulo="Contrato">
+      <div className="grid max-w-6xl gap-5">
+        <p className="max-w-[75ch] text-gray-600">Contrato de prestação de serviços de criação entre você e a Propaga.</p>
+        <span className="w-fit rounded-full bg-aviso-100 px-3 py-1 text-xs font-semibold text-aviso-700">Documento assinado: registro pendente</span>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <Painel titulo="Pontos principais">
+            <dl className="grid gap-4 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
+              {pontos.map(([a, b]) => <div key={a} className="contents"><dt className="font-semibold">{a}</dt><dd className="leading-relaxed text-gray-600">{b}</dd></div>)}
+            </dl>
+          </Painel>
+          <div className="grid content-start gap-5">
+            <Painel titulo="Documento assinado">
+              <p className="rounded bg-aviso-100 px-4 py-3 text-sm text-aviso-700">O PDF assinado será disponibilizado aqui pela Propaga.</p>
+            </Painel>
+            <Painel titulo="Tabela anexa">
+              <p className="text-sm text-gray-600">Sua tabela de valores por peça/serviço.</p>
+              <a href="/criativo/tabela/" className="inline-flex min-h-11 w-fit items-center rounded border border-ink-900 bg-white px-4 font-semibold">Ver minha tabela</a>
+            </Painel>
+          </div>
+        </div>
+      </div>
+    </Casca>
+  );
+}
+
 function Conteudo() {
   const s = useSessao();
+  if (s.papel === "criativo") return <ContratoCriativo />;
   const c = CLIENTES[s.clienteId ?? Object.keys(CLIENTES)[0]];
   const assinado = !!c.contrato.assinadoEm;
   const testes = !assinado && !!c.contrato.consideradoAssinadoParaTestes;
@@ -60,5 +97,5 @@ function Conteudo() {
 }
 
 export default function Contrato() {
-  return <Protegido papeis={VE_CONTRATO}><Conteudo /></Protegido>;
+  return <Protegido papeis={[...VE_CONTRATO, "criativo"]}><Conteudo /></Protegido>;
 }

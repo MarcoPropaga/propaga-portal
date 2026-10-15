@@ -11,7 +11,10 @@ const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] 
   { href: "/solicitacoes/", rotulo: "Solicitações", texto: "Acompanhe etapas, versões e entregas." },
   { href: "/valores/", rotulo: "Jobs Propaga", texto: "Serviços do catálogo vigente, com preço final.", papeis: VE_VALORES },
   { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: VE_RELATORIOS },
-  { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado.", papeis: VE_CONTRATO },
+  { href: "/criativo/relatorio/", rotulo: "Meu relatório", texto: "Peças do mês com os valores da sua tabela; envio à Marisa.", papeis: ["criativo"] },
+  { href: "/criativo/tabela/", rotulo: "Minha tabela", texto: "Seus valores por peça e serviço.", papeis: ["criativo"] },
+  { href: "/criativo/pagamentos/", rotulo: "Pagamento da Mariane", texto: "Relatórios mensais do criativo para conferir e pagar.", papeis: ["financeiro_propaga", "admin"] },
+  { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado.", papeis: [...VE_CONTRATO, "criativo"] },
   { href: "/arquivos/", rotulo: "Arquivos no Drive", texto: "Pastas de cada pedido.", papeis: VE_ARQUIVOS },
   { href: "/ajuda/", rotulo: "Ajuda", texto: "Dúvidas frequentes e contato." },
 ];

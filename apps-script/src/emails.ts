@@ -111,3 +111,13 @@ ${o.linhas.map((l) => `<tr><td style="padding:6px 8px 6px 0;border-top:1px solid
 <p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:#55C5D0;color:#003C57;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir Minhas tarefas</a></p>`);
   return { assunto, texto, html };
 }
+
+/** Aviso simples (relatório e pagamento da Mariane). */
+export function emailAviso(o: { titulo: string; texto: string; botao: string; link: string }) {
+  const texto = [o.titulo, ``, o.texto, ``, `${o.botao}: ${o.link}`, ``, `Propaga · Comunicação com Inteligência Aplicada`].join("\n");
+  const html = moldura(`
+<h1 style="margin:0 0 12px;font-size:22px">${esc(o.titulo)}</h1>
+<p style="margin:0 0 16px;line-height:1.55">${esc(o.texto)}</p>
+<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:#55C5D0;color:#003C57;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">${esc(o.botao)}</a></p>`);
+  return { assunto: o.titulo, texto, html };
+}

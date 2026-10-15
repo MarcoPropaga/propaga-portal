@@ -317,7 +317,7 @@ function Conteudo() {
 
         <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">
           As peças ficam no Drive compartilhado da B&M Log: versões em <b>03 Provas</b>, arquivos finais em <b>04 Aprovados</b>. Para ver a pré-visualização aqui, entre no Google com a conta que tem acesso ao Drive.
-          Relatório: aprovada = concluída · cancelada após apresentada = 50% do valor · a partir da 3ª refação, edições novas = +30%.
+          {papel !== "criativo" && "Relatório: aprovada = concluída · cancelada após apresentada = 50% do valor · a partir da 3ª refação, edições novas = +30%."}
         </p>
       </div>
 
