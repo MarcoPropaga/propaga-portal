@@ -7,7 +7,7 @@ import { Protegido } from "@/components/auth/protegido";
 import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora } from "@/components/pedido";
-import { aplicarAjustes, cobradoDe, REGRA_CANCELADA_CRIATIVO, colunasDo, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, valorTabela, VE_TABELA_CRIATIVO,
+import { aplicarAjustes, cobradoDe, REGRA_CANCELADA_CRIATIVO, REGRA_COMPLEXO_CRIATIVO, colunasDo, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, valorTabela, VE_TABELA_CRIATIVO,
   type Coluna, type LinhaCriativo, type RelatorioCriativo } from "@/lib/criativo";
 import { hojeSP } from "@/lib/datas";
 import { useFila, usePedidos } from "@/lib/usarFila";
@@ -134,7 +134,7 @@ function Conteudo() {
               {vis.length > 0 && <tfoot><tr className="border-t-2 border-ink-900 font-semibold"><td className="px-3 py-2.5" colSpan={4}>Total de {nomeMes(mes)} · {vis.length} peça(s){refs ? ` · ${refs} refação(ões) sem valor extra` : ""}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(total)}</td></tr></tfoot>}
             </table>
           </div>
-          <p className="text-sm text-gray-600">{REGRA_CANCELADA_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
+          <p className="text-sm text-gray-600">{REGRA_CANCELADA_CRIATIVO} {REGRA_COMPLEXO_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
           <div className="flex flex-wrap gap-3 print:hidden">
             {!rel && vis.length > 0 && <Botao onClick={enviarMarisa} carregando={ocupado}>Enviar para a Marisa</Botao>}
             {rel?.status === "enviado" && !corrigir && <Botao variante="linha" onClick={() => setCorrigir(true)}>Corrigir e reenviar</Botao>}

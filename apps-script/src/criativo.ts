@@ -56,6 +56,20 @@ export function enviarRelatorioCriativo(p: Plataforma, fs: Firestore, u: Usuario
     try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); }
     catch (e) { p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
   }
+  // Projeto complexo (sob consulta): o valor registrado pela Mariane vai ao conhecimento do Marcelo (decisão de 15/10).
+  const complexos = linhas.filter((l) => tab.itens.find((i) => i.id === l.item)?.sobConsulta);
+  if (complexos.length) {
+    const lista = complexos.map((l) => `${l.protocolo} · ${l.peca}: ${moeda(l.valor ?? 0)}${l.situacao === "cancelada" ? " (cancelada: 50%)" : ""}`).join("; ");
+    const aviso = emailAviso({
+      titulo: `Valor de projeto complexo · ${nomeMes(d.mes)}`,
+      texto: `${u.nome} registrou o valor de ${complexos.length} projeto(s) complexo(s) (sob consulta) no relatório de ${nomeMes(d.mes)}: ${lista}.`,
+      botao: "Abrir o portal", link: `${cfg.portalUrl}/aprovacoes/`,
+    });
+    for (const x of fs.listar("usuarios").map((y) => y.dados as { email: string; papel: string }).filter((y) => y.papel === "atendimento")) {
+      try { p.enviarEmail({ para: x.email, assunto: aviso.assunto, html: aviso.html, texto: aviso.texto, nomeRemetente: cfg.remetente }); }
+      catch (e) { p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
+    }
+  }
   return { mes: d.mes, total, pecas: linhas.length };
 }
 

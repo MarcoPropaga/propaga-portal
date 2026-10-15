@@ -11,6 +11,7 @@ import { emailAtualizacao } from "./emails";
 import type { Firestore } from "./firestore";
 import { ErroUsuario, type Plataforma } from "./plataforma";
 import { lerConfig } from "./servidor";
+import { cancelaCobravel } from "@/lib/pecas";
 
 interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
 interface Pedido {
@@ -43,7 +44,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
 
   let novo: Status;
   try {
-    novo = aplicar(acao, ped.status, u.papel as Papel);
+    novo = aplicar(acao, ped.status, u.papel as Papel, { cobravel: cancelaCobravel(ped as never) });
   } catch (e) { throw new ErroUsuario((e as Error).message); }
 
   const agora = p.agora();
@@ -102,7 +103,8 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       avisar = ["solicitante", "financeiro_propaga"];
       break;
     case "faturar":
-      rotulo = "Faturamento registrado";
+      if (ped.status === "cancelada") { mudancas.canceladoCobrado = true; rotulo = "Faturamento registrado · pedido cancelado, cobrança de 50%"; }
+      else rotulo = "Faturamento registrado";
       break;
     case "registrarPagamento":
       rotulo = "Pagamento registrado";

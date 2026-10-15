@@ -507,6 +507,9 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
     const rel2 = f.emails.filter((e) => e.assunto.startsWith("Relatório da Mariane"));
     expect(rel2.map((e) => e.para).sort()).toEqual(["marco@propaga.com", "marisa@propaga.com"]);
     expect(rel2[0].assunto).toBe("Relatório da Mariane · outubro/2026");
+    const cx = f.emails.filter((e) => e.assunto.startsWith("Valor de projeto complexo"));
+    expect(cx.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
+    expect((cx[0] as any).texto).toMatch(/Peça p2: R\$\s300,00 \(cancelada: 50%\)/);
     expect((rel2[0] as any).texto ?? rel2[0].html).toMatch(/R\$\s205,00/);
   });
 
@@ -532,5 +535,23 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
     expect(f.emails.filter((e) => e.assunto.startsWith("Pagamento registrado")).map((e) => e.para)).toEqual(["contato@mondesign.com.br"]);
     expect(fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: aj }).mensagem).toMatch(/já foi pago/);
     expect(fila("relatorioCriativo", mri, { mes: "2026-08" }).mensagem).toMatch(/Nenhuma peça/);
+  });
+});
+
+describe("pedido cancelado com cobrança de 50%: Financeiro da Propaga fatura", () => {
+  it("todas as peças canceladas depois de apresentadas → tarefa Faturar para a Marisa; Mariana (B&M) não fatura", () => {
+    const f = fake();
+    const adm = convidar(f.p, { nome: "Marco", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "P" }).uid;
+    const mrs = convidar(f.p, { nome: "Marisa Coelho", email: "marisa@propaga.com", papel: "financeiro_propaga" }, { uid: adm, nome: "M" }).uid;
+    const mar = convidar(f.p, { nome: "Mariana", email: "mariana@bmlog.com.br", papel: "financeiro_cliente", clienteId: "bmlog" }, { uid: adm, nome: "M" }).uid;
+    const em = "2026-10-10T12:00:00Z";
+    const pc = { id: "p1", nome: "Post", item: 0, etapa: "encerrada", extras30: 0, desde: em, hist: [], versoes: [{ v: 1, link: "x", em, por: "M", decisao: { tipo: "cancelada", por: "D", em } }] };
+    f.docs.set("clientes/bmlog/solicitacoes/BML-2026-0001", { updateTime: "t0", fields: (paraValor({ protocolo: "BML-2026-0001", titulo: "X", status: "cancelada", solicitanteUid: "deb", temPecas: true, versao: 1, itens: [{ cod: "01", variante: 0, qtd: 1, nome: "Post" }], pecas: [pc], prazo: {}, drive: {} }) as any).mapValue.fields });
+    let n = 0;
+    const acao = (uid: string, a: string) => { const id = `z${++n}`; f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo: "acao", uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados: { protocolo: "BML-2026-0001", acao: a } }) as any).mapValue.fields }); processarFila(f.p); return f.doc(`fila/${id}`); };
+    expect(acao(mar, "faturar").status).toBe("erro");
+    expect(acao(mrs, "faturar").status).toBe("ok");
+    expect(f.doc("clientes/bmlog/solicitacoes/BML-2026-0001")).toMatchObject({ status: "faturada", canceladoCobrado: true });
+    expect(acao(mrs, "registrarPagamento").status).toBe("ok");
   });
 });

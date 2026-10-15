@@ -100,9 +100,17 @@ export function previewDrive(link: string): string | null {
 /** Texto em linhas → itens (para refação em lista). */
 export const linhasParaItens = (t: string) => t.split(/\n+/).map((x) => x.replace(/^\s*(\d+[.)-]|[-•*])\s*/, "").trim()).filter(Boolean);
 
+/** Pedido cancelado com valor a cobrar (50% das peças canceladas depois de apresentadas) ainda não faturado.
+    Quem fatura é o Financeiro da Propaga (Marisa). */
+export function cancelaCobravel(p: { status: string; temPecas?: boolean; versao?: number; pecas?: Peca[]; canceladoCobrado?: boolean }): boolean {
+  if (p.status !== "cancelada" || p.canceladoCobrado) return false;
+  if (p.temPecas) return (p.pecas ?? []).some((x) => x.etapa === "encerrada" && ultimaDecisao(x)?.tipo === "cancelada" && x.item != null);
+  return (p.versao ?? 0) > 0;
+}
+
 /** Tarefas do pedido (fora das peças) que cabem a cada perfil — base de "Minhas tarefas" e do contador. */
 export type TarefaPedido = "proposta" | "ajustar" | "aceitar" | "criar" | "entregar" | "faturar" | "receber";
-export function tarefasDoPedido(papel: Papel | string | null | undefined, p: { status: string; temPecas?: boolean }): TarefaPedido[] {
+export function tarefasDoPedido(papel: Papel | string | null | undefined, p: { status: string; temPecas?: boolean; versao?: number; pecas?: Peca[]; canceladoCobrado?: boolean }): TarefaPedido[] {
   const t: TarefaPedido[] = [];
   const atend = papel === "atendimento" || papel === "admin", fin = papel === "financeiro_propaga" || papel === "admin";
   if ((papel === "solicitante" || papel === "admin") && p.status === "proposta") t.push("proposta");
@@ -110,7 +118,7 @@ export function tarefasDoPedido(papel: Papel | string | null | undefined, p: { s
   if (atend && p.status === "enviada") t.push("aceitar");
   if (papel === "criativo" && aguardaCriacao(p)) t.push("criar");
   if (atend && p.status === "aprovada") t.push("entregar");
-  if (fin && p.status === "entregue") t.push("faturar");
+  if (fin && (p.status === "entregue" || cancelaCobravel(p))) t.push("faturar");
   if (fin && p.status === "faturada") t.push("receber");
   return t;
 }

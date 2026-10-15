@@ -50,10 +50,10 @@ export const CLIENTES: Record<string, Cliente> = {
 };
 
 export const NOMES_PAPEIS: Record<string, string> = {
-  solicitante: "Solicitante",
+  solicitante: "Marketing B&M Log",
   financeiro_cliente: "Financeiro do cliente",
   atendimento: "Atendimento Propaga",
   financeiro_propaga: "Financeiro Propaga",
   criativo: "Criativo Propaga",
-  admin: "Administrador",
+  admin: "Admin Propaga",
 };

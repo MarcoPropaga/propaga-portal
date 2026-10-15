@@ -28,13 +28,15 @@ export const REGRA_REFACAO = "Até 2 refações estão incluídas. A partir da 3
 
 /** Fração do valor do pedido: 1 normal; pedido inteiro cancelado = 0,5 se já havia peças apresentadas, 0 se não.
     Ajustes por peça (−50% cancelada, +30% refação extra) ficam em ajustePecas (src/lib/pecas.ts). */
-export function fatorCobranca(p: { status: Status; versao?: number; temPecas?: boolean; pecas?: unknown[] }): number {
+export function fatorCobranca(p: { status: Status; versao?: number; temPecas?: boolean; pecas?: unknown[]; canceladoCobrado?: boolean }): number {
+  // Pedido cancelado e faturado pelo Financeiro da Propaga (sem peças): continua a 50%.
+  if (p.canceladoCobrado && !p.temPecas) return COBRANCA_CANCELADA_APRESENTADA;
   if (p.status !== "cancelada") return 1;
   if (p.temPecas) return 1; // cancelado peça a peça: o 50% sai de ajustePecas
   return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
 }
 
-export interface Ctx { rodadas?: number }
+export interface Ctx { rodadas?: number; /** Pedido cancelado que tem valor a cobrar (50%). */ cobravel?: boolean }
 interface Regra { de: Status[]; para: Status; papeis: Papel[]; rotulo: string }
 
 export const REGRAS: Record<Acao, Regra> = {
@@ -43,7 +45,7 @@ export const REGRAS: Record<Acao, Regra> = {
   recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
   aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar à Mariane" },
   entregar: { de: ["aprovada"], para: "entregue", papeis: ["atendimento", "admin"], rotulo: "Encaminhar para veiculação/impressão" },
-  faturar: { de: ["entregue"], para: "faturada", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar faturamento" },
+  faturar: { de: ["entregue", "cancelada"], para: "faturada", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar faturamento" },
   registrarPagamento: { de: ["faturada"], para: "paga", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar pagamento" },
   cancelar: { de: ["proposta", "ajuste", "enviada", "producao", "apresentacao", "aprovada"], para: "cancelada", papeis: ["solicitante", "atendimento", "admin"], rotulo: "Cancelar pedido" },
 };
@@ -63,9 +65,11 @@ export const NOME_STATUS: Record<Status, string> = {
   proposta: "Aguardando aprovação da Débora", ajuste: "Ajuste pedido pela Débora",
 };
 
-export function podeExecutar(acao: Acao, status: Status, papel: Papel, _ctx: Ctx = {}): boolean { // eslint-disable-line @typescript-eslint/no-unused-vars
+export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx = {}): boolean {
   const r = REGRAS[acao];
   if (!r.de.includes(status) || !r.papeis.includes(papel)) return false;
+  // Pedido cancelado só é faturado quando há valor a cobrar (peças canceladas depois de apresentadas = 50%).
+  if (acao === "faturar" && status === "cancelada" && !ctx.cobravel) return false;
   // Pedido inteiro: Solicitante e Atendimento só cancelam antes do aceite; depois, só o admin.
   // (Depois das peças, a Débora cancela peça por peça, com 50%.)
   // A proposta do Marcelo: a Débora recusa (recusarProposta); o Marcelo pode cancelar a dele antes da aprovação.
