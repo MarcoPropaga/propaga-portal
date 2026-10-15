@@ -634,3 +634,69 @@ describe("dois criativos (criativo2): o Marcelo escolhe no aceite, só quem est�
     expect(f.doc(`relatoriosCriativo/${mri}_2026-10`).status).toBe("enviado");
   });
 });
+
+describe("serviço fora da tabela do criativo: proposta do criativo, aprovação do admin, entra na tabela", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, mri: string, mcl: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `t${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const em = "2026-10-20T15:00:00Z";
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco Antônio", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    mri = convidar(f.p, { nome: "Mariane Garcia", email: "contato@mondesign.com.br", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo H. Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    configurarProjeto(f.p);
+    f.docs.set("clientes/bmlog/solicitacoes/BML-2026-0001", { updateTime: "t0", fields: (paraValor({
+      protocolo: "BML-2026-0001", titulo: "Institucional", status: "producao", criativo: { uid: mri, nome: "Mariane Garcia" },
+      itens: [{ cod: "49", variante: 0, qtd: 1, nome: "Campanha institucional", varianteRotulo: "Novo" }, { cod: "01", variante: 0, qtd: 1, nome: "Post estático" }],
+      pecas: [{ id: "p1", nome: "Campanha", item: 0, etapa: "concluida", extras30: 0, desde: em,
+        versoes: [{ v: 1, link: "x", em, por: "M", decisao: { tipo: "aprovada", por: "D", em } }], hist: [{ em, por: "Sistema", txt: "fechada" }] }],
+    }) as any).mapValue.fields });
+    f.emails.length = 0;
+  });
+  const propor = (uid: string, extra: Record<string, unknown> = {}) =>
+    fila("tabelaCriativo", uid, { acao: "propor", protocolo: "BML-2026-0001", item: 0, nome: "Campanha institucional (peça-chave)", coluna: "nova", valor: 250, ...extra });
+
+  it("criativo propõe → admin é avisado → admin aprova com o valor acordado → item na tabela e no relatório", () => {
+    expect(propor(mcl).mensagem).toMatch(/Só o criativo/);
+    expect(propor(mri, { item: 1 }).mensagem).toMatch(/já está na sua tabela/);
+    const r = propor(mri);
+    expect(r.status).toBe("ok");
+    const novo1 = f.emails.filter((e) => /Novo serviço para a tabela de Mariane/.test(e.assunto));
+    expect(novo1.map((e) => e.para)).toEqual(["marco@propaga.com"]);
+    expect(propor(mri).mensagem).toMatch(/aguardando aprovação/);
+    const id = r.resultado.id;
+    expect(fila("tabelaCriativo", mri, { acao: "aprovar", id }).mensagem).toMatch(/administração/);
+    f.emails.length = 0;
+    expect(fila("tabelaCriativo", adm, { acao: "aprovar", id, valor: 230 }).status).toBe("ok");
+    const t = f.doc("criativo/tabela");
+    const novo = t.itens.find((i: any) => i.nome === "Campanha institucional (peça-chave)");
+    expect(novo).toMatchObject({ nova: 230, adaptacao: null });
+    expect(novo.acordado).toMatch(/BML-2026-0001/);
+    expect(t.itens[t.itens.length - 1].id).toBe("complexo"); // projeto complexo continua por último
+    expect(t.mapa["49:0"]).toEqual({ item: novo.id, coluna: "nova" });
+    expect(f.emails.filter((e) => /incluído na sua tabela/.test(e.assunto)).map((e) => e.para)).toEqual(["contato@mondesign.com.br"]);
+    expect(fila("tabelaCriativo", adm, { acao: "aprovar", id }).mensagem).toMatch(/já foi decidida/);
+    // o relatório já usa o valor acordado, sem pedir valor sob consulta
+    expect(fila("relatorioCriativo", mri, { mes: "2026-10" }).resultado).toMatchObject({ total: 230, pecas: 1 });
+    // uma nova proposta para o mesmo serviço não cabe mais
+    expect(propor(mri).mensagem).toMatch(/já está na sua tabela/);
+  });
+
+  it("admin recusa com motivo; o criativo é avisado e pode propor de novo", () => {
+    const id = propor(mri).resultado.id;
+    expect(fila("tabelaCriativo", adm, { acao: "recusar", id }).mensagem).toMatch(/motivo/);
+    f.emails.length = 0;
+    expect(fila("tabelaCriativo", adm, { acao: "recusar", id, motivo: "Valor acima do combinado com a B&M Log." }).status).toBe("ok");
+    expect(f.emails.filter((e) => /não aprovada/.test(e.assunto)).map((e) => e.para)).toEqual(["contato@mondesign.com.br"]);
+    expect(f.doc("criativo/adicionais").propostas[0]).toMatchObject({ status: "recusada", decididoPor: "Marco Antônio" });
+    expect(f.doc("criativo/tabela").mapa["49:0"].item).toBe("complexo");
+    expect(propor(mri, { valor: 200 }).status).toBe("ok");
+  });
+});

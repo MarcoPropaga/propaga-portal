@@ -15,6 +15,7 @@ import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedi
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
+import { ServicosForaTabela } from "@/components/foraTabela";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { CLIENTES } from "@/content/clientes";
@@ -276,6 +277,7 @@ function Conteudo() {
               </dl>
             )}
             {abaAtual.t === "entregar" && <p className="text-sm text-gray-600">{(pd.pecas ?? []).filter((x) => x.etapa === "concluida").length} peça(s) com arquivo final em 04 Aprovados · {(pd.pecas ?? []).filter((x) => x.etapa === "encerrada").length} cancelada(s).</p>}
+            {papel === "criativo" && abaAtual.t === "criar" && <ServicosForaTabela pd={pd} />}
             {abrindo === pd.protocolo
               ? (abaAtual.t === "criar"
                 ? <FormPublicar pedido={pd} onFechar={() => setAbrindo(null)} onOk={(m) => setAviso({ tipo: "ok", msg: m })} />
