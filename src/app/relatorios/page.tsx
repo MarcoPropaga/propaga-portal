@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { fatorCobranca, NOME_STATUS, REGRA_CANCELAMENTO, REGRA_REFACAO, VE_RELATORIOS } from "@/lib/fluxo";
+import { fatorCobranca, NOME_STATUS, REGRA_REFACAO, VE_RELATORIOS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
 import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
@@ -222,7 +222,7 @@ function Conteudo() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {REGRA_CANCELAMENTO} {REGRA_REFACAO}</p>
+            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {REGRA_REFACAO}</p>
           </section>
         </>}
       </div>

@@ -49,7 +49,7 @@ export const REGRAS: Record<Acao, Regra> = {
   entregar: { de: ["aprovada"], para: "entregue", papeis: ["atendimento", "admin"], rotulo: "Encaminhar para veiculação/impressão" },
   faturar: { de: ["entregue", "cancelada"], para: "faturada", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar faturamento" },
   registrarPagamento: { de: ["faturada"], para: "paga", papeis: ["financeiro_propaga", "admin"], rotulo: "Registrar pagamento" },
-  cancelar: { de: ["proposta", "ajuste", "enviada", "producao", "apresentacao", "aprovada"], para: "cancelada", papeis: ["solicitante", "atendimento", "admin"], rotulo: "Cancelar pedido" },
+  cancelar: { de: [], para: "cancelada", papeis: ["solicitante", "atendimento", "admin"], rotulo: "Cancelar pedido" },
 };
 
 export const ETAPAS: { status: Status; rotulo: string }[] = [

@@ -5,7 +5,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { brData, Painel } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
-import { REGRA_CANCELAMENTO, REGRA_REFACAO, VE_CONTRATO } from "@/lib/fluxo";
+import { REGRA_REFACAO, VE_CONTRATO } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 
 /* Contrato da Mariane (Criativo Propaga): só ela vê esta versão da página (Marco, 15/10/2026). */
@@ -14,7 +14,7 @@ function ContratoCriativo() {
     ["Partes", "Prestação de serviços de criação para a Propaga, nos jobs do Portal MKT B&M Log."],
     ["Como chega o trabalho", "O Marcelo (Atendimento Propaga) envia a solicitação pelo portal, sem valores. Você cria as peças, envia ao Marcelo e acompanha a aprovação, refação ou cancelamento pelo marketing da B&M Log."],
     ["Valores", "Os da sua tabela de valores (Minha tabela), por peça/serviço. Projetos complexos são avaliados individualmente e o valor é informado por você no relatório."],
-    ["O que entra no mês", "Cada peça entra no relatório do mês em que foi concluída (arquivo final em 04 Aprovados) ou cancelada pela B&M Log. Peça cancelada pela B&M Log entra com 50% do valor da tabela. Refações são registradas como observação, sem valor extra."],
+    ["O que entra no mês", "Cada peça entra no relatório do mês em que foi concluída (arquivo final em 04 Aprovados). Refações são registradas como observação, sem valor extra."],
     ["Relatório e pagamento", "No fim do mês você confere o relatório e envia à Marisa (Financeiro Propaga), que confere e registra o pagamento. Você é avisada por e-mail."],
     ["Sigilo", "Sua tabela e este contrato são vistos só por você e pela administração da Propaga. O marketing e o financeiro da B&M Log e o Atendimento não têm acesso."],
   ];
@@ -56,7 +56,7 @@ function Conteudo() {
     ["Inclusões", "Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte."],
     ["Prazo", `${PRAZO_PADRAO_DIAS_UTEIS} dias úteis para a 1ª apresentação em serviços simples, contados do aceite do pedido com briefing completo e materiais acessíveis. Pedidos complexos ou urgentes recebem cronograma individual.`],
     ["Refação", `${REGRA_REFACAO} Reúna os pontos de cada versão numa única solicitação. Aprovação vale só quando registrada no portal.`],
-    ["Aprovação e cancelamento", `Só a solicitante aprova ou pede ajustes, sempre pelo portal. A peça aprovada entra nos relatórios como concluída. ${REGRA_CANCELAMENTO}`],
+    ["Aprovação", "Só a solicitante aprova ou pede ajustes, sempre pelo portal. A peça aprovada entra nos relatórios como concluída."],
     ["Dados e Drive", "Acesso por função, sem links públicos. Senhas nunca vão em briefing, comentário ou e-mail."],
   ];
   return (
