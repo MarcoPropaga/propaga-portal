@@ -369,10 +369,11 @@ describe("aprovação por peça (fila 'peca')", () => {
 
     f.emails.length = 0;
     expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }] }).mensagem).toMatch(/Avalie todas/);
-    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: [] }, { id: "p3", tipo: "cancelada", nota: "Suspensa." }] }).mensagem).toMatch(/Liste os ajustes/);
-    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: ["Aumentar título", "Trocar foto"] }, { id: "p3", tipo: "cancelada", nota: "Campanha suspensa." }] }).status).toBe("ok");
+    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: [] }, { id: "p3", tipo: "aprovada" }] }).mensagem).toMatch(/Liste os ajustes/);
+    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "aprovada" }, { id: "p3", tipo: "cancelada", nota: "Suspensa." }] }).mensagem).toMatch(/só aprovar ou pedir refação/);
+    expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: ["Aumentar título", "Trocar foto"] }, { id: "p3", tipo: "aprovada" }] }).status).toBe("ok");
     expect([pc("p1").etapa, pc("p1").tarefa]).toEqual(["criativo", "final"]);   // aprovada vai direto à Mariane
-    expect(pc("p3").etapa).toBe("encerrada"); // cancelada fecha na hora (50%), Mariane só é avisada
+    expect([pc("p3").etapa, pc("p3").tarefa]).toEqual(["criativo", "final"]); // cancelar não existe mais na avaliação
     expect(pc("p2").etapa).toBe("triagem");                                       // só a refação passa pelo Marcelo
     expect(ped().rodadas).toBe(1);
     expect(ped().status).toBe("producao");
@@ -403,6 +404,7 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).mensagem).toMatch(/peças em andamento/);
     expect(peca(mri, "finalizar", { id: "p1" }).mensagem).toMatch(/05 Arquivos abertos/);
     peca(mri, "finalizar", { id: "p1", abertos: true });
+    peca(mri, "finalizar", { id: "p3", abertos: true }); // p3 agora também é aprovada
     f.emails.length = 0;
     expect(peca(mri, "finalizar", { id: "p2", abertos: true }).resultado.pronto).toBe(true);
     expect(ped().status).toBe("aprovada"); // "Pronto para entrega"
