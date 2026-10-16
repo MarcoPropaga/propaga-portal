@@ -98,11 +98,10 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       const ap: string[] = [], rf: string[] = [], cn: string[] = [];
       for (const x of naVez) {
         const dec = porId.get(x.id)!;
+        if (dec.tipo === "cancelada") throw new ErroUsuario("A avaliação da peça é só aprovar ou pedir refação. Para cancelar, fale com o atendimento da Propaga.");
         if (dec.tipo === "refacao" && !dec.itens?.length) throw new ErroUsuario(`Liste os ajustes de "${x.nome}".`);
-        if (dec.tipo === "cancelada" && (dec.nota?.length ?? 0) < 3) throw new ErroUsuario(`Justifique o cancelamento de "${x.nome}".`);
         ultima(x).decisao = { tipo: dec.tipo, itens: dec.tipo === "refacao" ? dec.itens : undefined, nota: dec.nota || undefined, por: u.nome, em: agora };
         if (dec.tipo === "aprovada") { mover(x, "criativo", "final"); log(x, `Aprovada · relatório: concluída · ${cri} prepara o arquivo final`); ap.push(x.nome); }
-        if (dec.tipo === "cancelada") { mover(x, "encerrada"); log(x, "Cancelada · relatório: 50% · peça encerrada"); cn.push(`${x.nome} (${dec.nota})`); }
         if (dec.tipo === "refacao") { mover(x, "triagem"); log(x, `Refação pedida (${rodadas}ª)${rodadas > MAX_RODADAS ? " · sujeita a +30%" : ""}`); rf.push(`${x.nome}: ${dec.itens!.join("; ")}`); }
       }
       rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões), ${cn.length} cancelada(s)`;

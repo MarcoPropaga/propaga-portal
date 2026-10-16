@@ -155,7 +155,6 @@ function Visualizador({ ped, pecas, inicio, papel, rascunho, setRascunho, onFech
               <div className="flex flex-wrap gap-2">
                 <Botao type="button" className="!bg-[#1E7047] !px-3 !text-white" aria-pressed={r?.tipo === "aprovada"} onClick={() => escolher("aprovada")}>{r?.tipo === "aprovada" ? "✓ " : ""}Aprovar</Botao>
                 <Botao type="button" variante="linha" className="!border-alerta-700 !px-3 !text-alerta-700" aria-pressed={r?.tipo === "refacao"} onClick={() => escolher("refacao")}>{r?.tipo === "refacao" ? "✓ " : ""}Pedir refação</Botao>
-                <Botao type="button" variante="discreto" className="!px-3" aria-pressed={r?.tipo === "cancelada"} onClick={() => escolher("cancelada")}>{r?.tipo === "cancelada" ? "✓ " : ""}Cancelar</Botao>
               </div>
               {r && r.tipo !== "aprovada" && (
                 <div className="grid gap-2">
