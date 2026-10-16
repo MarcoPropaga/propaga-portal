@@ -23,6 +23,7 @@ const ITENS = [
   { href: "/contrato/", rotulo: "Contrato", papeis: [...VE_CONTRATO, "criativo"] as string[] },
   { href: "/arquivos/", rotulo: "Arquivos no Drive", papeis: VE_ARQUIVOS as string[] },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
+  { href: "/admin/rodada-de-teste/", rotulo: "Arquivar rodada de testes", papeis: ["admin"] },
   { href: "/ajuda/", rotulo: "Ajuda" },
 ];
 
