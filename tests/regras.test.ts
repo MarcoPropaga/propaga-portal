@@ -62,13 +62,9 @@ describe("fluxo do pedido (decisão de 03/10: sem aceite do cliente)", () => {
     expect(aplicar("registrarPagamento", "faturada", "financeiro_propaga", ctx)).toBe("paga");
     expect(acoesDisponiveis("apresentacao", "solicitante", ctx)).toEqual([]);
   });
-  it("cancelar o pedido inteiro: solicitante e atendimento só antes do aceite; depois, só o admin", () => {
-    expect(podeExecutar("cancelar", "enviada", "solicitante", ctx)).toBe(true);
-    expect(podeExecutar("cancelar", "enviada", "atendimento", ctx)).toBe(true);
-    expect(podeExecutar("cancelar", "producao", "solicitante", ctx)).toBe(false);
-    expect(podeExecutar("cancelar", "apresentacao", "solicitante", ctx)).toBe(false);
-    expect(podeExecutar("cancelar", "aprovada", "admin", ctx)).toBe(true);
-    expect(podeExecutar("cancelar", "entregue", "admin", ctx)).toBe(false);
+  it("cancelar o pedido não existe no portal (fica só no contrato)", () => {
+    for (const st of ["enviada", "producao", "apresentacao", "aprovada"] as const)
+      for (const papel of ["solicitante", "atendimento", "admin"] as const) expect(podeExecutar("cancelar", st, papel, ctx)).toBe(false);
   });
   it("bloqueia ação fora do perfil", () => {
     expect(() => aplicar("faturar", "entregue", "solicitante", ctx)).toThrow();

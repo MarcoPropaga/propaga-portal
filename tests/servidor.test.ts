@@ -244,11 +244,9 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(ped().status).toBe("enviada");
   });
 
-  it("cancelamento exige motivo e avisa solicitante e atendimento", () => {
-    expect(acao(deb, "cancelar").mensagem).toMatch(/motivo/);
-    acao(deb, "cancelar", { nota: "Campanha adiada." });
-    expect(ped().status).toBe("cancelada");
-    expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
+  it("cancelar o pedido não existe no portal (fica só no contrato)", () => {
+    expect(acao(deb, "cancelar", { nota: "Campanha adiada." }).status).toBe("erro");
+    expect(ped().status).not.toBe("cancelada");
   });
 
 

@@ -159,7 +159,6 @@ function Visualizador({ ped, pecas, inicio, papel, rascunho, setRascunho, onFech
               {r && r.tipo !== "aprovada" && (
                 <div className="grid gap-2">
                   {r.tipo === "refacao" && extra && <Nota cor="alerta"><b>Esta é a {(ped.rodadas || 0) + 1}ª refação.</b> As {MAX_RODADAS} incluídas já foram usadas: edições diferentes das pedidas antes acrescentam 30% ao valor da peça.</Nota>}
-                  {r.tipo === "cancelada" && <Nota cor="cinza"><b>Atenção:</b> a peça já foi apresentada. Cancelada, será cobrado 50% do seu valor.</Nota>}
                   <label htmlFor="txt" className="text-sm font-semibold">{r.tipo === "refacao" ? "Ajustes, um por linha" : "Justificativa do cancelamento"}</label>
                   <textarea id="txt" rows={5} value={texto} onChange={(e) => setTexto(e.target.value)} className={cx}
                     placeholder={r.tipo === "refacao" ? "1. Aumentar o título\n2. Trocar a foto do capacete" : "Ex.: a campanha foi suspensa."} aria-describedby={erro ? "txt-e" : undefined} />
@@ -240,7 +239,7 @@ function Conteudo() {
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">{texto}</p>
         <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
-          {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", "Débora aprova, pede refação ou cancela", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
+          {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", "Débora aprova ou pede refação", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
             <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
         </ol>
@@ -291,7 +290,6 @@ function Conteudo() {
               ) : abaAtual.t === "ajustar" ? (
                 <div className="flex flex-wrap gap-3">
                   <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Editar e reenviar à Débora</a>
-                  <Botao variante="linha" onClick={() => { setAcaoAberta("cancelar"); setAbrindo(pd.protocolo); }}>Cancelar solicitação</Botao>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3">
@@ -321,7 +319,7 @@ function Conteudo() {
 
         <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">
           As peças ficam no Drive compartilhado da Propaga: versões em <b>03 Provas</b>, arquivos finais em <b>04 Aprovados</b>{papel !== "solicitante" && <>, arquivos abertos em <b>05 Arquivos abertos</b></>}. Para ver a pré-visualização aqui, entre no Google com a conta que tem acesso ao Drive.
-          {papel !== "criativo" && "Relatório: aprovada = concluída · cancelada após apresentada = 50% do valor · a partir da 3ª refação, edições novas = +30%."}
+          {papel !== "criativo" && "Relatório: aprovada = concluída · a partir da 3ª refação, edições novas = +30%."}
         </p>
       </div>
 
@@ -445,8 +443,7 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
       <p><b>{pd.protocolo}</b> · {pd.titulo}</p>
       {ap.length > 0 && <div><b className="text-[#1E7047]">Aprovadas ({ap.length}) · entram no relatório como concluídas</b><ul className="list-disc pl-5">{ap.map((x) => <li key={x.id}>{x.nome}</li>)}</ul></div>}
       {rf.length > 0 && <div><b className="text-alerta-700">Refação ({rf.length}){(pd.rodadas || 0) >= MAX_RODADAS ? " · sujeita a +30%" : ""}</b><ul className="list-disc pl-5">{rf.map((x) => <li key={x.id}>{x.nome}: {rasc[x.id].itens?.join("; ")}</li>)}</ul></div>}
-      {cn.length > 0 && <div><b>Canceladas ({cn.length}) · cobrança de 50%</b><ul className="list-disc pl-5">{cn.map((x) => <li key={x.id}>{x.nome}: {rasc[x.id].nota}</li>)}</ul></div>}
-      <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">O relatório é atualizado na hora. Aprovadas e canceladas seguem direto para o criativo; as refações passam pelo Marcelo.</p>
+      <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">O relatório é atualizado na hora. Aprovadas seguem direto para o criativo; as refações passam pelo Marcelo.</p>
       {rodape("Enviar avaliação", async () => {
         const ok = await executar({ acao: "avaliar", protocolo: pd.protocolo, decisoes: naVez.map((x) => ({ id: x.id, tipo: rasc[x.id].tipo, itens: rasc[x.id].itens, nota: rasc[x.id].nota })) }, "Avaliação enviada.");
         if (ok === true) limpar(naVez.map((x) => x.id)); else if (typeof ok === "string") setErro(ok);

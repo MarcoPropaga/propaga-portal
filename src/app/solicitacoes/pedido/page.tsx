@@ -101,11 +101,10 @@ function Conteudo() {
         )}
         {publicando && <FormPublicar pedido={pedido} onFechar={() => setPublicando(false)} />}
         {acao && <FormAcao acao={acao} pedido={pedido} onFechar={() => setAcao(null)} />}
-        {!publicando && !acao && (podeCancelar || podePublicar) && (
+        {!publicando && !acao && podePublicar && (
           <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Atalhos do administrador">
             <span className="mr-auto text-sm text-gray-600">Atalhos do administrador</span>
             {podePublicar && <Botao variante="discreto" onClick={() => setPublicando(true)}>Publicar peças direto para a Débora</Botao>}
-            {podeCancelar && <Botao variante="discreto" onClick={() => setAcao("cancelar")}>Cancelar pedido</Botao>}
           </section>
         )}
 

@@ -17,9 +17,9 @@ const AJUDA: Partial<Record<Acao, string>> = {
   trocarCriativo: "O pedido passa para o criativo escolhido, que recebe um e-mail. As peças já concluídas continuam no relatório de quem as concluiu.",
   aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e o criativo escolhido recebe o job para criar as peças.",
   entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e a Débora e o Financeiro da Propaga são avisados.",
-  faturar: "Registre o faturamento (ex.: número da nota fiscal). Pedido cancelado depois de apresentado é faturado com 50% do valor das peças canceladas.",
+  faturar: "Registre o faturamento (ex.: número da nota fiscal).",
   registrarPagamento: "Registre o recebimento do pagamento.",
-  cancelar: "O cancelamento encerra o pedido inteiro. Informe o motivo.",
+  cancelar: "",
 };
 const cx = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
 
@@ -78,9 +78,6 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
     <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-marca-500 bg-white p-4 md:p-5" aria-labelledby={`${id}-t`}>
       <h3 id={`${id}-t`} className="form-acao-titulo text-base">{REGRAS[acao].rotulo}</h3>
       {AJUDA[acao] && <p className="text-sm text-gray-600">{AJUDA[acao]}</p>}
-      {acao === "cancelar" && (pedido.versao || 0) > 0 && (
-        <p className="rounded border-l-4 border-alerta-700 bg-alerta-100 px-3 py-2 text-sm leading-relaxed"><b>Atenção:</b> este pedido já teve peças apresentadas. Cancelado, será cobrado <b>50% do seu valor</b>.</p>
-      )}
       {acao === "aceitarPedido" && <>
         <fieldset className="grid gap-3 sm:grid-cols-3">
           <legend className="mb-2 text-sm font-semibold">Cronograma</legend>
