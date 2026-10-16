@@ -65,6 +65,11 @@ export class Firestore {
     return json(this.p.http(`${this.base}:commit`, "post", { writes }), "gravar");
   }
 
+  /** Remove documentos. Só é usado depois de copiar o conteúdo para o arquivo (ver arquivo.ts). */
+  remover(caminhos: string[]) {
+    return json(this.p.http(`${this.base}:commit`, "post", { writes: caminhos.map((c) => ({ delete: `${this.raiz}/${c}` })) }), "remover");
+  }
+
   /** Lista todos os documentos de uma coleção pequena (ex.: usuarios). */
   listar(colecao: string): Doc[] {
     const docs: Doc[] = [];

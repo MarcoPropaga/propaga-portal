@@ -19,6 +19,7 @@ function fake() {
       if (url.includes("firestore.googleapis.com")) {
         if (url.endsWith(":commit")) {
           for (const w of corpo.writes) {
+            if (w.delete) { docs.delete(w.delete.replace(raiz, "")); continue; }
             const nome = w.update.name.replace(raiz, "");
             const atual = docs.get(nome);
             if (w.currentDocument?.updateTime && atual?.updateTime !== w.currentDocument.updateTime) return r(409, { error: "precondition" });
@@ -727,5 +728,56 @@ describe("serviço fora da tabela do criativo: proposta do criativo, aprovação
     expect(t.itens.find((i: any) => i.id === "canva")).toMatchObject({ adaptacao: null, nova: 50 });
     expect(t.itens.find((i: any) => i.id === "cartao-5")).toMatchObject({ adaptacao: 20, nova: null });
     expect(t.itens.find((i: any) => i.id === "cartao-1")).toMatchObject({ adaptacao: 10, nova: null });
+  });
+});
+
+describe("arquivar a rodada de testes (fila 'arquivarRodada')", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, mcl: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `a${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo H. Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    const deb = convidar(f.p, { nome: "Débora", email: "marcopropaga7@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    configurarProjeto(f.p);
+    fila("enviar", deb, {
+      titulo: "Teste", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos",
+      itens: [{ cod: "01", variante: 0, qtd: 1, opcao: "4:5" }],
+      drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+    });
+  });
+
+  it("só o admin e só com a palavra ARQUIVAR", () => {
+    expect(fila("arquivarRodada", mcl, { confirmar: "ARQUIVAR" }).status).toBe("erro");
+    expect(fila("arquivarRodada", adm, {}).status).toBe("erro");
+    expect(f.docs.has("clientes/bmlog/solicitacoes/BML-2026-0001")).toBe(true);
+  });
+
+  it("copia para arquivo/, remove o pedido, zera a numeração e mantém usuários e tabela", () => {
+    const r = fila("arquivarRodada", adm, { confirmar: "ARQUIVAR" });
+    expect(r.status).toBe("ok");
+    const rodada = [...f.docs.keys()].find((k) => /^arquivo\/[^/]+$/.test(k))!;
+    expect(f.doc(rodada).itens).toBeGreaterThan(2);
+    const guardados = [...f.docs.keys()].filter((k) => k.startsWith(`${rodada}/itens/`));
+    expect(guardados.some((k) => k.endsWith("clientes~bmlog~solicitacoes~BML-2026-0001"))).toBe(true);
+    expect([...f.docs.keys()].some((k) => k.startsWith("clientes/bmlog/solicitacoes/"))).toBe(false);
+    expect([...f.docs.keys()].some((k) => k.startsWith("clientes/bmlog/valores/"))).toBe(false);
+    expect(f.doc("interno/contadores/protocolos/bmlog-2026").n).toBe(0);
+    expect(f.doc("criativo/tabela").itens).toHaveLength(17);
+    expect(f.docs.has(`usuarios/${mcl}`)).toBe(true);
+  });
+
+  it("sem nada a arquivar, não cria arquivo", () => {
+    fila("arquivarRodada", adm, { confirmar: "ARQUIVAR" });
+    const antes = [...f.docs.keys()].filter((k) => k.startsWith("arquivo/")).length;
+    expect(fila("arquivarRodada", adm, { confirmar: "ARQUIVAR" }).status).toBe("ok");
+    expect([...f.docs.keys()].filter((k) => k.startsWith("arquivo/")).length).toBe(antes);
   });
 });
