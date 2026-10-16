@@ -15,7 +15,7 @@ import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedi
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
-import { ServicosForaTabela } from "@/components/foraTabela";
+import { BotaoEnviarCriadas, ServicosForaTabela } from "@/components/foraTabela";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { CLIENTES } from "@/content/clientes";
@@ -296,7 +296,9 @@ function Conteudo() {
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3">
-                  <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>
+                  {papel === "criativo" && abaAtual.t === "criar"
+                    ? <BotaoEnviarCriadas pd={pd} onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }} />
+                    : <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>}
                   {abaAtual.t === "aceitar" && <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Editar solicitação</a>}
                   {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver pedido completo</a>

@@ -143,7 +143,7 @@ export function mesclarAdicionais(tab: TabelaCriativo, ad?: Partial<AdicionaisCr
   const cx = tab.itens.filter((i) => i.sobConsulta);
   return { ...tab, itens: [...tab.itens.filter((i) => !i.sobConsulta), ...ad.itens, ...cx], mapa: { ...tab.mapa, ...(ad.mapa ?? {}) } };
 }
-export const REGRA_FORA_TABELA = "Serviço que não está na sua tabela: proponha o valor. Com a aprovação da administração da Propaga, ele entra na sua tabela com o valor acordado e vale para os próximos pedidos.";
+export const REGRA_FORA_TABELA = "Serviço que não está na sua tabela: proponha o valor. Aguarde a aprovação da administração da Propaga antes de criar a peça: com ela, o serviço entra na sua tabela com o valor acordado e vale para os próximos pedidos.";
 
 /** Quem vê o quê. A tabela e o contrato da Mariane: só ela e o admin. Os relatórios enviados: ela, a Marisa e o admin. */
 export const VE_TABELA_CRIATIVO = ["criativo", "admin"];
