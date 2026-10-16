@@ -490,7 +490,7 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
   it("publica a tabela com a sugestão por serviço (Novo → Nova criação, Edição → Adaptação)", () => {
     configurarProjeto(f.p);
     const t = f.doc("criativo/tabela");
-    expect(t.itens).toHaveLength(18);
+    expect(t.itens).toHaveLength(17);
     expect(t.mapa["01:0"]).toEqual({ item: "post", coluna: "nova" });
     expect(t.mapa["01:1"]).toEqual({ item: "post", coluna: "adaptacao" });
     expect(t.mapa["49:0"]).toEqual({ item: "complexo", coluna: "nova" });
@@ -698,5 +698,34 @@ describe("serviço fora da tabela do criativo: proposta do criativo, aprovação
     expect(f.doc("criativo/adicionais").propostas[0]).toMatchObject({ status: "recusada", decididoPor: "Marco Antônio" });
     expect(f.doc("criativo/tabela").mapa["49:0"].item).toBe("complexo");
     expect(propor(mri, { valor: 200 }).status).toBe("ok");
+  });
+
+  it("o criativo só cria a peça de serviço fora da tabela depois da aprovação do valor (16/10)", () => {
+    const link = (n: string) => `https://drive.google.com/file/d/${n}/view`;
+    const publicar = (item: number) => fila("peca", mri, { protocolo: "BML-2026-0001", acao: "publicar", pecas: [{ nome: "Peça nova", item, link: link("a") }] });
+    // serviço da tabela (item 1): segue normal
+    expect(publicar(1).status).toBe("ok");
+    // serviço fora da tabela (item 0): bloqueado, mesmo com proposta pendente
+    expect(publicar(0).mensagem).toMatch(/Proponha o valor e aguarde a aprovação/);
+    const id = propor(mri).resultado.id;
+    expect(publicar(0).mensagem).toMatch(/aguarde a aprovação/);
+    // aprovada: libera
+    expect(fila("tabelaCriativo", adm, { acao: "aprovar", id, valor: 230 }).status).toBe("ok");
+    expect(publicar(0).status).toBe("ok");
+  });
+
+  it("proposta recusada não libera a criação da peça", () => {
+    const id = propor(mri).resultado.id;
+    fila("tabelaCriativo", adm, { acao: "recusar", id, motivo: "Valor acima do combinado." });
+    const r = fila("peca", mri, { protocolo: "BML-2026-0001", acao: "publicar", pecas: [{ nome: "Peça nova", item: 0, link: "https://drive.google.com/file/d/a/view" }] });
+    expect(r.mensagem).toMatch(/aguarde a aprovação/);
+  });
+
+  it("tabela de 16/10: PNG incluso (sai da tabela), Canva é nova criação e cartão vai de 2 a 5 alterações", () => {
+    const t = f.doc("criativo/tabela");
+    expect(t.itens.find((i: any) => i.id === "png")).toBeUndefined();
+    expect(t.itens.find((i: any) => i.id === "canva")).toMatchObject({ adaptacao: null, nova: 50 });
+    expect(t.itens.find((i: any) => i.id === "cartao-5")).toMatchObject({ adaptacao: 20, nova: null });
+    expect(t.itens.find((i: any) => i.id === "cartao-1")).toMatchObject({ adaptacao: 10, nova: null });
   });
 });

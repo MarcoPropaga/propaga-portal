@@ -9,6 +9,8 @@ import type { Status } from "@/lib/tipos";
 import { emailAtualizacao, emailResumo } from "./emails";
 import type { Firestore } from "./firestore";
 import { ErroUsuario, type Plataforma } from "./plataforma";
+import { foraDaTabela, chaveServico } from "@/lib/criativo";
+import { tabelaCriativoAtual } from "./criativo";
 import { lerConfig } from "./servidor";
 
 interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
@@ -62,6 +64,15 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       if (!["producao", "apresentacao"].includes(ped.status)) throw new ErroUsuario("Publique as peças depois de aceitar o pedido.");
       // Criativo cria → vai para a revisão do Marcelo; Atendimento/admin podem publicar direto para a Débora.
       const doCriativo = u.papel === "criativo";
+      // Serviço fora da tabela (Marco, 16/10/2026): o criativo só cria a peça depois da aprovação do valor pela Propaga.
+      if (doCriativo) {
+        const tab = tabelaCriativoAtual(fs);
+        for (const n of d.pecas) {
+          const it = n.item != null ? (ped.itens[n.item] as { nome: string; cod?: string; variante?: number } | undefined) : undefined;
+          if (it?.cod != null && it.variante != null && foraDaTabela(tab, chaveServico({ cod: it.cod, variante: it.variante })))
+            throw new ErroUsuario(`"${it.nome}" não está na sua tabela. Proponha o valor e aguarde a aprovação da Propaga antes de criar a peça.`);
+        }
+      }
       const base = pecas.length;
       d.pecas.forEach((n, i) => {
         if (n.item != null && !ped.itens[n.item]) throw new ErroUsuario(`Serviço inválido na peça "${n.nome}".`);

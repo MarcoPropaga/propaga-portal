@@ -10,6 +10,20 @@ import { moeda, useAdicionais, useTabelaCriativo } from "@/lib/usarTabelaCriativ
 const cx = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
 const numero = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
 
+/** Chaves dos serviços do pedido que ainda não têm valor aprovado na tabela do criativo (bloqueiam o envio das peças). */
+export function useServicosForaTabela(pd: PedidoDoc): string[] {
+  const { tab } = useTabelaCriativo();
+  const ad = useAdicionais();
+  if (!tab || !ad) return [];
+  return pd.itens.map((it) => chaveServico(it)).filter((c, i, a) => foraDaTabela(tab, c) && a.indexOf(c) === i);
+}
+
+/** Botão de enviar as peças criadas: fica desativado enquanto houver serviço do pedido sem valor aprovado. */
+export function BotaoEnviarCriadas({ pd, onClick }: { pd: PedidoDoc; onClick: () => void }) {
+  const fora = useServicosForaTabela(pd);
+  return <Botao onClick={onClick} disabled={fora.length > 0} title={fora.length ? "Aguarde a aprovação do valor do serviço fora da tabela." : undefined}>Enviar peças criadas ao Marcelo</Botao>;
+}
+
 export function ServicosForaTabela({ pd }: { pd: PedidoDoc }) {
   const { tab } = useTabelaCriativo();
   const ad = useAdicionais();
