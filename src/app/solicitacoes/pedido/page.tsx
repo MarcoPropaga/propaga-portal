@@ -24,7 +24,7 @@ interface Valores { itens: { unitario: number | null; subtotal: number | null; o
 type Envio = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
 const cx = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
-const ACOES_PECA = ["publicar", "avaliar", "encaminhar", "enviarVersao", "finalizar", "ciente", "liberar", "devolver"];
+const ACOES_PECA = ["publicar", "avaliar", "enviarVersao", "finalizar", "ciente", "liberar", "devolver"];
 const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
 function Conteudo() {

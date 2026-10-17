@@ -64,7 +64,7 @@ export const REGRAS_SENHA: { texto: string; ok: (s: string) => boolean }[] = [
 
 /* Ações sobre um pedido (fila tipo "acao"). Exigências por ação ficam no servidor (acoes.ts). */
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data.");
-export const ACOES = ["aprovarProposta", "ajustarProposta", "recusarProposta", "aceitarPedido", "trocarCriativo", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
+export const ACOES = ["aprovarProposta", "ajustarProposta", "recusarProposta", "devolverDuvida", "aceitarPedido", "trocarCriativo", "entregar", "faturar", "registrarPagamento", "cancelar"] as const;
 export const acaoSchema = z.object({
   protocolo: z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/, "Protocolo inválido."),
   acao: z.enum(ACOES),
@@ -92,13 +92,11 @@ export const pecaAcaoSchema = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("avaliar"), protocolo,
     decisoes: z.array(z.object({ id: idPeca, tipo: z.enum(["aprovada", "refacao", "cancelada"]),
       itens: z.array(z.string().trim().min(2).max(500)).max(30).optional(), nota: z.string().trim().max(2000).optional() })).min(1).max(50) }),
-  z.object({ acao: z.literal("encaminhar"), protocolo, prazo: data,
-    refacoes: z.array(z.object({ id: idPeca, itens: itensRefacao, cobrar30: z.boolean().optional() })).min(1).max(50) }),
   z.object({ acao: z.literal("enviarVersao"), protocolo, id: idPeca, link: linkDrive, feitos: z.number().int().min(0), nota: z.string().trim().max(2000).optional() }),
   z.object({ acao: z.literal("finalizar"), protocolo, id: idPeca,
     abertos: z.literal(true, { message: "Confirme que os arquivos abertos estão na pasta 05 Arquivos abertos." }) }),
   z.object({ acao: z.literal("ciente"), protocolo, id: idPeca }),
-  z.object({ acao: z.literal("liberar"), protocolo, ids: z.array(idPeca).min(1).max(50) }),
+  z.object({ acao: z.literal("liberar"), protocolo, ids: z.array(idPeca).min(1).max(50), cobrar30: z.array(idPeca).max(50).optional() }),
   z.object({ acao: z.literal("devolver"), protocolo, id: idPeca, itens: itensRefacao }),
 ]);
 export type PecaAcaoInput = z.infer<typeof pecaAcaoSchema>;
