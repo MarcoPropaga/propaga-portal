@@ -10,8 +10,8 @@ import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, type PedidoDoc } from "@/components/pedido";
 import { MAX_RODADAS, VE_TAREFAS, type Acao } from "@/lib/fluxo";
-import { hojeSP, somarDiasUteis } from "@/lib/datas";
-import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
+import { hojeSP } from "@/lib/datas";
+import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, refacoesDaPeca, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
@@ -29,7 +29,6 @@ const ATEND: Aba[] = [
   { k: "aceitar", rotulo: "Aceitar pedidos", f: nenhuma, t: "aceitar" },
   { k: "ajustar", rotulo: "Ajustar solicitação", f: nenhuma, t: "ajustar" },
   { k: "revisao", rotulo: "Revisar criativo", f: (p) => p.etapa === "revisao" },
-  { k: "triagem", rotulo: "Orientar refação", f: (p) => p.etapa === "triagem" },
   { k: "entregar", rotulo: "Veiculação/impressão", f: nenhuma, t: "entregar" },
   { k: "criativo", rotulo: "Com o criativo", f: (p) => p.etapa === "criativo" },
   { k: "cliente", rotulo: "Com a Débora", f: (p) => p.etapa === "cliente" },
@@ -57,7 +56,7 @@ const ABAS: Record<string, Aba[]> = {
     { k: "feitas", rotulo: "Concluídas", f: (p) => p.etapa === "concluida" },
   ],
   financeiro_propaga: FIN,
-  admin: [{ k: "propostas", rotulo: "Com a Débora (solicitação)", f: nenhuma, t: "proposta" }, ...ATEND.slice(0, 5), ...FIN, ...ATEND.slice(5)],
+  admin: [{ k: "propostas", rotulo: "Com a Débora (solicitação)", f: nenhuma, t: "proposta" }, ...ATEND.slice(0, 4), ...FIN, ...ATEND.slice(4)],
 };
 const abasDo = (papel: Papel | null) => ABAS[papel ?? ""] ?? ATEND;
 const ACAO_DA_TAREFA: Partial<Record<TarefaPedido, Acao>> = { aceitar: "aceitarPedido", entregar: "entregar", faturar: "faturar", receber: "registrarPagamento" };
@@ -262,7 +261,8 @@ function Conteudo() {
               <span className="text-sm text-gray-600">{pd.unidade} · {["aceitar", "proposta", "ajustar"].includes(abaAtual.t!) ? `desejada ${brData(pd.prazo.desejada)}` : `entrega final ${brData(pd.prazo.final)}`}</span>
             </div>
             {pd.criadoPor && abaAtual.t !== "criar" && <p className="text-sm text-gray-600">Criada por <b>{pd.criadoPor.nome}</b> em nome de {pd.solicitanteNome}{pd.status === "enviada" ? " · aprovada pela Débora" : ""}.</p>}
-            {abaAtual.t === "ajustar" && <AjustePedido protocolo={pd.protocolo} />}
+            {abaAtual.t === "ajustar" && <AjustePedido protocolo={pd.protocolo} acao="ajustarProposta" />}
+            {abaAtual.t === "proposta" && <AjustePedido protocolo={pd.protocolo} acao="devolverDuvida" />}
             {["aceitar", "criar", "proposta", "ajustar"].includes(abaAtual.t!) && (
               <dl className="grid gap-x-3 gap-y-1 text-sm sm:grid-cols-[120px_minmax(0,1fr)]">
                 <dt className="text-gray-600">Solicitante</dt><dd>{pd.solicitanteNome}</dd>
@@ -296,6 +296,7 @@ function Conteudo() {
                   {papel === "criativo" && abaAtual.t === "criar"
                     ? <BotaoEnviarCriadas pd={pd} onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }} />
                     : <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>}
+                  {abaAtual.t === "aceitar" && <Botao variante="linha" onClick={() => { setAcaoAberta("devolverDuvida"); setAbrindo(pd.protocolo); }}>Devolver à Débora (dúvida ou sugestão)</Botao>}
                   {abaAtual.t === "aceitar" && <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Editar solicitação</a>}
                   {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver pedido completo</a>
@@ -346,6 +347,10 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
   executar: (d: Record<string, unknown>, ok: string) => Promise<boolean | string>; ocupado: boolean;
 }) {
   const ehCliente = papel === "solicitante";
+  // +30% (3ª refação em diante): o Marcelo decide ao enviar a nova versão à Débora. Marcado por padrão; desmarque se repete pedido anterior ou corrige erro da Propaga.
+  const [c30, setC30] = useState<Record<string, boolean>>({});
+  const pedeC30 = (x: Peca) => (pd.rodadas || 0) > MAX_RODADAS && refacoesDaPeca(x) > 0;
+  const cobrar30 = (ids: string[]) => ids.filter((id) => { const x = pecas.find((q) => q.id === id)!; return pedeC30(x) && (c30[id] ?? true); });
   const pasta = <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>;
 
   // Admin também avalia (pedidos que ele mesmo abriu ou em nome da Débora), pela aba "Com a Débora".
@@ -365,28 +370,21 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
     </>;
   }
 
-  if (aba === "triagem") return <>
-    <div className="grid gap-2">{pecas.map((x) => { const d = ultimaDecisao(x)!; return (
-      <div key={x.id} className="grid gap-2 rounded border border-gray-200 p-3">
-        <div className="flex flex-wrap items-center gap-3"><button type="button" className="font-semibold underline-offset-4 hover:underline" onClick={() => abrir(pd, pecas, x.id)}>{x.nome} · v{ultima(x).v}</button><Prazo p={x} /></div>
-        <Nota cor="alerta"><b>Débora pediu:</b><Lista itens={d.itens} /></Nota>
-      </div>); })}</div>
-    <div className="flex flex-wrap gap-3"><Botao onClick={() => acao("encaminhar")}>Orientar e encaminhar ao criativo</Botao>{pasta}</div>
-  </>;
-
   if (aba === "revisao" && papel !== "criativo") return <>
     <div className="grid gap-2">{pecas.map((x) => { const v = ultima(x); return (
       <div key={x.id} className="grid gap-2 rounded border border-gray-200 p-3">
         <div className="flex flex-wrap items-center gap-3"><b>{x.nome} · v{v.v}{pd.criativo ? ` · ${pd.criativo.nome.split(" ")[0]}` : ""}</b><Prazo p={x} />{!x.orientacao && <span className="text-xs text-gray-600">primeira versão</span>}</div>
-        {x.orientacao && <Nota><b>Orientação:</b><Lista itens={x.orientacao.itens} /><span className="text-gray-600">O criativo marcou {v.feitos ?? 0} de {x.orientacao.itens.length} como feitos.</span></Nota>}
+        {x.orientacao && <Nota><b>{x.orientacao.por.split(" ")[0]} pediu:</b><Lista itens={x.orientacao.itens} /><span className="text-gray-600">O criativo marcou {v.feitos ?? 0} de {x.orientacao.itens.length} como feitos.</span></Nota>}
         {v.nota && <Nota cor="ok"><b>{pd.criativo?.nome.split(" ")[0] ?? "Criativo"}:</b> {v.nota}</Nota>}
+        {pedeC30(x) && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-marca-700" checked={c30[x.id] ?? true} onChange={(e) => setC30({ ...c30, [x.id]: e.target.checked })} />
+          <span>Edições novas, diferentes das pedidas antes: cobrar +30% no valor desta peça. Desmarque se repete pedido anterior ou corrige erro da Propaga.</span></label>}
         <div className="flex flex-wrap gap-2">
           <Botao variante="discreto" onClick={() => abrir(pd, pecas, x.id)}>Ver versão</Botao>
           <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => acao("devolver", x.id)}>Devolver ao criativo</Botao>
-          <Botao disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: [x.id] }, "Versão enviada à Débora.")}>Enviar à Débora</Botao>
+          <Botao disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: [x.id], cobrar30: cobrar30([x.id]) }, "Versão enviada à Débora.")}>Enviar à Débora</Botao>
         </div>
       </div>); })}</div>
-    {pecas.length > 1 && <Botao className="w-fit" disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: pecas.map((x) => x.id) }, `${pecas.length} peças enviadas à Débora.`)}>Enviar todas à Débora ({pecas.length})</Botao>}
+    {pecas.length > 1 && <Botao className="w-fit" disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: pecas.map((x) => x.id), cobrar30: cobrar30(pecas.map((x) => x.id)) }, `${pecas.length} peças enviadas à Débora.`)}>Enviar todas à Débora ({pecas.length})</Botao>}
   </>;
 
   if (papel === "criativo" && ["refazer", "final"].includes(aba)) return <>
@@ -394,8 +392,8 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
       <div key={x.id} className="grid gap-2 rounded border border-gray-200 p-3">
         <div className="flex flex-wrap items-center gap-3"><button type="button" className="font-semibold underline-offset-4 hover:underline" onClick={() => abrir(pd, pecas, x.id)}>{x.nome} · v{ultima(x).v}</button><Prazo p={x} /></div>
         {x.tarefa === "refazer" && <>
-          <Nota cor="alerta"><b>Débora pediu:</b><Lista itens={d?.itens} /></Nota>
-          <Nota><b>Orientação do Marcelo:</b><Lista itens={x.orientacao?.itens} /></Nota>
+          {!!d?.itens?.length && <Nota cor="alerta"><b>{d.por.split(" ")[0]} pediu:</b><Lista itens={d.itens} /></Nota>}
+          {x.orientacao && x.orientacao.por !== d?.por && <Nota><b>Ajuste do {x.orientacao.por.split(" ")[0]}:</b><Lista itens={x.orientacao.itens} /></Nota>}
           <Botao className="w-fit" onClick={() => acao("enviarVersao", x.id)}>Enviar nova versão ao Marcelo</Botao>
         </>}
         {x.tarefa === "final" && <>
@@ -423,10 +421,6 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
 }) {
   const pecas = pd.pecas ?? [];
   const peca = modal.id ? pecas.find((x) => x.id === modal.id) : undefined;
-  const [prazo, setPrazo] = useState(somarDiasUteis(hojeSP(), 2));
-  const tri = pecas.filter((x) => x.etapa === "triagem");
-  const [orient, setOrient] = useState<Record<string, string>>(() => Object.fromEntries(tri.map((x) => [x.id, (ultimaDecisao(x)?.itens ?? []).join("\n")])));
-  const [c30, setC30] = useState<Record<string, boolean>>(() => Object.fromEntries(tri.map((x) => [x.id, true])));
   const [link, setLink] = useState(""); const [nota, setNota] = useState(""); const [feitos, setFeitos] = useState<boolean[]>(() => (peca?.orientacao?.itens ?? []).map(() => false));
   const [dev, setDev] = useState("");
   const [erro, setErro] = useState("");
@@ -443,30 +437,13 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
       <p><b>{pd.protocolo}</b> · {pd.titulo}</p>
       {ap.length > 0 && <div><b className="text-[#1E7047]">Aprovadas ({ap.length}) · entram no relatório como concluídas</b><ul className="list-disc pl-5">{ap.map((x) => <li key={x.id}>{x.nome}</li>)}</ul></div>}
       {rf.length > 0 && <div><b className="text-alerta-700">Refação ({rf.length}){(pd.rodadas || 0) >= MAX_RODADAS ? " · sujeita a +30%" : ""}</b><ul className="list-disc pl-5">{rf.map((x) => <li key={x.id}>{x.nome}: {rasc[x.id].itens?.join("; ")}</li>)}</ul></div>}
-      <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">O relatório é atualizado na hora. Aprovadas seguem direto para o criativo; as refações passam pelo Marcelo.</p>
+      <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">O relatório é atualizado na hora. Aprovadas e refações seguem direto para o Marcelo e a Mariane, que são avisados.</p>
       {rodape("Enviar avaliação", async () => {
         const ok = await executar({ acao: "avaliar", protocolo: pd.protocolo, decisoes: naVez.map((x) => ({ id: x.id, tipo: rasc[x.id].tipo, itens: rasc[x.id].itens, nota: rasc[x.id].nota })) }, "Avaliação enviada.");
         if (ok === true) limpar(naVez.map((x) => x.id)); else if (typeof ok === "string") setErro(ok);
       })}
     </Modal>;
   }
-
-  if (modal.tipo === "encaminhar") return <Modal titulo="Orientar e encaminhar ao criativo" onFechar={onFechar}>
-    <p><b>{pd.protocolo}</b> · {pd.titulo}</p>
-    {tri.map((x) => <div key={x.id} className="grid gap-2 border-t border-gray-200 pt-3">
-      <b>{x.nome} · v{ultima(x).v}</b>
-      <label htmlFor={`or-${x.id}`} className="text-sm font-semibold">Orientação para o criativo (um ajuste por linha)</label>
-      <textarea id={`or-${x.id}`} rows={4} className={cx} value={orient[x.id] ?? ""} onChange={(e) => setOrient({ ...orient, [x.id]: e.target.value })} />
-      {(pd.rodadas || 0) > MAX_RODADAS && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-marca-700" checked={!!c30[x.id]} onChange={(e) => setC30({ ...c30, [x.id]: e.target.checked })} />
-        <span>Edições novas, diferentes das pedidas antes: cobrar +30% no valor desta peça. Desmarque se repete pedido anterior ou corrige erro da Propaga.</span></label>}
-    </div>)}
-    <div className="grid gap-1.5"><label htmlFor="prazo" className="text-sm font-semibold">Prazo da nova versão</label><input id="prazo" type="date" min={hojeSP()} className={cx} value={prazo} onChange={(e) => setPrazo(e.target.value)} /></div>
-    {rodape("Encaminhar ao criativo", async () => {
-      const refacoes = tri.map((x) => ({ id: x.id, itens: linhasParaItens(orient[x.id] ?? ""), cobrar30: (pd.rodadas || 0) > MAX_RODADAS ? !!c30[x.id] : undefined }));
-      if (refacoes.some((r) => !r.itens.length)) { setErro("Escreva a orientação de cada peça."); return; }
-      const r = await executar({ acao: "encaminhar", protocolo: pd.protocolo, prazo, refacoes }, "Encaminhado ao criativo."); if (typeof r === "string") setErro(r);
-    })}
-  </Modal>;
 
   if (modal.tipo === "enviarVersao" && peca) {
     const itens = peca.orientacao?.itens ?? [];
@@ -502,18 +479,18 @@ export default function Aprovacoes() {
   return <Protegido papeis={VE_TAREFAS}><Suspense><Conteudo /></Suspense></Protegido>;
 }
 
-/** Último pedido de ajuste da Débora (histórico do pedido), para o Marcelo ver o que mudar. */
-function AjustePedido({ protocolo }: { protocolo: string }) {
+/** Último recado entre Débora e Marcelo no pedido: ajuste pedido pela Débora ou dúvida/sugestão do Marcelo. */
+function AjustePedido({ protocolo, acao }: { protocolo: string; acao: "ajustarProposta" | "devolverDuvida" }) {
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
-  const [txt, setTxt] = useState<{ nota: string; nome: string } | null>(null);
+  const [txt, setTxt] = useState<{ nota: string; nome: string; acao: string } | null>(null);
   useEffect(() => {
-    getDocs(query(collection(db(), "clientes", clienteId, "solicitacoes", protocolo, "eventos"), where("acao", "==", "ajustarProposta")))
-      .then((q) => { const e = q.docs.map((d) => d.data() as { nota: string; nome: string; em: { seconds: number } }).sort((a, b) => b.em.seconds - a.em.seconds)[0]; if (e) setTxt(e); })
+    getDocs(query(collection(db(), "clientes", clienteId, "solicitacoes", protocolo, "eventos"), where("acao", "in", ["ajustarProposta", "devolverDuvida"])))
+      .then((q) => { const e = q.docs.map((d) => d.data() as { nota: string; nome: string; acao: string; em: { seconds: number } }).sort((a, b) => b.em.seconds - a.em.seconds)[0]; if (e && e.acao === acao) setTxt(e); })
       .catch(() => {});
-  }, [clienteId, protocolo]);
+  }, [clienteId, protocolo, acao]);
   if (!txt) return null;
-  return <p className="whitespace-pre-wrap rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm"><b>{txt.nome} pediu:</b> {txt.nota}</p>;
+  return <p className="whitespace-pre-wrap rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm"><b>{txt.nome} {acao === "devolverDuvida" ? "perguntou/sugeriu" : "pediu"}:</b> {txt.nota}</p>;
 }
 
 /** Concluir a peça exige confirmar os arquivos abertos na pasta 05 (decisão de 15/10/2026). */

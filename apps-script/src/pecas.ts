@@ -2,8 +2,8 @@
    Grava as peças no próprio documento do pedido (campo `pecas`), com pré-condição de versão. */
 import { CLIENTES } from "@/content/clientes";
 import { MAX_RODADAS, NOME_STATUS } from "@/lib/fluxo";
-import { hojeSP } from "@/lib/datas";
-import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
+import { hojeSP, somarDiasUteis } from "@/lib/datas";
+import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, refacoesDaPeca, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
 import { pecaAcaoSchema } from "@/lib/schemas";
 import type { Status } from "@/lib/tipos";
 import { emailAtualizacao, emailResumo } from "./emails";
@@ -18,12 +18,12 @@ interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; rodadas: number; versao: number;
   itens: { nome: string }[]; pecas?: Peca[]; temPecas?: boolean; criativo?: { uid: string; nome: string } | null;
 }
+const br = (iso: string) => iso.split("-").reverse().join("/");
 type Quem = "solicitante" | "atendimento" | "criativo" | "financeiro_propaga";
 
 const PODE: Record<string, string[]> = {
   publicar: ["criativo", "admin"], // só a Mariane cria; o admin mantém a rota direta para emergência
   avaliar: ["solicitante", "admin"],
-  encaminhar: ["atendimento", "admin"],
   enviarVersao: ["criativo", "atendimento", "admin"],
   finalizar: ["criativo", "atendimento", "admin"],
   ciente: ["criativo", "atendimento", "admin"],
@@ -95,40 +95,26 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       if (faltando.length) throw new ErroUsuario(`Avalie todas as peças antes de enviar: ${faltando.map((x) => x.nome).join(", ")}.`);
       const temRefacao = d.decisoes.some((x) => x.tipo === "refacao");
       if (temRefacao) rodadas++;
-      const ap: string[] = [], rf: string[] = [], cn: string[] = [];
+      const ap: string[] = [], rf: string[] = [];
       for (const x of naVez) {
         const dec = porId.get(x.id)!;
         if (dec.tipo === "cancelada") throw new ErroUsuario("A avaliação da peça é só aprovar ou pedir refação. Para cancelar, fale com o atendimento da Propaga.");
         if (dec.tipo === "refacao" && !dec.itens?.length) throw new ErroUsuario(`Liste os ajustes de "${x.nome}".`);
         ultima(x).decisao = { tipo: dec.tipo, itens: dec.tipo === "refacao" ? dec.itens : undefined, nota: dec.nota || undefined, por: u.nome, em: agora };
         if (dec.tipo === "aprovada") { mover(x, "criativo", "final"); log(x, `Aprovada · relatório: concluída · ${cri} prepara o arquivo final`); ap.push(x.nome); }
-        if (dec.tipo === "refacao") { mover(x, "triagem"); log(x, `Refação pedida (${rodadas}ª)${rodadas > MAX_RODADAS ? " · sujeita a +30%" : ""}`); rf.push(`${x.nome}: ${dec.itens!.join("; ")}`); }
+        if (dec.tipo === "refacao") {
+          // Refação vai direto para a Mariane, com os itens da Débora (prazo padrão: 2 dias úteis); o Marcelo é avisado.
+          x.orientacao = { itens: dec.itens!, prazo: somarDiasUteis(hojeSP(p.agora()), 2), por: u.nome, em: agora };
+          mover(x, "criativo", "refazer");
+          log(x, `Refação pedida (${rodadas}ª) · enviada a ${cri}${rodadas > MAX_RODADAS ? " · sujeita a +30%" : ""}`); rf.push(`${x.nome}: ${dec.itens!.join("; ")}`);
+        }
       }
-      rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões), ${cn.length} cancelada(s)`;
-      const resumo = [ap.length ? `Aprovadas: ${ap.join(", ")}` : "", rf.length ? `Refação:\n${rf.map((t) => `- ${t}`).join("\n")}` : "", cn.length ? `Canceladas (50%): ${cn.join(", ")}` : ""].filter(Boolean).join("\n");
-      // E-mail só para quem recebe a vez: Marcelo (refações) e Mariane (finais; canceladas como aviso).
-      if (rf.length) avisos.push({ quem: ["atendimento"], rotulo: "Refação pedida · oriente o criativo", nota: resumo });
-      if (ap.length || cn.length) avisos.push({ quem: ["criativo"], rotulo: ap.length ? "Peças aprovadas · preparar arquivo final" : "Peça cancelada pela Débora",
-        nota: [ap.length ? `Preparar arquivo final em 04 Aprovados: ${ap.join(", ")}` : "", cn.length ? `Canceladas (interromper, nada a entregar): ${cn.join(", ")}` : ""].filter(Boolean).join("\n") });
-      break;
-    }
-    case "encaminhar": {
-      if (d.prazo < hojeSP(p.agora())) throw new ErroUsuario("O prazo não pode estar no passado.");
-      const naVez = pecas.filter((x) => x.etapa === "triagem");
-      const porId = new Map(d.refacoes.map((x) => [x.id, x]));
-      if (!naVez.length) throw new ErroUsuario("Não há refações para encaminhar.");
-      const cobradas: string[] = [];
-      for (const x of naVez) {
-        const o = porId.get(x.id);
-        if (!o) throw new ErroUsuario(`Inclua a orientação de "${x.nome}".`);
-        x.orientacao = { itens: o.itens, prazo: d.prazo, por: u.nome, em: agora };
-        if (o.cobrar30 && rodadas > MAX_RODADAS) { x.extras30 = (x.extras30 || 0) + 1; cobradas.push(x.nome); log(x, "Refação extra com edições novas: +30% no valor"); }
-        mover(x, "criativo", "refazer");
-        log(x, `Encaminhada a ${cri} · prazo ${d.prazo.split("-").reverse().join("/")}`);
-      }
-      rotuloEvento = `${naVez.length} refação(ões) encaminhada(s) ao criativo`;
-      avisos.push({ quem: ["criativo"], rotulo: "Refação para fazer", nota: naVez.map((x) => `- ${x.nome}: ${x.orientacao!.itens.join("; ")}`).join("\n") + `\nPrazo: ${d.prazo.split("-").reverse().join("/")}` });
-      if (cobradas.length) avisos.push({ quem: ["solicitante"], rotulo: "Refação extra · +30% no valor da peça", nota: cobradas.join(", ") });
+      rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões)`;
+      // Aprovação e refação avisam o Marcelo e a Mariane ao mesmo tempo (decisão de 16/10/2026).
+      if (ap.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Peças aprovadas pela Débora",
+        nota: `Aprovadas: ${ap.join(", ")}\n${cri} prepara o arquivo final em 04 Aprovados e os arquivos abertos em 05 Arquivos abertos.` });
+      if (rf.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Refação pedida pela Débora",
+        nota: `${rf.map((t) => `- ${t}`).join("\n")}\nPrazo sugerido: ${br(somarDiasUteis(hojeSP(p.agora()), 2))}` });
       break;
     }
     case "enviarVersao": {
@@ -164,14 +150,20 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       break;
     }
     case "liberar": {
-      const nomes: string[] = [];
+      const nomes: string[] = [], cobradas: string[] = [];
       for (const id of d.ids) {
         const x = achar(id);
         if (x.etapa !== "revisao") throw new ErroUsuario(`"${x.nome}" não está em revisão.`);
+        // +30% (decisão do Marcelo ao liberar): só a partir da 3ª refação e em peça que veio de refação da Débora.
+        if (d.cobrar30?.includes(id)) {
+          if (rodadas <= MAX_RODADAS || !refacoesDaPeca(x)) throw new ErroUsuario("A cobrança de +30% vale a partir da 3ª refação, em peça que a Débora mandou refazer.");
+          x.extras30 = (x.extras30 || 0) + 1; cobradas.push(x.nome); log(x, "Refação extra com edições novas: +30% no valor");
+        }
         ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo Marcelo e enviada à Débora`); nomes.push(x.nome);
       }
       rotuloEvento = `Nova versão enviada à Débora: ${nomes.join(", ")}`;
       avisos.push({ quem: ["solicitante"], rotulo: "Nova versão para sua aprovação", nota: nomes.map((t) => `- ${t}`).join("\n") });
+      if (cobradas.length) avisos.push({ quem: ["solicitante"], rotulo: "Refação extra · +30% no valor da peça", nota: cobradas.join(", ") });
       break;
     }
     case "devolver": {

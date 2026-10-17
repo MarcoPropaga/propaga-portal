@@ -4,6 +4,7 @@ import { configurarProjeto, convidar, processarFila } from "../apps-script/src/s
 import { resumoDiario } from "../apps-script/src/pecas";
 import { Firestore } from "../apps-script/src/firestore";
 import { CLIENTES } from "@/content/clientes";
+import { situacaoRelatorio } from "@/lib/pecas";
 import type { Plataforma, RespostaHttp } from "../apps-script/src/plataforma";
 
 /* Simula Firestore REST + Identity Toolkit em memória. */
@@ -309,6 +310,22 @@ describe("solicitação criada pelo Marcelo (proposta em nome da Débora)", () =
     expect(f.emails.map((e) => e.para).sort()).toEqual(["contato@mondesign.com.br", "deborabmlog@gmail.com"]);
   });
 
+  it("Marcelo devolve à Débora com dúvida ou sugestão → ela responde na aprovação → volta ao Marcelo", () => {
+    fila("enviar", deb, base); f.emails.length = 0;
+    expect(ped().status).toBe("enviada");
+    expect(acao(deb, "devolverDuvida", { nota: "Posso?" }).mensagem).toMatch(/não está disponível/); // só o atendimento devolve
+    expect(acao(mcl, "devolverDuvida").mensagem).toMatch(/dúvida ou a sugestão/);
+    expect(acao(mcl, "devolverDuvida", { nota: "Podemos trocar o formato 4:5 por 1:1?" }).status).toBe("ok");
+    expect(ped().status).toBe("proposta");
+    expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
+    expect(f.emails[0].html).toContain("Podemos trocar");
+    f.emails.length = 0;
+    expect(acao(deb, "aprovarProposta", { nota: "Pode ser 1:1." }).status).toBe("ok");
+    expect(ped().status).toBe("enviada");
+    expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
+    expect(acao(mcl, "devolverDuvida", { nota: "Outra dúvida" }).status).toBe("ok"); // pode repetir enquanto não aceita
+  });
+
   it("Débora recusa: cancelada sem cobrança; proposta não pode ser editada nem a da Débora depois do aceite", () => {
     fila("enviar", mcl, base);
     expect(acao(deb, "recusarProposta").mensagem).toMatch(/motivo/);
@@ -358,7 +375,7 @@ describe("aprovação por peça (fila 'peca')", () => {
     f.emails.length = 0;
   });
 
-  it("ciclo: publicar → avaliar (aprova, refaz, cancela) → encaminhar → nova versão → revisão → Débora aprova → final → pronto para entrega", () => {
+  it("ciclo: publicar → avaliar (aprova e refaz) → refação direto à Mariane → nova versão → revisão → Débora aprova → final → pronto para entrega", () => {
     expect(peca(deb, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).mensagem).toMatch(/perfil/);
     expect(peca(mcl, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] }).mensagem).toMatch(/perfil/); // só a Mariane cria (admin: emergência)
     expect(peca(adm, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }, { nome: "Post B", item: 0, link: link("b") }, { nome: "Post C", item: 0, link: link("c") }] }).status).toBe("ok");
@@ -372,15 +389,16 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect(peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "refacao", itens: ["Aumentar título", "Trocar foto"] }, { id: "p3", tipo: "aprovada" }] }).status).toBe("ok");
     expect([pc("p1").etapa, pc("p1").tarefa]).toEqual(["criativo", "final"]);   // aprovada vai direto à Mariane
     expect([pc("p3").etapa, pc("p3").tarefa]).toEqual(["criativo", "final"]); // cancelar não existe mais na avaliação
-    expect(pc("p2").etapa).toBe("triagem");                                       // só a refação passa pelo Marcelo
+    expect([pc("p2").etapa, pc("p2").tarefa]).toEqual(["criativo", "refazer"]);   // refação vai direto à Mariane, sem passar pelo Marcelo
+    expect(pc("p2").orientacao).toMatchObject({ itens: ["Aumentar título", "Trocar foto"], por: "Débora" });
     expect(ped().rodadas).toBe(1);
     expect(ped().status).toBe("producao");
-    expect(para()).toEqual(["marcelo@propaga.com", "mariane@propaga.com"]); // só quem recebe a vez
-
+    // aprovação e refação avisam o Marcelo e a Mariane (um e-mail de cada tipo para cada um)
+    expect([...new Set(para())]).toEqual(["marcelo@propaga.com", "mariane@propaga.com"]);
+    expect(f.emails.filter((e) => e.para === "marcelo@propaga.com").map((e) => e.assunto).join("|")).toMatch(/aprovadas|refação/i);
+    expect(situacaoRelatorio(pc("p1")).rotulo).toBe("Concluída · sem refação · arquivo final em preparação");
+    expect(situacaoRelatorio(pc("p2")).chave).toBe("refacao");
     f.emails.length = 0;
-    expect(peca(mcl, "encaminhar", { prazo: "2026-10-07", refacoes: [{ id: "p2", itens: ["Aumentar título", "Foto do caminhão azul"] }] }).status).toBe("ok");
-    expect([pc("p2").etapa, pc("p2").tarefa, pc("p2").orientacao.prazo]).toEqual(["criativo", "refazer", "2026-10-07"]);
-    expect(para()).toEqual(["mariane@propaga.com"]);
 
     expect(peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 1 }).mensagem).toMatch(/Marque todos/);
     expect(peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 2 }).status).toBe("ok");
@@ -392,12 +410,14 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect([pc("p2").etapa, pc("p2").versoes.length, ped().rodadas]).toEqual(["criativo", 2, 1]); // v2 fica marcada como devolvida e é substituída
     peca(mri, "enviarVersao", { id: "p2", link: link("b2"), feitos: 1 });
     f.emails.length = 0;
+    expect(peca(mcl, "liberar", { ids: ["p2"], cobrar30: ["p2"] }).mensagem).toMatch(/3ª refação/); // com 1 refação ainda não há +30%
     expect(peca(mcl, "liberar", { ids: ["p2"] }).status).toBe("ok");
     expect(pc("p2").etapa).toBe("cliente");
     expect(ped().status).toBe("apresentacao");
     expect(para()).toEqual(["deborabmlog@gmail.com"]);
 
     peca(deb, "avaliar", { decisoes: [{ id: "p2", tipo: "aprovada" }] });
+    expect(situacaoRelatorio(pc("p2")).rotulo).toBe("Concluída · 1 refação · arquivo final em preparação"); // observação do relatório na hora da aprovação
     expect(ped().status).toBe("producao"); // aprovadas, mas arquivos finais ainda em preparação
     expect(fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "entregar" }).mensagem).toMatch(/peças em andamento/);
     expect(peca(mri, "finalizar", { id: "p1" }).mensagem).toMatch(/05 Arquivos abertos/);
@@ -438,17 +458,19 @@ describe("aprovação por peça (fila 'peca')", () => {
     expect(resumoDiario(cfg.p, new Firestore(f.p, "propaga-portal"))).toBe(0);
   });
 
-  it("3ª refação: +30% só quando o Marcelo marca; criativo não avalia", () => {
+  it("3ª refação: +30% só quando o Marcelo marca ao enviar à Débora; criativo não avalia", () => {
     peca(adm, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }] });
     expect(peca(mri, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }] }).mensagem).toMatch(/perfil/);
     for (let i = 0; i < 3; i++) {
       peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "refacao", itens: [`Ajuste ${i}`] }] });
-      peca(mcl, "encaminhar", { prazo: "2026-10-07", refacoes: [{ id: "p1", itens: [`Ajuste ${i}`], cobrar30: true }] });
+      expect(peca(mcl, "encaminhar", { prazo: "2026-10-07", refacoes: [{ id: "p1", itens: ["x"] }] }).status).toBe("erro"); // não existe mais
       peca(mri, "enviarVersao", { id: "p1", link: link(`a${i}`), feitos: 1 });
-      peca(mcl, "liberar", { ids: ["p1"] });
+      peca(mcl, "liberar", { ids: ["p1"], cobrar30: i === 2 ? ["p1"] : undefined });
     }
     expect(ped().rodadas).toBe(3);
     expect(pc("p1").extras30).toBe(1); // só a 3ª conta
+    peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }] });
+    expect(situacaoRelatorio(pc("p1")).rotulo).toBe("Concluída · 3 refações · arquivo final em preparação");
   });
 });
 

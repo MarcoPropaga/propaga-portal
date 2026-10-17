@@ -84,6 +84,11 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       rotulo = `Solicitação recusada por ${u.nome} · sem cobrança`;
       avisar = ["atendimento"];
       break;
+    case "devolverDuvida":
+      if (nota.length < 3) throw new ErroUsuario("Escreva a dúvida ou a sugestão para a Débora.");
+      rotulo = `${u.nome} devolveu a solicitação à Débora com dúvida ou sugestão`;
+      avisar = ["solicitante"];
+      break;
     case "aceitarPedido": {
       if (!d.cronograma) throw new ErroUsuario("Informe o cronograma: início, 1ª apresentação e entrega final.");
       if (d.cronograma.inicio < hojeSP(agora)) throw new ErroUsuario("A data de início não pode estar no passado.");

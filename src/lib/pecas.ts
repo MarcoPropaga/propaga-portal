@@ -1,18 +1,18 @@
 /* Aprovação por peça (decisões de Marco, 03/10/2026).
    Fluxo de cada peça:
-     cliente   → Débora avalia (aprovar / refação em itens / cancelar com justificativa)
-     triagem   → só refações: Marcelo orienta, define prazo e decide os +30% (3ª refação em diante)
-     criativo  → Mariane: refazer (refação), preparar o arquivo final (aprovada) ou tomar ciência (cancelada)
-     revisao   → Marcelo revisa a nova versão: libera para a Débora ou devolve à Mariane (ajuste interno)
+     cliente   → Débora avalia (aprovar / refação em itens)
+     criativo  → Mariane: refazer (refação, direto com os itens da Débora) ou preparar o arquivo final (aprovada)
+     revisao   → Marcelo revisa a nova versão: libera para a Débora (e decide os +30% da 3ª refação em diante)
+                 ou devolve à Mariane (ajuste interno)
      concluida → aprovada com arquivo final em 04 Aprovados
-     encerrada → cancelada, ciência registrada
-   Aprovadas e canceladas vão direto para a Mariane (sem passar pela triagem).
-   O relatório muda na hora da avaliação: aprovada = concluída, cancelada = 50%, refação = em refação.
+     encerrada → peça encerrada (só dados antigos)
+   Aprovação e refação vão direto para a Mariane e avisam também o Marcelo (decisão de 16/10/2026).
+   O relatório muda na hora da avaliação: aprovada = concluída (com a observação de refações), refação = em refação.
    Mesmo módulo no navegador e no servidor. */
 import { somarDiasUteis } from "./datas";
 import type { Papel, Status } from "./tipos";
 
-export type EtapaPeca = "cliente" | "triagem" | "criativo" | "revisao" | "concluida" | "encerrada";
+export type EtapaPeca = "cliente" | "criativo" | "revisao" | "concluida" | "encerrada";
 export type TarefaCriativo = "refazer" | "final" | "ciencia";
 export type TipoDecisao = "aprovada" | "refacao" | "cancelada";
 
@@ -33,6 +33,10 @@ export const doCriativo = (p: { criativo?: CriativoRef | null }, uid?: string | 
 /** Link da pasta do pedido para a equipe Propaga: o Drive compartilhado da Propaga quando informado. */
 export const pastaEquipe = (p: { drive: { link: string; propaga?: string } }) => p.drive.propaga || p.drive.link;
 
+/** Quantas refações a Débora pediu nesta peça (observação do relatório). */
+export const refacoesDaPeca = (p: Peca) => p.versoes.filter((v) => v.decisao?.tipo === "refacao").length;
+export const obsRefacoes = (p: Peca) => { const n = refacoesDaPeca(p); return n ? `${n} refaç${n > 1 ? "ões" : "ão"}` : "sem refação"; };
+
 export const ultima = (p: Peca) => p.versoes[p.versoes.length - 1];
 export const ultimaDecisao = (p: Peca): DecisaoPeca | null => [...p.versoes].reverse().find((v) => v.decisao)?.decisao ?? null;
 
@@ -40,7 +44,7 @@ export const ultimaDecisao = (p: Peca): DecisaoPeca | null => [...p.versoes].rev
 export function situacaoRelatorio(p: Peca): { chave: "aguardando" | "concluida" | "refacao" | "cancelada"; rotulo: string } {
   if (p.etapa === "cliente") return { chave: "aguardando", rotulo: "Aguardando aprovação" };
   const d = ultimaDecisao(p);
-  if (d?.tipo === "aprovada") return { chave: "concluida", rotulo: p.etapa === "concluida" ? "Concluída · arquivo final entregue" : "Concluída · arquivo final em preparação" };
+  if (d?.tipo === "aprovada") return { chave: "concluida", rotulo: `Concluída · ${obsRefacoes(p)}${p.etapa === "concluida" ? "" : " · arquivo final em preparação"}` };
   if (d?.tipo === "cancelada") return { chave: "cancelada", rotulo: "Cancelada · 50%" };
   return { chave: "refacao", rotulo: "Em refação" };
 }
@@ -48,14 +52,14 @@ export function situacaoRelatorio(p: Peca): { chave: "aguardando" | "concluida" 
 /** Situação interna (Marcelo e Mariane). */
 export function situacaoInterna(p: Peca): string {
   if (p.etapa === "criativo") return { refazer: "Criativo refaz", final: "Criativo prepara o arquivo final", ciencia: "Criativo: ciência do cancelamento" }[p.tarefa ?? "refazer"];
-  return { cliente: "Com a Débora", triagem: "Marcelo orienta a refação", revisao: "Marcelo revisa", concluida: "Concluída", encerrada: "Cancelada · encerrada" }[p.etapa] ?? "";
+  return { cliente: "Com a Débora", revisao: "Marcelo revisa", concluida: "Concluída", encerrada: "Cancelada · encerrada" }[p.etapa] ?? "";
 }
 
 /** Prazo da etapa atual (AAAA-MM-DD) — base dos lembretes. */
 export function prazoEtapa(p: Peca): string | null {
   const desde = p.desde.slice(0, 10);
   if (p.etapa === "cliente") return somarDiasUteis(desde, 2);
-  if (p.etapa === "triagem" || p.etapa === "revisao") return somarDiasUteis(desde, 1);
+  if (p.etapa === "revisao") return somarDiasUteis(desde, 1);
   if (p.etapa === "criativo") return p.tarefa === "refazer" && p.orientacao?.prazo ? p.orientacao.prazo : somarDiasUteis(desde, 1);
   return null;
 }
@@ -67,7 +71,7 @@ export const aguardaCriacao = (p: { status: string; temPecas?: boolean }) => p.s
 /** A peça pede ação deste perfil? */
 export function pendentePara(papel: Papel | string | null | undefined, p: Peca): boolean {
   if (papel === "solicitante") return p.etapa === "cliente";
-  if (papel === "atendimento" || papel === "admin") return p.etapa === "triagem" || p.etapa === "revisao";
+  if (papel === "atendimento" || papel === "admin") return p.etapa === "revisao";
   if (papel === "criativo") return p.etapa === "criativo";
   return false;
 }

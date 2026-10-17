@@ -13,6 +13,7 @@ import { brData, type PedidoDoc } from "@/components/pedido";
 const AJUDA: Partial<Record<Acao, string>> = {
   aprovarProposta: "A solicitação segue para o Marcelo conferir, definir o cronograma e enviar ao criativo criar as peças.",
   ajustarProposta: "Escreva o que precisa mudar. A solicitação volta para o Marcelo ajustar e reenviar para sua aprovação.",
+  devolverDuvida: "A solicitação volta para a Débora com a sua dúvida ou sugestão. Ela responde na aprovação (ou pede ajuste) e o pedido volta para você.",
   recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o Marcelo.",
   trocarCriativo: "O pedido passa para o criativo escolhido, que recebe um e-mail. As peças já concluídas continuam no relatório de quem as concluiu.",
   aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e o criativo escolhido recebe o job para criar as peças.",
@@ -50,7 +51,7 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
 
   async function confirmar(e: React.FormEvent) {
     e.preventDefault(); setErro("");
-    if (ACOES_COM_MOTIVO.includes(acao) && nota.trim().length < 3) { setErro(acao === "ajustarProposta" ? "Escreva o que precisa ser ajustado." : "Informe o motivo."); return; }
+    if (ACOES_COM_MOTIVO.includes(acao) && nota.trim().length < 3) { setErro(acao === "ajustarProposta" ? "Escreva o que precisa ser ajustado." : acao === "devolverDuvida" ? "Escreva a dúvida ou a sugestão." : "Informe o motivo."); return; }
     const num = (t: string) => Number(t.replace(/\./g, "").replace(",", "."));
     const dados: Record<string, unknown> = { protocolo: pedido.protocolo, acao };
     if (nota.trim()) dados.nota = nota.trim();
@@ -118,7 +119,7 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
         </div>
       )}
       <div className="grid gap-1.5">
-        <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "ajustarProposta" ? "O que ajustar" : ACOES_COM_MOTIVO.includes(acao) ? "Motivo" : acao === "entregar" ? "Onde foi veiculado ou impresso (opcional)" : "Observação (opcional)"}{ACOES_COM_MOTIVO.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
+        <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "ajustarProposta" ? "O que ajustar" : acao === "devolverDuvida" ? "Dúvida ou sugestão para a Débora" : ACOES_COM_MOTIVO.includes(acao) ? "Motivo" : acao === "entregar" ? "Onde foi veiculado ou impresso (opcional)" : "Observação (opcional)"}{ACOES_COM_MOTIVO.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
         <textarea id={`${id}-nota`} rows={3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#C9D7DC] bg-white p-3" />
       </div>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}

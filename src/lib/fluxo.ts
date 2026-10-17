@@ -1,18 +1,18 @@
 /* Etapas do pedido e ações por pedido (decisões de Marco, 03/10/2026 — fluxo único, sem duplicidade).
-   Fluxo: Débora solicita → Marcelo aceita → Mariane cria → Marcelo revisa → Débora avalia cada peça
-   (aprovada / refação / cancelada) → pronto para entrega → Marcelo entrega → Marisa fatura e recebe.
-   Aprovação, refação e cancelamento são POR PEÇA (src/lib/pecas.ts); aqui ficam só as ações do pedido.
+   Fluxo: Débora solicita → Marcelo aceita (ou devolve à Débora com dúvida/sugestão) → Mariane cria → Marcelo revisa →
+   Débora avalia cada peça (aprovada / refação) → pronto para entrega → Marcelo entrega → Marisa fatura e recebe.
+   Aprovação e refação são POR PEÇA (src/lib/pecas.ts); aqui ficam só as ações do pedido.
    As etapas "Em aprovação" e "Pronto para entrega" são calculadas pelas peças.
    O servidor (Apps Script) aplica estas regras; o navegador só mostra os botões permitidos. */
 import type { Papel, Status } from "./tipos";
 
 export type Acao = "aprovarProposta" | "ajustarProposta" | "recusarProposta"
-  | "aceitarPedido" | "trocarCriativo" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
+  | "devolverDuvida" | "aceitarPedido" | "trocarCriativo" | "entregar" | "faturar" | "registrarPagamento" | "cancelar";
 
 /* Solicitação criada pelo Marcelo (decisão de Marco, 05/10/2026): fica em nome da Débora e começa como
    "proposta"; a Débora aprova (vai para o Marcelo aceitar e enviar à Mariane), pede ajuste (volta ao Marcelo)
    ou recusa (encerra sem custo). Ações que exigem justificativa: */
-export const ACOES_COM_MOTIVO: Acao[] = ["ajustarProposta", "recusarProposta", "cancelar"];
+export const ACOES_COM_MOTIVO: Acao[] = ["ajustarProposta", "recusarProposta", "devolverDuvida", "cancelar"];
 /** Quem cria solicitação: a Débora (direto ao Marcelo) e o Marcelo (vai à Débora aprovar). */
 export const VE_NOVA_SOLICITACAO: Papel[] = ["solicitante", "atendimento", "admin"];
 
@@ -43,6 +43,8 @@ export const REGRAS: Record<Acao, Regra> = {
   aprovarProposta: { de: ["proposta"], para: "enviada", papeis: ["solicitante", "admin"], rotulo: "Aprovar solicitação" },
   ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao Marcelo" },
   recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
+  // Marcelo, ao analisar o pedido, tem dúvida ou sugestão: devolve à Débora (volta a "Aguardando aprovação da Débora").
+  devolverDuvida: { de: ["enviada"], para: "proposta", papeis: ["atendimento", "admin"], rotulo: "Devolver à Débora (dúvida ou sugestão)" },
   aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar ao criativo" },
   // Troca de criativo: o status não muda (o servidor mantém o atual).
   trocarCriativo: { de: ["producao", "apresentacao", "aprovada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Trocar o criativo" },
