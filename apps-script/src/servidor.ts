@@ -12,6 +12,7 @@ import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
+import { executarPublicacao } from "./publicacao";
 import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo, tabelaCriativoFila } from "./criativo";
 import { arquivarRodada } from "./arquivo";
 import { Firestore, type Doc } from "./firestore";
@@ -157,6 +158,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       return executarAcao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "peca":
       return executarPeca(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
+    case "publicacao":
+      return executarPublicacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     default:
       throw new ErroUsuario("Esta ação ainda não está disponível.");
   }

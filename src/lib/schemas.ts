@@ -38,7 +38,7 @@ export type SolicitacaoInput = z.infer<typeof solicitacaoSchema>;
 
 /* Convite de usuário (somente admin). */
 export const PAPEIS_CLIENTE = ["solicitante", "financeiro_cliente"] as const;
-export const PAPEIS_PROPAGA = ["atendimento", "financeiro_propaga", "criativo", "admin"] as const;
+export const PAPEIS_PROPAGA = ["atendimento", "financeiro_propaga", "criativo", "midia_social", "admin"] as const;
 
 export const conviteSchema = z
   .object({
@@ -100,3 +100,30 @@ export const pecaAcaoSchema = z.discriminatedUnion("acao", [
   z.object({ acao: z.literal("devolver"), protocolo, id: idPeca, itens: itensRefacao }),
 ]);
 export type PecaAcaoInput = z.infer<typeof pecaAcaoSchema>;
+
+/* Publicação nas redes sociais (fila tipo "publicacao"). Regras de quem pode e em que etapa ficam no servidor (publicacao.ts). */
+const refPub = z.object({ protocolo, id: idPeca });
+const itensPub = z.array(refPub).min(1, "Selecione ao menos uma peça.").max(100);
+const motivoPub = z.string().trim().min(3, "Escreva o motivo.").max(2000);
+export const pubAcaoSchema = z.discriminatedUnion("acao", [
+  z.object({ acao: z.literal("encaminhar"), protocolo, ids: z.array(idPeca).min(1, "Selecione ao menos uma peça.").max(50) }),
+  z.object({ acao: z.literal("receber"), itens: itensPub }),
+  z.object({ acao: z.literal("devolverArte"), protocolo, id: idPeca, motivo: motivoPub }),
+  z.object({ acao: z.literal("enviarCalendario"), itens: z.array(refPub.extend({
+    canais: z.array(z.string().trim().min(1).max(60)).max(10),
+    data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data de publicação."),
+    hora: z.string().regex(/^\d{2}:\d{2}$/, "Informe o horário (HH:MM)."),
+    legenda: z.string().max(3000, "A legenda aceita até 3.000 caracteres."),
+    urgente: z.string().trim().max(500).optional(),
+  })).min(1, "Selecione ao menos uma peça.").max(100) }),
+  z.object({ acao: z.literal("enviarADebora"), itens: itensPub }),
+  z.object({ acao: z.literal("devolverCalendario"), itens: itensPub, motivo: motivoPub }),
+  z.object({ acao: z.literal("avaliarCalendario"), decisoes: z.array(refPub.extend({ tipo: z.enum(["aprovada", "ajuste"]), nota: z.string().trim().max(2000).optional() })).min(1).max(100) }),
+  z.object({ acao: z.literal("preparar"), itens: itensPub }),
+  z.object({ acao: z.literal("agendar"), itens: itensPub }),
+  z.object({ acao: z.literal("publicar"), itens: z.array(refPub.extend({
+    data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Informe a data em que foi publicada."),
+    link: z.string().trim().max(500).optional(), semLink: z.string().trim().max(500).optional(),
+  })).min(1, "Selecione ao menos uma peça.").max(100) }),
+]);
+export type PubAcaoInput = z.infer<typeof pubAcaoSchema>;

@@ -5,6 +5,7 @@ import { MAX_RODADAS, NOME_STATUS } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis } from "@/lib/datas";
 import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, refacoesDaPeca, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
 import { pecaAcaoSchema } from "@/lib/schemas";
+import { NOME_PUB, atrasadaPub, pendentePub, prazoPub } from "@/lib/publicacao";
 import type { Status } from "@/lib/tipos";
 import { emailAtualizacao, emailResumo } from "./emails";
 import type { Firestore } from "./firestore";
@@ -13,13 +14,13 @@ import { foraDaTabela, chaveServico } from "@/lib/criativo";
 import { tabelaCriativoAtual } from "./criativo";
 import { lerConfig } from "./servidor";
 
-interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
-interface Pedido {
+export interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
+export interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; rodadas: number; versao: number;
   itens: { nome: string }[]; pecas?: Peca[]; temPecas?: boolean; criativo?: { uid: string; nome: string } | null;
 }
 const br = (iso: string) => iso.split("-").reverse().join("/");
-type Quem = "solicitante" | "atendimento" | "criativo" | "financeiro_propaga";
+export type Quem = "solicitante" | "atendimento" | "criativo" | "financeiro_propaga" | "midia_social";
 
 const PODE: Record<string, string[]> = {
   publicar: ["criativo", "admin"], // só a Mariane cria; o admin mantém a rota direta para emergência
@@ -199,18 +200,19 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   return { status, pronto };
 }
 
-function usuarios(fs: Firestore) {
+export function usuarios(fs: Firestore) {
   return fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as Omit<Usuario, "uid">) }));
 }
 
-function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: string, ped: Pedido, quem: Quem[], rotulo: string, nota: string, status: Status) {
+export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: string, ped: Pedido, quem: Quem[], rotulo: string, nota: string, status: Status) {
   try {
     const cfg = lerConfig(p);
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
       (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid)) ||
-      (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga")));
+      (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
+      (quem.includes("midia_social") && x.papel === "midia_social")));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
       autor: autor.nome, etapa: NOME_STATUS[status], link: `${cfg.portalUrl}/aprovacoes/?p=${encodeURIComponent(ped.protocolo)}` });
@@ -246,6 +248,8 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
       }
       for (const x of ped.pecas ?? []) if (pendentePara(u.papel, x))
         linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: x.nome, etapa: x.etapa, prazo: prazoEtapa(x), atrasada: atrasada(x, hoje) });
+      for (const x of ped.pecas ?? []) if (x.pub && pendentePub(u.papel, x.pub, ped, u.uid))
+        linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: `${x.nome} · ${NOME_PUB[x.pub.etapa]}`, etapa: x.pub.etapa, prazo: prazoPub(x.pub), atrasada: atrasadaPub(x.pub, hoje) });
     }
     if (!linhas.length) continue;
     const msg = emailResumo({ nome: u.nome.split(" ")[0], linhas, link: `${cfg.portalUrl}/aprovacoes/` });

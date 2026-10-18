@@ -27,7 +27,7 @@ service cloud.firestore {
       allow write: if false;
 
       match /catalogo/{versao} {
-        allow read: if membro(c) && papel() != 'criativo';
+        allow read: if membro(c) && !(papel() in ['criativo', 'midia_social']);
         allow write: if false;
       }
 
@@ -58,10 +58,11 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada']
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada']
+          : papel() == 'midia_social' ? ['publicacao']
           : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo', 'arquivarRodada']
           : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']
-          : ['enviar', 'acao', 'peca'];
+          : ['enviar', 'acao', 'peca', 'publicacao'];
       }
       allow create: if logado() && doisFatores()
         && request.resource.data.uid == request.auth.uid
