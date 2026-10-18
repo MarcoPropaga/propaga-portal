@@ -5,7 +5,7 @@ import { MAX_RODADAS, NOME_STATUS } from "@/lib/fluxo";
 import { hojeSP, somarDiasUteis } from "@/lib/datas";
 import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, refacoesDaPeca, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
 import { pecaAcaoSchema } from "@/lib/schemas";
-import { NOME_PUB, atrasadaPub, pendentePub, prazoPub } from "@/lib/publicacao";
+import { NOME_CAL, arteDe, atrasadaPub, itensDe, pendentePub, prazoPub, type CalItem } from "@/lib/publicacao";
 import type { Status } from "@/lib/tipos";
 import { emailAtualizacao, emailResumo } from "./emails";
 import type { Firestore } from "./firestore";
@@ -141,6 +141,8 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       mover(x, "concluida"); log(x, "Arquivo final em 04 Aprovados · arquivos abertos em 05");
       if (autoria) x.criativo = autoria; else if (!x.criativo && ped.criativo) x.criativo = ped.criativo;
       rotuloEvento = `${x.nome}: arquivo final entregue`;
+      // Peça vinculada a um post do calendário: o Kauan recebe a arte aprovada para publicar.
+      if (x.cal) avisos.push({ quem: ["midia_social"], rotulo: `Arte aprovada e pronta para publicar · ${x.nome}`, nota: "Arquivo final em 04 Aprovados." });
       break;
     }
     case "ciente": {
@@ -248,8 +250,12 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
       }
       for (const x of ped.pecas ?? []) if (pendentePara(u.papel, x))
         linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: x.nome, etapa: x.etapa, prazo: prazoEtapa(x), atrasada: atrasada(x, hoje) });
-      for (const x of ped.pecas ?? []) if (x.pub && pendentePub(u.papel, x.pub, ped, u.uid))
-        linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: `${x.nome} · ${NOME_PUB[x.pub.etapa]}`, etapa: x.pub.etapa, prazo: prazoPub(x.pub), atrasada: atrasadaPub(x.pub, hoje) });
+    }
+    if (u.propaga || u.clienteId) for (const c of Object.keys(CLIENTES)) {
+      if (!u.propaga && u.clienteId !== c) continue;
+      const itens = itensDe(fs.listar(`clientes/${c}/calendarios`).map((x) => x.dados as unknown as { mes: string; itens: CalItem[] }));
+      for (const it of itens) if (pendentePub(u.papel, it, arteDe(it, pedidos.filter((q) => q.c === c))))
+        linhas.push({ protocolo: `Calendário ${it.mes}`, titulo: it.titulo, peca: NOME_CAL[it.etapa], etapa: it.etapa, prazo: prazoPub(it), atrasada: atrasadaPub(it, hoje) });
     }
     if (!linhas.length) continue;
     const msg = emailResumo({ nome: u.nome.split(" ")[0], linhas, link: `${cfg.portalUrl}/aprovacoes/` });

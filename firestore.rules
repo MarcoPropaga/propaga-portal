@@ -42,6 +42,12 @@ service cloud.firestore {
         }
       }
 
+      // Calendário de publicações nas redes sociais: leitura pela equipe Propaga e pela Débora; escrita só pelo servidor.
+      match /calendarios/{mes} {
+        allow read: if membro(c) && papel() in ['solicitante', 'atendimento', 'midia_social', 'admin'];
+        allow write: if false;
+      }
+
       match /valores/{protocolo} {
         // Solicitante: só os valores dos próprios pedidos (Relatórios dela).
         allow read: if veRelatorios(c) || (membro(c) && papel() == 'solicitante'

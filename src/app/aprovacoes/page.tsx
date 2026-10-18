@@ -10,11 +10,12 @@ import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, type PedidoDoc } from "@/components/pedido";
 import { MAX_RODADAS, VE_TAREFAS, type Acao } from "@/lib/fluxo";
+import { arteDe, contarPendenciasCal, itensDe } from "@/lib/publicacao";
 import { hojeSP } from "@/lib/datas";
 import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, refacoesDaPeca, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
-import { useFila, usePedidos } from "@/lib/usarFila";
+import { useCalendarios, useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
-import { PainelPublicacao, abasPubDo, ehAbaPub } from "@/components/publicacao";
+import { PainelPublicacao, abasPubDo, ehAbaPub, type AbaPub } from "@/components/publicacao";
 import { FormAcao } from "@/components/formAcao";
 import { BotaoEnviarCriadas, ServicosForaTabela } from "@/components/foraTabela";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -23,7 +24,7 @@ import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
 
 /* Abas de "Minhas tarefas": `t` = tarefa do pedido (aceitar, criar, entregar, faturar, receber); `f` = filtro de peças. */
-type Aba = { k: string; rotulo: string; f: (p: Peca) => boolean; t?: TarefaPedido };
+type Aba = { k: string; rotulo: string; f: (p: Peca) => boolean; t?: TarefaPedido; cal?: AbaPub["cal"] };
 const nenhuma = () => false;
 const decidida = (t: TipoDecisao) => (p: Peca) => p.etapa !== "cliente" && ultimaDecisao(p)?.tipo === t;
 const ATEND: Aba[] = [
@@ -61,7 +62,7 @@ const ABAS: Record<string, Aba[]> = {
 };
 ABAS.midia_social = [];
 /* Abas de peças/tarefas do pedido + abas da publicação nas redes (src/components/publicacao.tsx). */
-const abasDo = (papel: Papel | null): Aba[] => [...(ABAS[papel ?? ""] ?? ATEND), ...abasPubDo(papel)];
+const abasDo = (papel: Papel | null): Aba[] => [...(ABAS[papel ?? ""] ?? ATEND), ...abasPubDo(papel).map((a) => ({ ...a, f: nenhuma }))];
 const ACAO_DA_TAREFA: Partial<Record<TarefaPedido, Acao>> = { aceitar: "aceitarPedido", entregar: "entregar", faturar: "faturar", receber: "registrarPagamento" };
 
 const SELO: Record<string, string> = {
@@ -191,6 +192,7 @@ function Conteudo() {
   const [filtro, setFiltro] = useState(busca.get("p") ?? "");
   const { lista, erro } = usePedidos();
   const enviar = useFila();
+  const cals = useCalendarios();
   const abas = abasDo(papel);
   const [aba, setAba] = useState<string>(abas[0].k);
   const [vis, setVis] = useState<{ prot: string; ids: string[]; i: number } | null>(null);
@@ -204,13 +206,13 @@ function Conteudo() {
   const pedidos = useMemo(() => todos.filter((p) => p.temPecas), [todos]);
   const [abrindo, setAbrindo] = useState<string | null>(null); // formulário de tarefa de pedido aberto
   const [acaoAberta, setAcaoAberta] = useState<Acao | null>(null);
-  const pendentes = contarPendencias(papel, todos);
+  const pendentes = contarPendencias(papel, todos) + contarPendenciasCal(papel, cals, todos);
   const abaAtual = abas.find((a) => a.k === aba) ?? abas[0];
   const doPedido = (t?: TarefaPedido) => (t ? todos.filter((p) => tarefasDoPedido(papel, p).includes(t)) : []);
   const tarefasPed = doPedido(abaAtual.t);
   const pub = ehAbaPub(abaAtual.k);
   const blocos = abaAtual.t || pub ? [] : pedidos.map((pd) => ({ pd, pecas: (pd.pecas ?? []).filter(abaAtual.f) })).filter((b) => b.pecas.length);
-  const contar = (a: Aba) => (a.t ? doPedido(a.t).length : pedidos.reduce((t, pd) => t + (pd.pecas ?? []).filter(a.f).length, 0));
+  const contar = (a: Aba) => (a.cal ? itensDe(cals).filter((i) => a.cal!(i, arteDe(i, todos))).length : a.t ? doPedido(a.t).length : pedidos.reduce((t, pd) => t + (pd.pecas ?? []).filter(a.f).length, 0));
 
   // Abre na primeira aba com algo pendente.
   const iniciou = useRef(false);
@@ -309,7 +311,7 @@ function Conteudo() {
               )}
           </section>
         ))}
-        {pub && lista && <PainelPublicacao aba={abaAtual} pedidos={todos} ctx={{ papel, enviar: (t, d) => enviar(t, d), onMsg: (tipo, msg) => setAviso({ tipo, msg }) }} />}
+        {pub && lista && <PainelPublicacao aba={abaAtual as AbaPub} cals={cals} ctx={{ papel, pedidos: todos, enviar: (t, d) => enviar(t, d), onMsg: (tipo, msg) => setAviso({ tipo, msg }) }} />}
         {lista && !pub && !blocos.length && !tarefasPed.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
 
         {blocos.map(({ pd, pecas }) => (

@@ -1,35 +1,29 @@
 /* Publicação nas redes sociais (fila tipo "publicacao"). Ver o fluxo em src/lib/publicacao.ts.
-   Grava a trilha em `peca.pub`, no próprio documento do pedido, com pré-condição de versão.
-   Todas as peças de uma chamada são gravadas juntas (tudo ou nada). O portal NÃO publica nem fala com o mLabs. */
+   O calendário fica em clientes/{c}/calendarios/{AAAA-MM}; o vínculo com a peça também é gravado na peça (peca.cal).
+   Tudo o que uma chamada altera é gravado junto (tudo ou nada). O portal NÃO publica nem fala com o mLabs. */
 import { CLIENTES } from "@/content/clientes";
 import { hojeSP } from "@/lib/datas";
 import type { Peca } from "@/lib/pecas";
-import { ultima } from "@/lib/pecas";
-import { erroEntrada, type EtapaPub, type Publicacao } from "@/lib/publicacao";
+import { arteDe, erroItem, mesDe, NOME_MES, type CalItem, type EtapaCal, type RefCal } from "@/lib/publicacao";
 import { pubAcaoSchema } from "@/lib/schemas";
+import { emailAtualizacao } from "./emails";
 import type { Firestore } from "./firestore";
-import { avisar, type Pedido, type Quem, type Usuario } from "./pecas";
+import { usuarios, type Pedido, type Quem, type Usuario } from "./pecas";
+import { lerConfig } from "./servidor";
 import { ErroUsuario, type Plataforma } from "./plataforma";
 
 const PODE: Record<string, string[]> = {
-  encaminhar: ["atendimento", "admin"],
-  receber: ["midia_social", "admin"],
-  devolverArte: ["midia_social", "admin"],
   enviarCalendario: ["midia_social", "admin"],
   enviarADebora: ["atendimento", "admin"],
   devolverCalendario: ["atendimento", "admin"],
   avaliarCalendario: ["solicitante", "admin"],
-  preparar: ["midia_social", "admin"],
+  vincular: ["atendimento", "admin"],
+  devolverArte: ["midia_social", "admin"],
+  reenviarArte: ["atendimento", "admin"],
   agendar: ["midia_social", "admin"],
   publicar: ["midia_social", "admin"],
 };
-const ROTULO: Record<string, string> = {
-  encaminhar: "Arte encaminhada para publicação", receber: "Recebimento confirmado", devolverArte: "Arte devolvida ao Marcelo",
-  enviarCalendario: "Calendário enviado para análise", enviarADebora: "Calendário enviado à Débora", devolverCalendario: "Calendário devolvido ao Kauan",
-  avaliarCalendario: "Calendário avaliado pela Débora", preparar: "Preparação no mLabs iniciada", agendar: "Agendada no mLabs", publicar: "Publicada",
-};
-
-interface Ref { protocolo: string; id: string }
+const br = (d: string) => d.split("-").reverse().join("/");
 
 export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, clienteId: string, bruto: unknown) {
   const r = pubAcaoSchema.safeParse(bruto);
@@ -42,151 +36,185 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
 
   const agora = p.agora().toISOString();
   const hoje = hojeSP(p.agora());
-  const pedidos = new Map<string, { caminho: string; atualizadoEm: string; ped: Pedido; pecas: Peca[]; nomes: string[] }>();
-  const carregar = (protocolo: string) => {
-    let x = pedidos.get(protocolo);
-    if (x) return x;
+
+  // Calendários (um documento por mês) e pedidos tocados por esta chamada.
+  const cals = new Map<string, { caminho: string; existe: boolean; atualizadoEm: string; itens: CalItem[]; mexeu: boolean }>();
+  const calendario = (mes: string) => {
+    let c = cals.get(mes); if (c) return c;
+    const caminho = `clientes/${clienteId}/calendarios/${mes}`;
+    const doc = fs.ler(caminho);
+    c = { caminho, existe: !!doc, atualizadoEm: doc?.atualizadoEm ?? "", itens: doc ? JSON.parse(JSON.stringify((doc.dados as { itens?: CalItem[] }).itens ?? [])) : [], mexeu: false };
+    cals.set(mes, c); return c;
+  };
+  const item = (ref: RefCal) => {
+    const c = calendario(ref.mes); const it = c.itens.find((x) => x.id === ref.id);
+    if (!it) throw new ErroUsuario("Post não encontrado no calendário.");
+    it.mes = ref.mes; c.mexeu = true; return it;
+  };
+  const pedidos = new Map<string, { caminho: string; atualizadoEm: string; ped: Pedido; pecas: Peca[]; mexeu: boolean }>();
+  const pedido = (protocolo: string) => {
+    let x = pedidos.get(protocolo); if (x) return x;
     const caminho = `clientes/${clienteId}/solicitacoes/${protocolo}`;
     const doc = fs.ler(caminho);
     if (!doc) throw new ErroUsuario("Pedido não encontrado.");
     const ped = doc.dados as unknown as Pedido;
-    if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Este pedido não é seu.");
-    x = { caminho, atualizadoEm: doc.atualizadoEm, ped, pecas: JSON.parse(JSON.stringify(ped.pecas ?? [])), nomes: [] };
-    pedidos.set(protocolo, x);
-    return x;
+    x = { caminho, atualizadoEm: doc.atualizadoEm, ped, pecas: JSON.parse(JSON.stringify(ped.pecas ?? [])), mexeu: false };
+    pedidos.set(protocolo, x); return x;
   };
-  const achar = (ref: Ref) => {
-    const pd = carregar(ref.protocolo);
-    const x = pd.pecas.find((q) => q.id === ref.id);
-    if (!x) throw new ErroUsuario("Peça não encontrada.");
-    return { pd, x };
+  const exigir = (it: CalItem, etapas: EtapaCal[], msg: string) => { if (!etapas.includes(it.etapa)) throw new ErroUsuario(`"${it.titulo}": ${msg}`); };
+  const mover = (it: CalItem, etapa: EtapaCal, txt: string) => { it.etapa = etapa; it.desde = agora; it.hist.push({ em: agora, por: u.nome, txt }); };
+  const avisos = new Map<string, { quem: Quem[]; rotulo: string; linhas: string[]; mes: string }>();
+  const avisa = (quem: Quem[], rotulo: string, it: CalItem) => {
+    const k = quem.join(",") + rotulo + it.mes; const a = avisos.get(k) ?? { quem, rotulo, linhas: [], mes: it.mes };
+    a.linhas.push(`- ${br(it.data)} ${it.hora} · ${it.titulo}`); avisos.set(k, a);
   };
-  const exigir = (x: Peca, etapas: EtapaPub[], msg: string) => {
-    if (!x.pub || !etapas.includes(x.pub.etapa)) throw new ErroUsuario(`"${x.nome}": ${msg}`);
-    return x.pub;
-  };
-  const mover = (x: Peca, pb: Publicacao, etapa: EtapaPub, txt: string) => { pb.etapa = etapa; pb.desde = agora; pb.hist.push({ em: agora, por: u.nome, txt }); x.pub = pb; };
-  const avisos = new Map<string, { quem: Quem[]; rotulo: string; nota: string[]; pedidos: Set<string> }>();
-  const avisa = (quem: Quem[], rotulo: string, pecaNome: string, protocolo: string) => {
-    const k = quem.join(",") + rotulo; const a = avisos.get(k) ?? { quem, rotulo, nota: [], pedidos: new Set<string>() };
-    a.nota.push(`- ${pecaNome} (${protocolo})`); a.pedidos.add(protocolo); avisos.set(k, a);
-  };
-  const aqui = (pd: { nomes: string[] }, x: Peca) => pd.nomes.push(x.nome);
+  const todosPedidos = () => fs.listar(`clientes/${clienteId}/solicitacoes`).map((x) => x.dados as unknown as Pedido);
 
   switch (d.acao) {
-    case "encaminhar": {
-      for (const id of d.ids) {
-        const { pd, x } = achar({ protocolo: d.protocolo, id });
-        if (pd.ped.status === "cancelada") throw new ErroUsuario("Este pedido está cancelado.");
-        if (x.etapa !== "concluida") throw new ErroUsuario(`"${x.nome}" ainda não tem arquivo final aprovado.`);
-        if (x.pub && x.pub.etapa !== "devolvida") throw new ErroUsuario(`"${x.nome}" já foi encaminhada para publicação.`);
-        const v = ultima(x);
-        const pb: Publicacao = { etapa: "receber", desde: agora, versao: v.v, link: v.link, entrada: x.pub?.entrada ?? null, ajuste: null, hist: x.pub?.hist ?? [] };
-        mover(x, pb, "receber", `Arte v${v.v} aprovada encaminhada ao Kauan para publicação`);
-        aqui(pd, x); avisa(["midia_social"], "Arte aprovada para publicar", x.nome, d.protocolo);
-      }
-      break;
-    }
-    case "receber": {
-      for (const ref of d.itens) {
-        const { pd, x } = achar(ref); const pb = exigir(x, ["receber"], "esta peça não está aguardando recebimento.");
-        mover(x, pb, "recebida", "Recebimento confirmado"); aqui(pd, x);
-      }
-      break;
-    }
-    case "devolverArte": {
-      const { pd, x } = achar(d); const pb = exigir(x, ["receber", "recebida"], "esta peça não pode ser devolvida agora.");
-      pb.ajuste = { de: "kauan", motivo: d.motivo, por: u.nome, em: agora };
-      mover(x, pb, "devolvida", `Arte devolvida ao Marcelo: ${d.motivo}`); aqui(pd, x);
-      avisa(["atendimento"], `Arte devolvida pelo Kauan · ${d.motivo}`, x.nome, d.protocolo);
-      break;
-    }
     case "enviarCalendario": {
-      for (const it of d.itens) {
-        const { pd, x } = achar(it); const pb = exigir(x, ["recebida", "ajuste"], "esta peça não está aguardando calendário.");
-        const e = { canais: it.canais, data: it.data, hora: it.hora, legenda: it.legenda.trim(), urgente: it.urgente?.trim() || undefined };
-        const erro = erroEntrada(e, hoje, cli.canaisSociais);
-        if (erro) throw new ErroUsuario(`"${x.nome}": ${erro}`);
-        pb.entrada = e; pb.ajuste = null;
-        mover(x, pb, "analise", `Calendário enviado: ${e.canais.join(", ")} · ${e.data.split("-").reverse().join("/")} ${e.hora}${e.urgente ? ` · urgente: ${e.urgente}` : ""}`);
-        aqui(pd, x); avisa(["atendimento"], "Calendário de publicações para analisar", x.nome, it.protocolo);
+      for (const e of d.itens) {
+        const entrada = { titulo: e.titulo.trim(), canais: e.canais, data: e.data, hora: e.hora, legenda: e.legenda.trim(), urgente: e.urgente?.trim() || undefined };
+        const erro = erroItem(entrada, hoje, cli.canaisSociais);
+        if (erro) throw new ErroUsuario(`"${entrada.titulo || "post"}": ${erro}`);
+        if (e.id) {
+          if (!e.mes) throw new ErroUsuario("Post sem mês.");
+          const it = item({ mes: e.mes, id: e.id });
+          exigir(it, ["ajuste"], "só post devolvido para ajuste pode ser corrigido.");
+          if (mesDe(entrada.data) !== e.mes) throw new ErroUsuario(`"${entrada.titulo}": a data deve continuar em ${NOME_MES(e.mes)}. Para outro mês, inclua um novo post.`);
+          Object.assign(it, entrada); it.ajuste = null;
+          mover(it, "analise", `Corrigido e reenviado: ${entrada.canais.join(", ")} · ${br(entrada.data)} ${entrada.hora}`);
+          avisa(["atendimento"], "Calendário de publicações para analisar", it);
+        } else {
+          const mes = mesDe(entrada.data); const c = calendario(mes); c.mexeu = true;
+          const n = c.itens.reduce((m, x) => Math.max(m, parseInt(x.id.slice(1), 10) || 0), 0) + 1;
+          const it: CalItem = { id: `p${n}`, mes, ...entrada, etapa: "analise", desde: agora, ajuste: null, peca: null, publicada: null,
+            hist: [{ em: agora, por: u.nome, txt: `Enviado ao Marcelo: ${entrada.canais.join(", ")} · ${br(entrada.data)} ${entrada.hora}${entrada.urgente ? ` · urgente: ${entrada.urgente}` : ""}` }] };
+          c.itens.push(it);
+          avisa(["atendimento"], "Calendário de publicações para analisar", it);
+        }
       }
       break;
     }
     case "enviarADebora": {
       for (const ref of d.itens) {
-        const { pd, x } = achar(ref); const pb = exigir(x, ["analise"], "esta peça não está em análise.");
-        mover(x, pb, "debora", "Calendário analisado pelo Marcelo e enviado à Débora"); aqui(pd, x);
-        avisa(["solicitante"], "Calendário de publicações para sua aprovação", x.nome, ref.protocolo);
+        const it = item(ref); exigir(it, ["analise"], "este post não está em análise.");
+        mover(it, "debora", "Analisado pelo Marcelo e enviado à Débora");
+        avisa(["solicitante"], "Calendário de publicações para sua aprovação", it);
       }
       break;
     }
     case "devolverCalendario": {
       for (const ref of d.itens) {
-        const { pd, x } = achar(ref); const pb = exigir(x, ["analise"], "esta peça não está em análise.");
-        pb.ajuste = { de: "marcelo", motivo: d.motivo, por: u.nome, em: agora };
-        mover(x, pb, "ajuste", `Calendário devolvido ao Kauan: ${d.motivo}`); aqui(pd, x);
-        avisa(["midia_social"], `Calendário devolvido para ajuste · ${d.motivo}`, x.nome, ref.protocolo);
+        const it = item(ref); exigir(it, ["analise"], "este post não está em análise.");
+        it.ajuste = { de: "marcelo", motivo: d.motivo, por: u.nome, em: agora };
+        mover(it, "ajuste", `Devolvido ao Kauan: ${d.motivo}`);
+        avisa(["midia_social"], `Calendário devolvido para ajuste · ${d.motivo}`, it);
       }
       break;
     }
     case "avaliarCalendario": {
       for (const dec of d.decisoes) {
-        const { pd, x } = achar(dec); const pb = exigir(x, ["debora"], "esta peça não está aguardando a Débora.");
+        const it = item(dec); exigir(it, ["debora"], "este post não está aguardando a Débora.");
         if (dec.tipo === "aprovada") {
-          mover(x, pb, "aprovada", "Aprovada para publicação pela Débora"); pb.ajuste = null;
-          avisa(["atendimento", "midia_social"], "Calendário aprovado pela Débora", x.nome, dec.protocolo);
+          it.ajuste = null; mover(it, "aprovado", "Aprovado pela Débora");
+          avisa(["atendimento", "midia_social"], "Calendário aprovado pela Débora", it);
         } else {
-          if ((dec.nota?.length ?? 0) < 3) throw new ErroUsuario(`"${x.nome}": escreva o ajuste pedido.`);
-          pb.ajuste = { de: "debora", motivo: dec.nota!, por: u.nome, em: agora };
-          mover(x, pb, "analise", `Ajuste pedido pela Débora: ${dec.nota}`);
-          avisa(["atendimento"], `Ajuste pedido pela Débora · ${dec.nota}`, x.nome, dec.protocolo);
+          if ((dec.nota?.length ?? 0) < 3) throw new ErroUsuario(`"${it.titulo}": escreva o ajuste pedido.`);
+          it.ajuste = { de: "debora", motivo: dec.nota!, por: u.nome, em: agora };
+          mover(it, "analise", `Ajuste pedido pela Débora: ${dec.nota}`);
+          avisa(["atendimento"], `Ajuste pedido pela Débora · ${dec.nota}`, it);
         }
-        aqui(pd, x);
       }
       break;
     }
-    case "preparar": {
+    case "vincular": {
+      const it = item(d); exigir(it, ["ajuste", "analise", "debora", "aprovado", "devolvida"], "post já agendado ou publicado não troca de peça.");
+      const pd = pedido(d.protocolo);
+      if (pd.ped.status === "cancelada") throw new ErroUsuario("Este pedido está cancelado.");
+      const x = pd.pecas.find((q) => q.id === d.pecaId);
+      if (!x) throw new ErroUsuario("Peça não encontrada.");
+      if (x.etapa === "encerrada") throw new ErroUsuario(`"${x.nome}" foi cancelada.`);
+      if (x.cal && !(x.cal.mes === d.mes && x.cal.id === d.id)) throw new ErroUsuario(`"${x.nome}" já está vinculada a outro post do calendário.`);
+      if (it.peca && !(it.peca.protocolo === d.protocolo && it.peca.id === d.pecaId)) {
+        const ant = pedido(it.peca.protocolo); const a = ant.pecas.find((q) => q.id === it.peca!.id);
+        if (a) { a.cal = null; ant.mexeu = true; }
+      }
+      x.cal = { mes: d.mes, id: d.id }; pd.mexeu = true;
+      it.peca = { protocolo: d.protocolo, id: d.pecaId, nome: x.nome };
+      it.hist.push({ em: agora, por: u.nome, txt: `Vinculado à peça "${x.nome}" (${d.protocolo})` });
+      if (it.etapa === "devolvida") { it.etapa = "aprovado"; it.desde = agora; }
+      break;
+    }
+    case "devolverArte": {
+      const it = item(d); exigir(it, ["aprovado"], "só post com arte vinculada pode ser devolvido.");
+      if (!arteDe(it, [...todosPedidos()]).pronta) throw new ErroUsuario(`"${it.titulo}": a arte ainda não está pronta.`);
+      it.ajuste = { de: "kauan", motivo: d.motivo, por: u.nome, em: agora };
+      mover(it, "devolvida", `Arte devolvida ao Marcelo: ${d.motivo}`);
+      avisa(["atendimento"], `Arte devolvida pelo Kauan · ${d.motivo}`, it);
+      break;
+    }
+    case "reenviarArte": {
       for (const ref of d.itens) {
-        const { pd, x } = achar(ref); const pb = exigir(x, ["aprovada"], "só peça aprovada pela Débora pode ser preparada.");
-        mover(x, pb, "preparo", "Preparação no mLabs iniciada"); aqui(pd, x);
+        const it = item(ref); exigir(it, ["devolvida"], "este post não está com a arte devolvida.");
+        it.ajuste = null; mover(it, "aprovado", "Arte corrigida e reenviada ao Kauan");
+        avisa(["midia_social"], "Arte corrigida, pronta para publicar", it);
       }
       break;
     }
     case "agendar": {
+      const peds = todosPedidos();
       for (const ref of d.itens) {
-        const { pd, x } = achar(ref); const pb = exigir(x, ["aprovada", "preparo"], "só peça aprovada pela Débora pode ser agendada.");
-        pb.agendadaEm = agora;
-        mover(x, pb, "agendada", `Agendada no mLabs: ${pb.entrada?.canais.join(", ")} · ${pb.entrada?.data.split("-").reverse().join("/")} ${pb.entrada?.hora}`); aqui(pd, x);
+        const it = item(ref); exigir(it, ["aprovado"], "só post com o calendário aprovado pode ser agendado.");
+        if (!it.peca) throw new ErroUsuario(`"${it.titulo}": o Marcelo ainda não vinculou a peça deste post.`);
+        if (!arteDe(it, peds).pronta) throw new ErroUsuario(`"${it.titulo}": a arte ainda não foi aprovada pela Débora com arquivo final.`);
+        it.agendadaEm = agora;
+        mover(it, "agendada", `Agendada no mLabs: ${it.canais.join(", ")} · ${br(it.data)} ${it.hora}`);
       }
       break;
     }
     case "publicar": {
-      for (const it of d.itens) {
-        const { pd, x } = achar(it); const pb = exigir(x, ["agendada"], "só peça agendada pode ser registrada como publicada.");
-        if (it.data > hoje) throw new ErroUsuario(`"${x.nome}": a data de publicação não pode ser futura.`);
-        if (!it.link && (it.semLink?.length ?? 0) < 3) throw new ErroUsuario(`"${x.nome}": cole o link da publicação ou explique por que não há link.`);
-        if (it.link && !/^https:\/\//.test(it.link)) throw new ErroUsuario(`"${x.nome}": o link deve começar com https://.`);
-        pb.publicada = { data: it.data, link: it.link || undefined, semLink: it.link ? undefined : it.semLink, em: agora, por: u.nome };
-        mover(x, pb, "publicada", `Publicada em ${it.data.split("-").reverse().join("/")}${it.link ? ` · ${it.link}` : ` · sem link: ${it.semLink}`}`); aqui(pd, x);
+      for (const e of d.itens) {
+        const it = item(e); exigir(it, ["agendada"], "só post agendado pode ser registrado como publicado.");
+        if (e.data > hoje) throw new ErroUsuario(`"${it.titulo}": a data de publicação não pode ser futura.`);
+        if (!e.link && (e.semLink?.length ?? 0) < 3) throw new ErroUsuario(`"${it.titulo}": cole o link da publicação ou explique por que não há link.`);
+        if (e.link && !/^https:\/\//.test(e.link)) throw new ErroUsuario(`"${it.titulo}": o link deve começar com https://.`);
+        it.publicada = { data: e.data, link: e.link || undefined, semLink: e.link ? undefined : e.semLink, em: agora, por: u.nome };
+        mover(it, "publicada", `Publicada em ${br(e.data)}${e.link ? ` · ${e.link}` : ` · sem link: ${e.semLink}`}`);
       }
       break;
     }
   }
 
-  const gravar = [...pedidos.values()].flatMap((pd) => [
-    { caminho: pd.caminho, dados: { pecas: pd.pecas, atualizadoEm: p.agora() }, mesclar: true, seAtualizadoEm: pd.atualizadoEm },
-    { caminho: `${pd.caminho}/eventos/${Date.parse(agora)}-pub-${d.acao}-${Math.random().toString(36).slice(2, 7)}`,
-      dados: { em: p.agora(), uid: u.uid, nome: u.nome, rotulo: `${ROTULO[d.acao]}: ${pd.nomes.join(", ")}`, nota: "", chave: false, acao: `pub-${d.acao}` } },
-  ]);
-  try { fs.gravar(gravar); }
-  catch { throw new ErroUsuario("Um pedido foi atualizado por outra pessoa agora há pouco. Recarregue a página e tente de novo."); }
-
-  for (const a of avisos.values()) for (const prot of a.pedidos) {
-    const pd = pedidos.get(prot)!;
-    // aviso por pedido, listando só as peças dele
-    const nota = a.nota.filter((l) => l.endsWith(`(${prot})`)).join("\n");
-    avisar(p, fs, u, clienteId, pd.ped, a.quem, a.rotulo, nota, pd.ped.status);
+  const gravar: Parameters<Firestore["gravar"]>[0] = [];
+  for (const c of cals.values()) if (c.mexeu) {
+    const mes = c.caminho.split("/").pop()!;
+    gravar.push(c.existe
+      ? { caminho: c.caminho, dados: { mes, itens: c.itens, atualizadoEm: p.agora() }, mesclar: true, seAtualizadoEm: c.atualizadoEm }
+      : { caminho: c.caminho, dados: { mes, itens: c.itens, atualizadoEm: p.agora() }, seNaoExiste: true });
   }
-  return { ok: true, pecas: [...pedidos.values()].reduce((n, x) => n + x.nomes.length, 0) };
+  for (const x of pedidos.values()) if (x.mexeu)
+    gravar.push({ caminho: x.caminho, dados: { pecas: x.pecas, atualizadoEm: p.agora() }, mesclar: true, seAtualizadoEm: x.atualizadoEm });
+  try { fs.gravar(gravar); }
+  catch { throw new ErroUsuario("O calendário foi atualizado por outra pessoa agora há pouco. Recarregue a página e tente de novo."); }
+
+  for (const a of avisos.values()) avisarCalendario(p, fs, u, clienteId, a.quem, a.mes, a.rotulo, a.linhas.join("\n"));
+  return { ok: true, itens: [...cals.values()].reduce((n, c) => n + (c.mexeu ? 1 : 0), 0) };
+}
+
+/** E-mail de aviso do calendário (não pertence a um pedido). */
+function avisarCalendario(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: string, quem: Quem[], mes: string, rotulo: string, nota: string) {
+  try {
+    const cfg = lerConfig(p);
+    const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
+      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
+      (quem.includes("atendimento") && x.papel === "atendimento") ||
+      (quem.includes("midia_social") && x.papel === "midia_social")));
+    if (!dest.length) return;
+    const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: `Calendário ${mes}`, titulo: `Publicações de ${NOME_MES(mes)}`, rotulo, nota,
+      autor: autor.nome, etapa: "Redes sociais", link: `${cfg.portalUrl}/aprovacoes/` });
+    for (const x of dest) {
+      try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); }
+      catch (e) { p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
+    }
+  } catch (e) { p.log(`Avisos do calendário ${mes} falharam: ${(e as Error).message}`); }
 }

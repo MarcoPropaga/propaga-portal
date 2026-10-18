@@ -6,10 +6,11 @@ import { BotaoVoltar } from "@/components/ui";
 import { NOMES_PAPEIS } from "@/content/clientes";
 import { VE_NOVA_SOLICITACAO, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
 import { contarPendencias } from "@/lib/pecas";
-import { usePedidos } from "@/lib/usarFila";
+import { useCalendarios, usePedidos } from "@/lib/usarFila";
+import { contarPendenciasCal } from "@/lib/publicacao";
 
 const ITENS = [
-  { href: "/inicio/", rotulo: "Início" },
+  { href: "/inicio/", rotulo: "Início", fora: ["midia_social"] },
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: VE_NOVA_SOLICITACAO as string[] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
   { href: "/aprovacoes/", rotulo: "Minhas tarefas", papeis: VE_TAREFAS as string[] },
@@ -24,7 +25,7 @@ const ITENS = [
   { href: "/arquivos/", rotulo: "Arquivos no Drive", papeis: VE_ARQUIVOS as string[] },
   { href: "/admin/usuarios/", rotulo: "Usuários", papeis: ["admin"] },
   { href: "/admin/rodada-de-teste/", rotulo: "Arquivar rodada de testes", papeis: ["admin"] },
-  { href: "/ajuda/", rotulo: "Ajuda" },
+  { href: "/ajuda/", rotulo: "Ajuda", fora: ["midia_social"] },
 ];
 
 /** Estrutura das páginas internas: menu lateral grafite + conteúdo. */
@@ -34,7 +35,8 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   const nomePortal = "Portal MKT B&M Log";
   const veAprov = !!s.papel && (VE_TAREFAS as string[]).includes(s.papel);
   const { lista } = usePedidos(veAprov);
-  const pend = contarPendencias(s.papel, (lista ?? []).filter((p) => s.papel !== "solicitante" || p.solicitanteUid === s.usuario?.uid));
+  const cals = useCalendarios(veAprov);
+  const pend = contarPendencias(s.papel, (lista ?? []).filter((p) => s.papel !== "solicitante" || p.solicitanteUid === s.usuario?.uid)) + contarPendenciasCal(s.papel, cals, lista ?? []);
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">
@@ -45,7 +47,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           <span className="mt-2 block text-sm text-[#A9CBD6]">{nomePortal}</span>
         </div>
         <nav className="flex flex-wrap gap-1 md:grid">
-          {ITENS.filter((i) => !i.papeis || (s.papel && i.papeis.includes(s.papel))).map((i) => {
+          {ITENS.filter((i) => !(i as { fora?: string[] }).fora?.includes(s.papel ?? "") && (!i.papeis || (s.papel && i.papeis.includes(s.papel)))).map((i) => {
             const atual = caminho === i.href || (i.href === "/solicitacoes/" && caminho.startsWith("/solicitacoes/"));
             return <a key={i.href} href={i.href} aria-current={atual ? "page" : undefined}
               className={`flex items-center gap-2 rounded px-3 py-2.5 font-medium ${atual ? "bg-marca-500 text-ink-900" : "hover:bg-white/10"}`}>{i.rotulo}
