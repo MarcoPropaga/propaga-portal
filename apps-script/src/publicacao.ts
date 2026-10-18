@@ -73,7 +73,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
   switch (d.acao) {
     case "enviarCalendario": {
       for (const e of d.itens) {
-        const entrada = { titulo: e.titulo.trim(), canais: e.canais, data: e.data, hora: e.hora, legenda: e.legenda.trim(), urgente: e.urgente?.trim() || undefined };
+        const entrada = { avulso: e.avulso || undefined, titulo: e.titulo.trim(), canais: e.canais, data: e.data, hora: e.hora, legenda: e.legenda.trim(), urgente: e.urgente?.trim() || undefined };
         const erro = erroItem(entrada, hoje, cli.canaisSociais);
         if (erro) throw new ErroUsuario(`"${entrada.titulo || "post"}": ${erro}`);
         if (e.id) {

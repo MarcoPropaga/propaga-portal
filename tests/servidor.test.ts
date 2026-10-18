@@ -932,6 +932,12 @@ describe("publicação nas redes sociais (fila 'publicacao'): calendário do Kau
     expect(item().publicada.semLink).toBe("Story sem link público");
   });
 
+  it("post avulso guarda a etiqueta e segue o mesmo caminho de aprovação", () => {
+    expect(pub(kau, "enviarCalendario", { itens: [post({ avulso: true })] }).status).toBe("ok");
+    expect(item().avulso).toBe(true);
+    expect(item().etapa).toBe("analise");
+  });
+
   it("agendar exige peça vinculada; Débora de outro cliente não vê; resumo diário lista as pendências", () => {
     aprovarCalendario();
     expect(pub(kau, "agendar", { itens: [ref()] }).mensagem).toMatch(/não vinculou/);

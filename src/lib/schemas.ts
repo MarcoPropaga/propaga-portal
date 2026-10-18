@@ -110,7 +110,7 @@ export const pubAcaoSchema = z.discriminatedUnion("acao", [
   // Kauan: novo item (sem mes/id) ou correção de item devolvido (com mes e id).
   z.object({ acao: z.literal("enviarCalendario"), itens: z.array(z.object({
     mes: z.string().regex(/^\d{4}-\d{2}$/).optional(), id: z.string().trim().min(1).max(30).optional(),
-    titulo: z.string().trim().max(300), canais: z.array(z.string().trim().min(1).max(60)).max(10),
+    avulso: z.boolean().optional(), titulo: z.string().trim().max(300), canais: z.array(z.string().trim().min(1).max(60)).max(10),
     data: dataIso("Informe a data de publicação."), hora: z.string().regex(/^\d{2}:\d{2}$/, "Informe o horário (HH:MM)."),
     legenda: z.string().max(3000, "A legenda aceita até 3.000 caracteres."), urgente: z.string().trim().max(500).optional(),
   })).min(1, "Inclua ao menos um post.").max(200) }),
