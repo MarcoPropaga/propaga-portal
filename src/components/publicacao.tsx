@@ -88,6 +88,7 @@ function Resumo({ it, arte, hoje, ctx }: { it: CalItem; arte: Arte; hoje: string
     <div className="grid gap-1 text-sm">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <b>{it.titulo}</b>
+        {it.avulso && <span className="rounded-full bg-[#E8EEF7] px-2.5 py-0.5 text-xs font-semibold text-[#24456B]">Fora do calendário aprovado</span>}
         <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${atrasadaPub(it, hoje) ? "bg-alerta-100 text-alerta-700" : "bg-aviso-100 text-aviso-700"}`}>{NOME_CAL[it.etapa]}{atrasadaPub(it, hoje) ? " · atrasado" : ""}</span>
         {link && <a href={link} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Abrir arquivo final<span className="sr-only"> (nova aba)</span></a>}
       </div>
@@ -212,7 +213,7 @@ function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoj
     if (!lista.length) { setErro("Inclua ao menos um post."); return; }
     for (const r of lista) { const m = erroItem({ ...r, urgente: urgenteCal(r, hoje) ? r.urgente : undefined }, hoje, canais); if (m) { setErro(`"${r.titulo.trim() || "Post sem tema"}": ${m}`); return; } }
     setOcupado(true); setErro("");
-    const itens = lista.map((r) => ({ mes: r.mes, id: r.id, titulo: r.titulo, canais: r.canais, data: r.data, hora: r.hora, legenda: r.legenda, urgente: urgenteCal(r, hoje) ? r.urgente : undefined }));
+    const itens = lista.map((r) => ({ mes: r.mes, id: r.id, avulso: r.avulso || undefined, titulo: r.titulo, canais: r.canais, data: r.data, hora: r.hora, legenda: r.legenda, urgente: urgenteCal(r, hoje) ? r.urgente : undefined }));
     const res = await ctx.enviar("publicacao", { acao: "enviarCalendario", itens });
     setOcupado(false);
     if (res.ok) { setEdits({}); setNovos([vazio()]); ctx.onMsg("ok", "Calendário enviado ao Marcelo."); } else setErro(res.msg);
@@ -241,6 +242,9 @@ function LinhaRascunho({ r, canais, hoje, onChange, onRemover }: { r: Rascunho; 
       <legend className="px-1 text-sm font-semibold">{r.titulo.trim() || "Post"}</legend>
       {r.motivo && <p className="rounded bg-alerta-100 px-3 py-2 text-sm text-alerta-700">Ajuste pedido: {r.motivo}</p>}
       <label className="grid gap-1 text-sm font-semibold" htmlFor={`${id}-t`}>Tema ou orientação do post<input id={`${id}-t`} value={r.titulo} maxLength={300} onChange={(e) => onChange({ ...r, titulo: e.target.value })} className={campo} /></label>
+      <label className="inline-flex min-h-10 items-center gap-2 text-sm">
+        <input type="checkbox" checked={!!r.avulso} onChange={(e) => onChange({ ...r, avulso: e.target.checked })} />Fora do calendário aprovado (pedido avulso da Débora)
+      </label>
       <div className="flex flex-wrap gap-3" role="group" aria-label="Canais">
         {canais.map((c) => (
           <label key={c} className="inline-flex min-h-10 items-center gap-2 text-sm">

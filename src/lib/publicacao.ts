@@ -21,6 +21,8 @@ export interface CalItem {
   id: string; mes: string;
   /** Tema ou orientação do post. */
   titulo: string; canais: string[]; data: string; hora: string; legenda: string; urgente?: string;
+  /** Post incluído depois do calendário do mês (pedido avulso da Débora). Só etiqueta: a aprovação segue o mesmo caminho. */
+  avulso?: boolean;
   etapa: EtapaCal; desde: string; ajuste?: CalAjuste | null;
   /** Peça criada pela Mariane para este post (vínculo feito pelo Marcelo). */
   peca?: { protocolo: string; id: string; nome: string } | null;
@@ -53,7 +55,7 @@ export function semanaDe(data: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export interface CalEntrada { titulo: string; canais: string[]; data: string; hora: string; legenda: string; urgente?: string }
+export interface CalEntrada { avulso?: boolean; titulo: string; canais: string[]; data: string; hora: string; legenda: string; urgente?: string }
 
 /** Valida um item do calendário. Devolve a mensagem de erro ou null. */
 export function erroItem(e: Partial<CalEntrada>, hoje: string, canaisValidos: string[]): string | null {
