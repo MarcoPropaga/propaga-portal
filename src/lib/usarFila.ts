@@ -6,13 +6,14 @@ import { avisarServidor, db } from "@/lib/firebase";
 import { useSessao } from "@/components/auth/sessao";
 import { CLIENTES } from "@/content/clientes";
 import type { PedidoDoc } from "@/components/pedido";
+import type { Calendario } from "@/lib/publicacao";
 
 export type Resposta = { ok: true; resultado?: Record<string, unknown> } | { ok: false; msg: string };
 
 export function useFila() {
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
-  return async function enviar(tipo: "peca" | "acao" | "relatorioCriativo" | "pagarCriativo" | "tabelaCriativo" | "arquivarRodada", dados: unknown): Promise<Resposta> {
+  return async function enviar(tipo: "peca" | "publicacao" | "acao" | "relatorioCriativo" | "pagarCriativo" | "tabelaCriativo" | "arquivarRodada", dados: unknown): Promise<Resposta> {
     try {
       // Firestore não aceita undefined: remove campos vazios antes de gravar.
       const limpo = JSON.parse(JSON.stringify(dados));
@@ -45,4 +46,18 @@ export function usePedidos(ativo = true) {
       () => setErro("Não foi possível carregar os pedidos."));
   }, [ativo, clienteId, s.papel, uid]);
   return { lista, erro, clienteId };
+}
+
+/** Calendário de publicações (Kauan, Marcelo, Débora e admin), em tempo real. */
+export function useCalendarios(ativo = true) {
+  const s = useSessao();
+  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const [cals, setCals] = useState<Calendario[]>([]);
+  const ve = !!s.papel && ["solicitante", "atendimento", "midia_social", "admin"].includes(s.papel);
+  useEffect(() => {
+    if (!ativo || !ve || !s.usuario?.uid) return;
+    return onSnapshot(collection(db(), "clientes", clienteId, "calendarios"),
+      (q) => setCals(q.docs.map((d) => d.data() as Calendario)), () => setCals([]));
+  }, [ativo, ve, clienteId, s.usuario?.uid]);
+  return cals;
 }

@@ -14,6 +14,8 @@ export interface Cliente {
   publicos: { valor: string; rotulo: string }[];
   /** Destino e áudio dos vídeos. O primeiro é o padrão. */
   canaisVideo: string[];
+  /** Canais de publicação em redes sociais (Kauan). Lista de CONFIGURAÇÃO: confirmar com a B&M Log (pendência de 18/10/2026). */
+  canaisSociais: string[];
   audiosVideo: string[];
   /** Pares de serviços com escopo sobreposto: o portal alerta quando os dois estão no mesmo pedido. */
   sobreposicoes: [string, string][];
@@ -41,6 +43,7 @@ export const CLIENTES: Record<string, Cliente> = {
       { valor: "Ambos os públicos", rotulo: "Ambos os públicos" },
     ],
     canaisVideo: ["TVs internas B&M Log", "Redes sociais da B&M Log (solicitação expressa)"],
+    canaisSociais: ["Instagram", "Facebook", "LinkedIn"],
     audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela B&M Log", "Locução (cotada à parte)"],
     sobreposicoes: [["48", "52"], ["37", "39"]],
     // Decisão de 03/10/2026: considerado assinado durante os testes finais; registrar data e PDF depois.
@@ -55,5 +58,6 @@ export const NOMES_PAPEIS: Record<string, string> = {
   atendimento: "Atendimento Propaga",
   financeiro_propaga: "Financeiro Propaga",
   criativo: "Criativo Propaga",
+  midia_social: "Mídias sociais Propaga",
   admin: "Admin Propaga",
 };

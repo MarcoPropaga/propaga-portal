@@ -25,6 +25,8 @@ export interface Peca {
   hist: { em: string; por: string; txt: string }[]; desde: string;
   /** Criativo que fez a última entrega desta peça (entra no relatório dele). */
   criativo?: { uid: string; nome: string } | null;
+  /** Item do calendário de publicações ao qual esta peça está vinculada (src/lib/publicacao.ts). */
+  cal?: { mes: string; id: string } | null;
 }
 
 /** Criativo do pedido (escolhido pelo Marcelo no aceite; decisão de 15/10/2026). Sem criativo definido = qualquer criativo. */
@@ -136,6 +138,6 @@ export function tarefasDoPedido(papel: Papel | string | null | undefined, p: { s
 }
 
 /** Total de pendências de um perfil (tarefas de pedido + peças). */
-export function contarPendencias(papel: Papel | string | null | undefined, pedidos: { status: string; temPecas?: boolean; pecas?: Peca[] }[]): number {
+export function contarPendencias(papel: Papel | string | null | undefined, pedidos: { status: string; temPecas?: boolean; pecas?: Peca[]; solicitanteUid?: string }[]): number {
   return pedidos.reduce((n, p) => n + tarefasDoPedido(papel, p).length + (p.pecas ?? []).filter((x) => pendentePara(papel, x)).length, 0);
 }

@@ -10,10 +10,12 @@ import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, type PedidoDoc } from "@/components/pedido";
 import { MAX_RODADAS, VE_TAREFAS, type Acao } from "@/lib/fluxo";
+import { arteDe, contarPendenciasCal, itensDe } from "@/lib/publicacao";
 import { hojeSP } from "@/lib/datas";
 import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, refacoesDaPeca, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
-import { useFila, usePedidos } from "@/lib/usarFila";
+import { useCalendarios, useFila, usePedidos } from "@/lib/usarFila";
 import { FormPublicar } from "@/components/publicar";
+import { PainelPublicacao, abasPubDo, ehAbaPub, type AbaPub } from "@/components/publicacao";
 import { FormAcao } from "@/components/formAcao";
 import { BotaoEnviarCriadas, ServicosForaTabela } from "@/components/foraTabela";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -22,7 +24,7 @@ import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
 
 /* Abas de "Minhas tarefas": `t` = tarefa do pedido (aceitar, criar, entregar, faturar, receber); `f` = filtro de peças. */
-type Aba = { k: string; rotulo: string; f: (p: Peca) => boolean; t?: TarefaPedido };
+type Aba = { k: string; rotulo: string; f: (p: Peca) => boolean; t?: TarefaPedido; cal?: AbaPub["cal"] };
 const nenhuma = () => false;
 const decidida = (t: TipoDecisao) => (p: Peca) => p.etapa !== "cliente" && ultimaDecisao(p)?.tipo === t;
 const ATEND: Aba[] = [
@@ -58,7 +60,9 @@ const ABAS: Record<string, Aba[]> = {
   financeiro_propaga: FIN,
   admin: [{ k: "propostas", rotulo: "Com a Débora (solicitação)", f: nenhuma, t: "proposta" }, ...ATEND.slice(0, 4), ...FIN, ...ATEND.slice(4)],
 };
-const abasDo = (papel: Papel | null) => ABAS[papel ?? ""] ?? ATEND;
+ABAS.midia_social = [];
+/* Abas de peças/tarefas do pedido + abas da publicação nas redes (src/components/publicacao.tsx). */
+const abasDo = (papel: Papel | null): Aba[] => [...(ABAS[papel ?? ""] ?? ATEND), ...abasPubDo(papel).map((a) => ({ ...a, f: nenhuma }))];
 const ACAO_DA_TAREFA: Partial<Record<TarefaPedido, Acao>> = { aceitar: "aceitarPedido", entregar: "entregar", faturar: "faturar", receber: "registrarPagamento" };
 
 const SELO: Record<string, string> = {
@@ -188,6 +192,7 @@ function Conteudo() {
   const [filtro, setFiltro] = useState(busca.get("p") ?? "");
   const { lista, erro } = usePedidos();
   const enviar = useFila();
+  const cals = useCalendarios();
   const abas = abasDo(papel);
   const [aba, setAba] = useState<string>(abas[0].k);
   const [vis, setVis] = useState<{ prot: string; ids: string[]; i: number } | null>(null);
@@ -201,12 +206,13 @@ function Conteudo() {
   const pedidos = useMemo(() => todos.filter((p) => p.temPecas), [todos]);
   const [abrindo, setAbrindo] = useState<string | null>(null); // formulário de tarefa de pedido aberto
   const [acaoAberta, setAcaoAberta] = useState<Acao | null>(null);
-  const pendentes = contarPendencias(papel, todos);
+  const pendentes = contarPendencias(papel, todos) + contarPendenciasCal(papel, cals, todos);
   const abaAtual = abas.find((a) => a.k === aba) ?? abas[0];
   const doPedido = (t?: TarefaPedido) => (t ? todos.filter((p) => tarefasDoPedido(papel, p).includes(t)) : []);
   const tarefasPed = doPedido(abaAtual.t);
-  const blocos = abaAtual.t ? [] : pedidos.map((pd) => ({ pd, pecas: (pd.pecas ?? []).filter(abaAtual.f) })).filter((b) => b.pecas.length);
-  const contar = (a: Aba) => (a.t ? doPedido(a.t).length : pedidos.reduce((t, pd) => t + (pd.pecas ?? []).filter(a.f).length, 0));
+  const pub = ehAbaPub(abaAtual.k);
+  const blocos = abaAtual.t || pub ? [] : pedidos.map((pd) => ({ pd, pecas: (pd.pecas ?? []).filter(abaAtual.f) })).filter((b) => b.pecas.length);
+  const contar = (a: Aba) => (a.cal ? itensDe(cals).filter((i) => a.cal!(i, arteDe(i, todos))).length : a.t ? doPedido(a.t).length : pedidos.reduce((t, pd) => t + (pd.pecas ?? []).filter(a.f).length, 0));
 
   // Abre na primeira aba com algo pendente.
   const iniciou = useRef(false);
@@ -230,6 +236,7 @@ function Conteudo() {
   const texto = ({
     solicitante: pendentes ? `${pendentes} ${pendentes > 1 ? "itens aguardam" : "item aguarda"} você: solicitações criadas pelo Marcelo para aprovar e peças para avaliar.` : "Nada aguardando você agora.",
     criativo: pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: criar peças, refazer e preparar arquivos finais.` : "Nenhuma tarefa pendente.",
+    midia_social: pendentes ? `${pendentes} ${pendentes > 1 ? "publicações aguardam" : "publicação aguarda"} você: receber artes, montar o calendário e registrar agendamentos e publicações.` : "Nenhuma tarefa pendente.",
     financeiro_propaga: pendentes ? `${pendentes} ${pendentes > 1 ? "pedidos aguardam" : "pedido aguarda"} faturamento ou registro de pagamento.` : "Nenhuma tarefa pendente.",
 } as Record<string, string>)[papel ?? ""] ?? (pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: aceitar pedidos, revisar o criativo, orientar refações e registrar entregas.` : "Nenhuma tarefa pendente.");
 
@@ -237,11 +244,11 @@ function Conteudo() {
     <Casca titulo="Minhas tarefas">
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">{texto}</p>
-        <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
+        {papel !== "midia_social" && <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
           {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", "Débora aprova ou pede refação", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
             <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
-        </ol>
+        </ol>}
         {filtro && <Aviso>Mostrando só o pedido {filtro}. <button type="button" className="font-semibold underline" onClick={() => setFiltro("")}>Ver todos</button></Aviso>}
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {aviso && <Aviso tipo={aviso.tipo}>{aviso.msg}</Aviso>}
@@ -304,7 +311,8 @@ function Conteudo() {
               )}
           </section>
         ))}
-        {lista && !blocos.length && !tarefasPed.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
+        {pub && lista && <PainelPublicacao aba={abaAtual as AbaPub} cals={cals} ctx={{ papel, pedidos: todos, enviar: (t, d) => enviar(t, d), onMsg: (tipo, msg) => setAviso({ tipo, msg }) }} />}
+        {lista && !pub && !blocos.length && !tarefasPed.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
 
         {blocos.map(({ pd, pecas }) => (
           <section key={pd.protocolo} className="grid gap-3 rounded-md border border-gray-200 bg-white p-4" aria-label={pd.protocolo}>

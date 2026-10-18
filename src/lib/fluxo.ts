@@ -99,9 +99,9 @@ export const VE_VALORES_PEDIDO: Papel[] = ["financeiro_cliente", "atendimento", 
 /** Quem vê o menu Contrato (a Solicitante não, decisão de 03/10). */
 export const VE_CONTRATO: Papel[] = ["financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];
 /** Quem vê Arquivos no Drive (os financeiros não, decisão de 03/10). */
-export const VE_ARQUIVOS: Papel[] = ["solicitante", "atendimento", "criativo", "admin"];
+export const VE_ARQUIVOS: Papel[] = ["solicitante", "atendimento", "criativo", "midia_social", "admin"];
 /** Quem usa "Minhas tarefas" (cada pessoa age só ali). */
-export const VE_TAREFAS: Papel[] = ["solicitante", "atendimento", "criativo", "financeiro_propaga", "admin"];
+export const VE_TAREFAS: Papel[] = ["solicitante", "atendimento", "criativo", "midia_social", "financeiro_propaga", "admin"];
 export const VE_APROVACOES = VE_TAREFAS;
 /** Quem vê a tabela de Valores (o Criativo não vê preços). */
 export const VE_VALORES: Papel[] = ["solicitante", "financeiro_cliente", "atendimento", "financeiro_propaga", "admin"];

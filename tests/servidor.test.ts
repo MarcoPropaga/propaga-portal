@@ -803,3 +803,142 @@ describe("arquivar a rodada de testes (fila 'arquivarRodada')", () => {
     expect([...f.docs.keys()].filter((k) => k.startsWith("arquivo/")).length).toBe(antes);
   });
 });
+
+describe("publicação nas redes sociais (fila 'publicacao'): calendário do Kauan → Marcelo → Débora → Mariane → Kauan", () => {
+  let f: ReturnType<typeof fake>;
+  let deb: string, adm: string, mcl: string, mri: string, kau: string, seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `z${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const peca = (uid: string, acao: string, extra: Record<string, unknown> = {}) => fila("peca", uid, { protocolo: "BML-2026-0001", acao, ...extra });
+  const pub = (uid: string, acao: string, extra: Record<string, unknown> = {}) => fila("publicacao", uid, { acao, ...extra });
+  const ped = () => f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+  const cal = () => f.doc("clientes/bmlog/calendarios/2026-10");
+  const item = (id = "p1") => cal().itens.find((x: any) => x.id === id);
+  const ref = (id = "p1") => ({ mes: "2026-10", id });
+  const link = (n: string) => `https://drive.google.com/file/d/${n}/view`;
+  const para = () => f.emails.map((e) => e.para).sort();
+  const post = (extra: Record<string, unknown> = {}) => ({ titulo: "Dia do motorista", canais: ["Instagram", "LinkedIn"], data: "2026-10-12", hora: "09:30", legenda: "Seguimos juntos na logística.", ...extra });
+  beforeEach(() => {
+    f = fake();
+    adm = convidar(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidar(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    mcl = convidar(f.p, { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    mri = convidar(f.p, { nome: "Mariane", email: "mariane@propaga.com", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    kau = convidar(f.p, { nome: "Kauan Guerreiro", email: "kauan@propaga.com", papel: "midia_social" }, { uid: adm, nome: "Marco" }).uid;
+    fila("enviar", deb, {
+      titulo: "Campanha", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos",
+      itens: [{ cod: "01", variante: 0, qtd: 2, opcao: "4:5" }],
+      drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+    });
+    fila("acao", mcl, { protocolo: "BML-2026-0001", acao: "aceitarPedido", cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" }, driveVerificado: true, pastaPropaga: "https://drive.google.com/drive/folders/propaga" });
+    peca(adm, "publicar", { pecas: [{ nome: "Post A", item: 0, link: link("a") }, { nome: "Post B", item: 0, link: link("b") }] });
+    f.emails.length = 0;
+  });
+  const aprovarCalendario = (id = "p1") => { pub(kau, "enviarCalendario", { itens: [post()] }); pub(mcl, "enviarADebora", { itens: [ref(id)] }); pub(deb, "avaliarCalendario", { decisoes: [{ ...ref(id), tipo: "aprovada" }] }); };
+  const aprovarArte = (idPeca = "p1") => { peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "aprovada" }] }); peca(mri, "finalizar", { id: idPeca, abertos: true }); };
+
+  it("ciclo do mês: calendário → Marcelo → Débora → vínculo → arte aprovada → agenda → publica; o pedido não muda de status por isso", () => {
+    // Kauan envia o calendário (validações)
+    expect(pub(mcl, "enviarCalendario", { itens: [post()] }).mensagem).toMatch(/perfil/);
+    expect(pub(kau, "enviarCalendario", { itens: [post({ titulo: " " })] }).mensagem).toMatch(/tema/);
+    expect(pub(kau, "enviarCalendario", { itens: [post({ canais: [] })] }).mensagem).toMatch(/canal/);
+    expect(pub(kau, "enviarCalendario", { itens: [post({ canais: ["TikTok"] })] }).mensagem).toMatch(/Canal inválido/);
+    expect(pub(kau, "enviarCalendario", { itens: [post({ legenda: "  " })] }).mensagem).toMatch(/legenda/);
+    expect(pub(kau, "enviarCalendario", { itens: [post({ data: "2026-10-05" })] }).mensagem).toMatch(/justifique a urgência/);
+    expect(pub(kau, "enviarCalendario", { itens: [post(), post({ titulo: "Urgente", data: "2026-10-05", urgente: "Data comemorativa" })] }).status).toBe("ok");
+    expect(cal().itens.length).toBe(2);
+    expect(item().etapa).toBe("analise");
+    expect(para()).toEqual(["marcelo@propaga.com"]);
+
+    // Marcelo devolve um; Kauan corrige
+    f.emails.length = 0;
+    expect(pub(mcl, "devolverCalendario", { itens: [ref()], motivo: "" }).status).toBe("erro");
+    expect(pub(mcl, "devolverCalendario", { itens: [ref()], motivo: "Trocar o horário" }).status).toBe("ok");
+    expect(item().etapa).toBe("ajuste");
+    expect(para()).toEqual(["kauan@propaga.com"]);
+    expect(pub(kau, "enviarCalendario", { itens: [{ ...post({ hora: "11:00" }), ...ref() }] }).status).toBe("ok");
+    expect(item().hora).toBe("11:00");
+    expect(item("p2").etapa).toBe("analise");
+
+    // Marcelo envia à Débora; só ela (ou admin) aprova
+    f.emails.length = 0;
+    expect(pub(kau, "enviarADebora", { itens: [ref()] }).mensagem).toMatch(/perfil/);
+    expect(pub(mcl, "enviarADebora", { itens: [ref(), ref("p2")] }).status).toBe("ok");
+    expect(para()).toEqual(["deborabmlog@gmail.com"]);
+    expect(pub(mcl, "avaliarCalendario", { decisoes: [{ ...ref(), tipo: "aprovada" }] }).mensagem).toMatch(/perfil/);
+    f.emails.length = 0;
+    expect(pub(deb, "avaliarCalendario", { decisoes: [{ ...ref(), tipo: "ajuste" }] }).mensagem).toMatch(/ajuste pedido/);
+    expect(pub(deb, "avaliarCalendario", { decisoes: [{ ...ref(), tipo: "ajuste", nota: "Legenda mais curta" }, { ...ref("p2"), tipo: "aprovada" }] }).status).toBe("ok");
+    expect(item().etapa).toBe("analise");           // volta ao Marcelo
+    expect(item().ajuste.de).toBe("debora");
+    expect(item("p2").etapa).toBe("aprovado");
+    expect([...new Set(para())]).toEqual(["kauan@propaga.com", "marcelo@propaga.com"]); // aprovado volta a Marcelo e Kauan
+    pub(mcl, "devolverCalendario", { itens: [ref()], motivo: "A Débora pede legenda mais curta" });
+    pub(kau, "enviarCalendario", { itens: [{ ...post({ legenda: "Logística com cuidado." }), ...ref() }] });
+    pub(mcl, "enviarADebora", { itens: [ref()] });
+    expect(pub(deb, "avaliarCalendario", { decisoes: [{ ...ref(), tipo: "aprovada" }] }).status).toBe("ok");
+    expect(item().etapa).toBe("aprovado");
+
+    // Marcelo vincula as peças da Mariane aos posts
+    const statusAntes = ped().status;
+    expect(pub(kau, "vincular", { ...ref(), protocolo: "BML-2026-0001", pecaId: "p1" }).mensagem).toMatch(/perfil/);
+    expect(pub(mcl, "vincular", { ...ref(), protocolo: "BML-2026-0001", pecaId: "zz" }).mensagem).toMatch(/não encontrada/);
+    expect(pub(mcl, "vincular", { ...ref(), protocolo: "BML-2026-0001", pecaId: "p1" }).status).toBe("ok");
+    expect(pub(mcl, "vincular", { ...ref("p2"), protocolo: "BML-2026-0001", pecaId: "p1" }).mensagem).toMatch(/já está vinculada/);
+    expect(item().peca.nome).toBe("Post A");
+    expect(ped().pecas.find((x: any) => x.id === "p1").cal).toEqual({ mes: "2026-10", id: "p1" });
+
+    // Kauan ainda não agenda: arte não aprovada
+    expect(pub(kau, "agendar", { itens: [ref()] }).mensagem).toMatch(/ainda não foi aprovada/);
+    // Débora aprova a arte; Mariane entrega o arquivo final; Kauan é avisado nesse momento
+    peca(deb, "avaliar", { decisoes: [{ id: "p1", tipo: "aprovada" }, { id: "p2", tipo: "aprovada" }] });
+    expect(pub(kau, "agendar", { itens: [ref()] }).mensagem).toMatch(/ainda não foi aprovada/); // falta o arquivo final
+    f.emails.length = 0;
+    peca(mri, "finalizar", { id: "p1", abertos: true });
+    expect(para()).toContain("kauan@propaga.com");
+
+    expect(pub(kau, "agendar", { itens: [ref()] }).status).toBe("ok");
+    expect(item().etapa).toBe("agendada");
+    expect(pub(kau, "publicar", { itens: [{ ...ref(), data: "2026-10-02" }] }).mensagem).toMatch(/link da publicação/);
+    expect(pub(kau, "publicar", { itens: [{ ...ref(), data: "2026-10-09", link: "https://instagram.com/p/x" }] }).mensagem).toMatch(/futura/);
+    expect(pub(kau, "publicar", { itens: [{ ...ref(), data: "2026-10-02", link: "https://instagram.com/p/x" }] }).status).toBe("ok");
+    expect(item().etapa).toBe("publicada");
+    expect(item().hist.length).toBeGreaterThan(8);              // histórico preservado
+    expect(ped().status).not.toBe("entregue");
+    expect(ped().status).toBe(statusAntes === "entregue" ? "entregue" : ped().status);
+  });
+
+  it("arte devolvida pelo Kauan volta ao Marcelo, que reenvia; sem link exige justificativa", () => {
+    aprovarCalendario();
+    pub(mcl, "vincular", { ...ref(), protocolo: "BML-2026-0001", pecaId: "p1" });
+    expect(pub(kau, "devolverArte", { ...ref(), motivo: "Sem a versão para stories" }).mensagem).toMatch(/ainda não está pronta/);
+    aprovarArte();
+    f.emails.length = 0;
+    expect(pub(kau, "devolverArte", { ...ref(), motivo: "" }).status).toBe("erro");
+    const rr = pub(kau, "devolverArte", { ...ref(), motivo: "Arquivo sem a versão para stories" });
+    expect(rr.mensagem ?? "").toBe("");
+    expect(rr.status).toBe("ok");
+    expect(para()).toEqual(["marcelo@propaga.com"]);
+    expect(item().etapa).toBe("devolvida");
+    expect(pub(kau, "reenviarArte", { itens: [ref()] }).mensagem).toMatch(/perfil/);
+    expect(pub(mcl, "reenviarArte", { itens: [ref()] }).status).toBe("ok");
+    expect(item().etapa).toBe("aprovado");
+    pub(kau, "agendar", { itens: [ref()] });
+    expect(pub(kau, "publicar", { itens: [{ ...ref(), data: "2026-10-02", semLink: "Story sem link público" }] }).status).toBe("ok");
+    expect(item().publicada.semLink).toBe("Story sem link público");
+  });
+
+  it("agendar exige peça vinculada; Débora de outro cliente não vê; resumo diário lista as pendências", () => {
+    aprovarCalendario();
+    expect(pub(kau, "agendar", { itens: [ref()] }).mensagem).toMatch(/não vinculou/);
+    f.docs.delete("interno/resumos/dias/2026-10-02");
+    f.emails.length = 0;
+    expect(resumoDiario(f.p, new Firestore(f.p, "propaga-portal"))).toBeGreaterThan(0);
+    const m = f.emails.find((e) => e.para === "marcelo@propaga.com");
+    expect(m?.html).toMatch(/Dia do motorista/);
+  });
+});

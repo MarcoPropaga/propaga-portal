@@ -37,6 +37,7 @@ export type Papel =
   | "atendimento"          // Marcelo — aceita o pedido, cronograma, valor dos itens a cotar, versões, entrega
   | "financeiro_propaga"   // Marisa — relatórios, faturamento, pagamento
   | "criativo"             // Mariane — criativo Propaga: lê pedidos e refações, sem valores e sem ações
+  | "midia_social"         // Kauan — publica nas redes sociais (mLabs) as artes aprovadas, após aprovação do calendário; sem valores
   | "admin";               // Marco — acesso geral, catálogo, usuários
 
 export type Status =

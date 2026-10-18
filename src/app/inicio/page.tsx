@@ -1,6 +1,7 @@
 "use client";
 import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
 import { Protegido } from "@/components/auth/protegido";
+import { useEffect } from "react";
 import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
@@ -21,6 +22,8 @@ const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] 
 
 function Conteudo() {
   const s = useSessao();
+  // Mídias sociais (Kauan) não tem Início: entra direto nas tarefas.
+  useEffect(() => { if (s.papel === "midia_social") window.location.replace("/aprovacoes/"); }, [s.papel]);
   const nome = (s.usuario?.displayName || "").split(" ")[0];
   const podeSolicitar = !!s.papel && (VE_NOVA_SOLICITACAO as string[]).includes(s.papel);
   return (
