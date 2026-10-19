@@ -67,7 +67,7 @@ function Conteudo() {
     setErros({});
     const ref = await addDoc(collection(db(), "fila"), {
       tipo: reenviar ? "reenviarConvite" : "convidar", uid: s.usuario!.uid, clienteId: r.data.clienteId ?? null,
-      dados: { ...r.data, clienteId: r.data.clienteId ?? null }, status: "pendente", criadoEm: serverTimestamp(),
+      dados: Object.fromEntries(Object.entries(r.data).filter(([, v]) => v != null)), status: "pendente", criadoEm: serverTimestamp(),
     });
     avisarServidor();
     setEstado({ tipo: "aguardando", id: ref.id });
