@@ -240,7 +240,7 @@ export function enviarSolicitacao(
         },
         { caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
         proposta
-          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome de ${titular.nome}; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
+          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome do Marketing B&M Log; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
           : ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
       ]);
       break;
@@ -253,7 +253,7 @@ export function enviarSolicitacao(
   if (proposta) {
     const ped = { protocolo, titulo: d.titulo, solicitanteUid: titular.uid } as Parameters<typeof avisarPessoas>[4];
     avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"], "Nova solicitação para sua aprovação",
-      `${u.nome} criou esta solicitação em seu nome. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
+      `${u.nome} criou esta solicitação em nome do Marketing B&M Log. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
     return { protocolo, proposta: true };
   }
 
@@ -344,7 +344,7 @@ function editarSolicitacao(
   }
   const ped = { protocolo: d.editar!, titulo: d.titulo, solicitanteUid: ant.solicitanteUid } as Parameters<typeof avisarPessoas>[4];
   avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"],
-    reenvio ? "Solicitação ajustada para sua aprovação" : "O Marcelo ajustou sua solicitação", nota, novo as never,
+    reenvio ? "Solicitação ajustada para sua aprovação" : "O Marcelo ajustou a solicitação", nota, novo as never,
     reenvio ? "/aprovacoes/" : "/solicitacoes/pedido/");
   return { protocolo: d.editar, editado: true, status: novo };
 }

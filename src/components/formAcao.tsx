@@ -13,11 +13,11 @@ import { brData, type PedidoDoc } from "@/components/pedido";
 const AJUDA: Partial<Record<Acao, string>> = {
   aprovarProposta: "A solicitação segue para o Marcelo conferir, definir o cronograma e enviar ao criativo criar as peças.",
   ajustarProposta: "Escreva o que precisa mudar. A solicitação volta para o Marcelo ajustar e reenviar para sua aprovação.",
-  devolverDuvida: "A solicitação volta para a Débora com a sua dúvida ou sugestão. Ela responde na aprovação (ou pede ajuste) e o pedido volta para você.",
+  devolverDuvida: "A solicitação volta para o Marketing B&M Log com a sua dúvida ou sugestão. Ele responde na aprovação (ou pede ajuste) e o pedido volta para você.",
   recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o Marcelo.",
   trocarCriativo: "O pedido passa para o criativo escolhido, que recebe um e-mail. As peças já concluídas continuam no relatório de quem as concluiu.",
-  aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, a Débora é avisada e o criativo escolhido recebe o job para criar as peças.",
-  entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e a Débora e o Financeiro da Propaga são avisados.",
+  aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, o Marketing B&M Log é avisado e o criativo escolhido recebe o job para criar as peças.",
+  entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e o Marketing B&M Log e o Financeiro da Propaga são avisados.",
   faturar: "Registre o faturamento (ex.: número da nota fiscal).",
   registrarPagamento: "Registre o recebimento do pagamento.",
   cancelar: "",
@@ -87,7 +87,7 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
               <input id={`${id}-${k}`} type="date" min={hoje} value={cron[k]} onChange={(e) => setCron({ ...cron, [k]: e.target.value })} className={cx} /></div>
           ))}
         </fieldset>
-        <p className="text-sm text-gray-600">Data desejada pela Débora: <b>{brData(pedido.prazo.desejada)}</b>{pedido.prazo.urgente && " · pedido urgente"}.</p>
+        <p className="text-sm text-gray-600">Data desejada pelo Marketing B&M Log: <b>{brData(pedido.prazo.desejada)}</b>{pedido.prazo.urgente && " · pedido urgente"}.</p>
         {aCotar.length > 0 && (
           <fieldset className="grid gap-3">
             <legend className="mb-2 text-sm font-semibold">Valor unitário dos itens a cotar (preço final ao cliente)</legend>
@@ -119,7 +119,7 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
         </div>
       )}
       <div className="grid gap-1.5">
-        <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "ajustarProposta" ? "O que ajustar" : acao === "devolverDuvida" ? "Dúvida ou sugestão para a Débora" : ACOES_COM_MOTIVO.includes(acao) ? "Motivo" : acao === "entregar" ? "Onde foi veiculado ou impresso (opcional)" : "Observação (opcional)"}{ACOES_COM_MOTIVO.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
+        <label htmlFor={`${id}-nota`} className="text-sm font-semibold">{acao === "ajustarProposta" ? "O que ajustar" : acao === "devolverDuvida" ? "Dúvida ou sugestão para o Marketing B&M Log" : ACOES_COM_MOTIVO.includes(acao) ? "Motivo" : acao === "entregar" ? "Onde foi veiculado ou impresso (opcional)" : "Observação (opcional)"}{ACOES_COM_MOTIVO.includes(acao) && <span className="text-alerta-700" aria-hidden="true"> *</span>}</label>
         <textarea id={`${id}-nota`} rows={3} maxLength={3000} value={nota} onChange={(e) => setNota(e.target.value)} className="w-full rounded border border-[#C9D7DC] bg-white p-3" />
       </div>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}

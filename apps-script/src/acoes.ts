@@ -85,8 +85,8 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       avisar = ["atendimento"];
       break;
     case "devolverDuvida":
-      if (nota.length < 3) throw new ErroUsuario("Escreva a dúvida ou a sugestão para a Débora.");
-      rotulo = `${u.nome} devolveu a solicitação à Débora com dúvida ou sugestão`;
+      if (nota.length < 3) throw new ErroUsuario("Escreva a dúvida ou a sugestão para o Marketing B&M Log.");
+      rotulo = `${u.nome} devolveu a solicitação ao Marketing B&M Log com dúvida ou sugestão`;
       avisar = ["solicitante"];
       break;
     case "aceitarPedido": {

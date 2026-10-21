@@ -294,6 +294,8 @@ describe("solicitação criada pelo Marcelo (proposta em nome da Débora)", () =
     fila("enviar", mcl, base);
     expect(ped()).toMatchObject({ status: "proposta", solicitanteUid: deb, solicitanteNome: "Débora" }); // ordem alfabética: sempre a mesma titular
     expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "glauco@bmlog.com.br"]);
+    expect(f.emails[0].html).toMatch(/em nome do Marketing B(&amp;|&)M Log/); // texto neutro: vale para qualquer pessoa da equipe
+    expect(f.emails[0].html).not.toContain("em seu nome");
     f.emails.length = 0;
     expect(acao(glauco, "ajustarProposta", { nota: "Trocar para 3 posts" }).status).toBe("ok"); // pede ajuste em pedido da Débora
     expect(ped().status).toBe("ajuste");

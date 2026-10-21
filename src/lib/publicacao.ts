@@ -34,7 +34,7 @@ export interface Calendario { mes: string; itens: CalItem[] }
 export type RefCal = { mes: string; id: string };
 
 export const NOME_CAL: Record<EtapaCal, string> = {
-  ajuste: "Ajuste pedido · Kauan corrige", analise: "Em análise (Marcelo)", debora: "Aguardando a Débora",
+  ajuste: "Ajuste pedido · Kauan corrige", analise: "Em análise (Marcelo)", debora: "Aguardando o Marketing B&M Log",
   aprovado: "Calendário aprovado", devolvida: "Arte devolvida ao Marcelo", agendada: "Agendada no mLabs", publicada: "Publicada",
 };
 
