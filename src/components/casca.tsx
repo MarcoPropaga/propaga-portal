@@ -40,7 +40,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">
-      <aside className="print:hidden flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:p-5" aria-label="Menu principal">
+      <aside className="print:hidden flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:overflow-y-auto md:p-5" aria-label="Menu principal">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/selo-mkt-bmlog.png" alt="mkt B&M Log" width={88} height={88} className="size-[88px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />

@@ -36,6 +36,7 @@ function Conteudo() {
             <dt className="text-gray-600">Empresa</dt><dd>{s.propaga ? "Propaga" : (s.clienteId && CLIENTES[s.clienteId]?.nome) || "—"}</dd>
             <dt className="text-gray-600">Segurança</dt><dd className="text-[#1E7047]">Verificação em duas etapas ativa</dd>
           </dl>
+          <button type="button" onClick={() => s.sair()} className="mt-2 inline-flex min-h-11 w-fit items-center rounded border border-ink-900 px-5 font-semibold hover:bg-ink-900 hover:text-paper">Sair</button>
         </section>
         {podeSolicitar && (
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
