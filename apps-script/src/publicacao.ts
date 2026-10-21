@@ -98,7 +98,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
     case "enviarADebora": {
       for (const ref of d.itens) {
         const it = item(ref); exigir(it, ["analise"], "este post não está em análise.");
-        mover(it, "debora", "Analisado pelo Marcelo e enviado à Débora");
+        mover(it, "debora", "Analisado pelo Marcelo e enviado ao Marketing B&M Log");
         avisa(["solicitante"], "Calendário de publicações para sua aprovação", it);
       }
       break;
@@ -114,15 +114,15 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
     }
     case "avaliarCalendario": {
       for (const dec of d.decisoes) {
-        const it = item(dec); exigir(it, ["debora"], "este post não está aguardando a Débora.");
+        const it = item(dec); exigir(it, ["debora"], "este post não está aguardando o Marketing B&M Log.");
         if (dec.tipo === "aprovada") {
-          it.ajuste = null; mover(it, "aprovado", "Aprovado pela Débora");
-          avisa(["atendimento", "midia_social"], "Calendário aprovado pela Débora", it);
+          it.ajuste = null; mover(it, "aprovado", "Aprovado pelo Marketing B&M Log");
+          avisa(["atendimento", "midia_social"], "Calendário aprovado pelo Marketing B&M Log", it);
         } else {
           if ((dec.nota?.length ?? 0) < 3) throw new ErroUsuario(`"${it.titulo}": escreva o ajuste pedido.`);
           it.ajuste = { de: "debora", motivo: dec.nota!, por: u.nome, em: agora };
-          mover(it, "analise", `Ajuste pedido pela Débora: ${dec.nota}`);
-          avisa(["atendimento"], `Ajuste pedido pela Débora · ${dec.nota}`, it);
+          mover(it, "analise", `Ajuste pedido pelo Marketing B&M Log: ${dec.nota}`);
+          avisa(["atendimento"], `Ajuste pedido pelo Marketing B&M Log · ${dec.nota}`, it);
         }
       }
       break;
@@ -166,7 +166,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
       for (const ref of d.itens) {
         const it = item(ref); exigir(it, ["aprovado"], "só post com o calendário aprovado pode ser agendado.");
         if (!it.peca) throw new ErroUsuario(`"${it.titulo}": o Marcelo ainda não vinculou a peça deste post.`);
-        if (!arteDe(it, peds).pronta) throw new ErroUsuario(`"${it.titulo}": a arte ainda não foi aprovada pela Débora com arquivo final.`);
+        if (!arteDe(it, peds).pronta) throw new ErroUsuario(`"${it.titulo}": a arte ainda não foi aprovada pelo Marketing B&M Log com arquivo final.`);
         it.agendadaEm = agora;
         mover(it, "agendada", `Agendada no mLabs: ${it.canais.join(", ")} · ${br(it.data)} ${it.hora}`);
       }

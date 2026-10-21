@@ -44,7 +44,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const doc = fs.ler(caminho);
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
-  if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Este pedido não é seu.");
+  // Marketing do cliente é equipe compartilhada (decisão de 21/10/2026): o pedido é de todos os solicitantes do cliente, já validado acima.
   if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) throw new ErroUsuario(`Este pedido está com ${ped.criativo.nome}.`);
   const autoria = u.papel === "criativo" ? { uid: u.uid, nome: u.nome } : null;
   const cri = ped.criativo?.nome.split(" ")[0] ?? "o criativo";
@@ -80,7 +80,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         const x: Peca = { id: `p${base + i + 1}`, nome: n.nome, item: n.item, etapa: doCriativo ? "revisao" : "cliente", tarefa: null, orientacao: null, extras30: 0,
           versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null, interna: doCriativo || undefined }], hist: [], desde: agora,
           criativo: autoria ?? ped.criativo ?? null };
-        log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : "v1 enviada à Débora para aprovação");
+        log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : "v1 enviada ao Marketing B&M Log para aprovação");
         pecas.push(x);
       });
       const lista = d.pecas.map((n) => `- ${n.nome}`).join("\n");
@@ -112,9 +112,9 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       }
       rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões)`;
       // Aprovação e refação avisam o Marcelo e a Mariane ao mesmo tempo (decisão de 16/10/2026).
-      if (ap.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Peças aprovadas pela Débora",
+      if (ap.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Peças aprovadas pelo Marketing B&M Log",
         nota: `Aprovadas: ${ap.join(", ")}\n${cri} prepara o arquivo final em 04 Aprovados e os arquivos abertos em 05 Arquivos abertos.` });
-      if (rf.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Refação pedida pela Débora",
+      if (rf.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Refação pedida pelo Marketing B&M Log",
         nota: `${rf.map((t) => `- ${t}`).join("\n")}\nPrazo sugerido: ${br(somarDiasUteis(hojeSP(p.agora()), 2))}` });
       break;
     }
@@ -159,12 +159,12 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         if (x.etapa !== "revisao") throw new ErroUsuario(`"${x.nome}" não está em revisão.`);
         // +30% (decisão do Marcelo ao liberar): só a partir da 3ª refação e em peça que veio de refação da Débora.
         if (d.cobrar30?.includes(id)) {
-          if (rodadas <= MAX_RODADAS || !refacoesDaPeca(x)) throw new ErroUsuario("A cobrança de +30% vale a partir da 3ª refação, em peça que a Débora mandou refazer.");
+          if (rodadas <= MAX_RODADAS || !refacoesDaPeca(x)) throw new ErroUsuario("A cobrança de +30% vale a partir da 3ª refação, em peça que o Marketing B&M Log mandou refazer.");
           x.extras30 = (x.extras30 || 0) + 1; cobradas.push(x.nome); log(x, "Refação extra com edições novas: +30% no valor");
         }
-        ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo Marcelo e enviada à Débora`); nomes.push(x.nome);
+        ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo Marcelo e enviada ao Marketing B&M Log`); nomes.push(x.nome);
       }
-      rotuloEvento = `Nova versão enviada à Débora: ${nomes.join(", ")}`;
+      rotuloEvento = `Nova versão enviada ao Marketing B&M Log: ${nomes.join(", ")}`;
       avisos.push({ quem: ["solicitante"], rotulo: "Nova versão para sua aprovação", nota: nomes.map((t) => `- ${t}`).join("\n") });
       if (cobradas.length) avisos.push({ quem: ["solicitante"], rotulo: "Refação extra · +30% no valor da peça", nota: cobradas.join(", ") });
       break;
@@ -210,7 +210,7 @@ export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: 
   try {
     const cfg = lerConfig(p);
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
-      (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
+      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid)) ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
@@ -242,7 +242,6 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
     const linhas: { protocolo: string; titulo: string; peca: string; etapa: string; prazo: string | null; atrasada: boolean }[] = [];
     for (const ped of pedidos) {
       if (!u.propaga && u.clienteId !== ped.c) continue;
-      if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) continue;
       if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) continue;
       if (u.papel === "criativo" && aguardaCriacao(ped)) {
         const z = (ped as unknown as { prazo?: { primeira?: string } }).prazo?.primeira ?? null;

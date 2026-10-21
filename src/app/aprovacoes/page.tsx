@@ -33,7 +33,7 @@ const ATEND: Aba[] = [
   { k: "revisao", rotulo: "Revisar criativo", f: (p) => p.etapa === "revisao" },
   { k: "entregar", rotulo: "Veiculação/impressão", f: nenhuma, t: "entregar" },
   { k: "criativo", rotulo: "Com o criativo", f: (p) => p.etapa === "criativo" },
-  { k: "cliente", rotulo: "Com a Débora", f: (p) => p.etapa === "cliente" },
+  { k: "cliente", rotulo: "Com o Marketing B&M Log", f: (p) => p.etapa === "cliente" },
   { k: "concluidas", rotulo: "Concluídas", f: decidida("aprovada") },
   { k: "canceladas", rotulo: "Canceladas", f: decidida("cancelada") },
 ];
@@ -58,7 +58,7 @@ const ABAS: Record<string, Aba[]> = {
     { k: "feitas", rotulo: "Concluídas", f: (p) => p.etapa === "concluida" },
   ],
   financeiro_propaga: FIN,
-  admin: [{ k: "propostas", rotulo: "Com a Débora (solicitação)", f: nenhuma, t: "proposta" }, ...ATEND.slice(0, 4), ...FIN, ...ATEND.slice(4)],
+  admin: [{ k: "propostas", rotulo: "Com o Marketing B&M Log (solicitação)", f: nenhuma, t: "proposta" }, ...ATEND.slice(0, 4), ...FIN, ...ATEND.slice(4)],
 };
 ABAS.midia_social = [];
 /* Abas de peças/tarefas do pedido + abas da publicação nas redes (src/components/publicacao.tsx). */
@@ -201,7 +201,7 @@ function Conteudo() {
   const [aviso, setAviso] = useState<{ tipo: "ok" | "erro"; msg: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
-  const todos = useMemo(() => (lista ?? []).filter((p) => (!filtro || p.protocolo === filtro) && (papel !== "solicitante" || p.solicitanteUid === s.usuario?.uid))
+  const todos = useMemo(() => (lista ?? []).filter((p) => (!filtro || p.protocolo === filtro))
     .sort((a, b) => b.protocolo.localeCompare(a.protocolo)), [lista, filtro, papel, s.usuario?.uid]);
   const pedidos = useMemo(() => todos.filter((p) => p.temPecas), [todos]);
   const [abrindo, setAbrindo] = useState<string | null>(null); // formulário de tarefa de pedido aberto
@@ -245,7 +245,7 @@ function Conteudo() {
       <div className="grid max-w-6xl gap-5">
         <p className="max-w-[75ch] text-gray-600">{texto}</p>
         {papel !== "midia_social" && <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
-          {["Débora solicita (ou aprova a do Marcelo)", "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", "Débora aprova ou pede refação", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
+          {["Marketing B&M Log solicita (ou aprova a do Marcelo)", "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", "Marketing B&M Log aprova ou pede refação", "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
             <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
         </ol>}
@@ -267,7 +267,7 @@ function Conteudo() {
               <h2 className="text-lg">{pd.titulo}</h2>
               <span className="text-sm text-gray-600">{pd.unidade} · {["aceitar", "proposta", "ajustar"].includes(abaAtual.t!) ? `desejada ${brData(pd.prazo.desejada)}` : `entrega final ${brData(pd.prazo.final)}`}</span>
             </div>
-            {pd.criadoPor && abaAtual.t !== "criar" && <p className="text-sm text-gray-600">Criada por <b>{pd.criadoPor.nome}</b> em nome de {pd.solicitanteNome}{pd.status === "enviada" ? " · aprovada pela Débora" : ""}.</p>}
+            {pd.criadoPor && abaAtual.t !== "criar" && <p className="text-sm text-gray-600">Criada por <b>{pd.criadoPor.nome}</b> em nome do Marketing B&M Log{pd.status === "enviada" ? " · aprovada pelo Marketing B&M Log" : ""}.</p>}
             {abaAtual.t === "ajustar" && <AjustePedido protocolo={pd.protocolo} acao="ajustarProposta" />}
             {abaAtual.t === "proposta" && <AjustePedido protocolo={pd.protocolo} acao="devolverDuvida" />}
             {["aceitar", "criar", "proposta", "ajustar"].includes(abaAtual.t!) && (
@@ -296,14 +296,14 @@ function Conteudo() {
                 </div>
               ) : abaAtual.t === "ajustar" ? (
                 <div className="flex flex-wrap gap-3">
-                  <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Editar e reenviar à Débora</a>
+                  <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Editar e reenviar ao Marketing B&M Log</a>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3">
                   {papel === "criativo" && abaAtual.t === "criar"
                     ? <BotaoEnviarCriadas pd={pd} onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }} />
                     : <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>}
-                  {abaAtual.t === "aceitar" && <Botao variante="linha" onClick={() => { setAcaoAberta("devolverDuvida"); setAbrindo(pd.protocolo); }}>Devolver à Débora (dúvida ou sugestão)</Botao>}
+                  {abaAtual.t === "aceitar" && <Botao variante="linha" onClick={() => { setAcaoAberta("devolverDuvida"); setAbrindo(pd.protocolo); }}>Devolver ao Marketing B&M Log (dúvida ou sugestão)</Botao>}
                   {abaAtual.t === "aceitar" && <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Editar solicitação</a>}
                   {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver pedido completo</a>
@@ -389,10 +389,10 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
         <div className="flex flex-wrap gap-2">
           <Botao variante="discreto" onClick={() => abrir(pd, pecas, x.id)}>Ver versão</Botao>
           <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => acao("devolver", x.id)}>Devolver ao criativo</Botao>
-          <Botao disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: [x.id], cobrar30: cobrar30([x.id]) }, "Versão enviada à Débora.")}>Enviar à Débora</Botao>
+          <Botao disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: [x.id], cobrar30: cobrar30([x.id]) }, "Versão enviada ao Marketing B&M Log.")}>Enviar ao Marketing B&M Log</Botao>
         </div>
       </div>); })}</div>
-    {pecas.length > 1 && <Botao className="w-fit" disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: pecas.map((x) => x.id), cobrar30: cobrar30(pecas.map((x) => x.id)) }, `${pecas.length} peças enviadas à Débora.`)}>Enviar todas à Débora ({pecas.length})</Botao>}
+    {pecas.length > 1 && <Botao className="w-fit" disabled={ocupado} onClick={() => executar({ acao: "liberar", protocolo: pd.protocolo, ids: pecas.map((x) => x.id), cobrar30: cobrar30(pecas.map((x) => x.id)) }, `${pecas.length} peças enviadas ao Marketing B&M Log.`)}>Enviar todas ao Marketing B&M Log ({pecas.length})</Botao>}
   </>;
 
   if (papel === "criativo" && ["refazer", "final"].includes(aba)) return <>
@@ -473,7 +473,7 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
 
   if (modal.tipo === "devolver" && peca) return <Modal titulo="Devolver ao criativo" onFechar={onFechar}>
     <p><b>{peca.nome}</b> · v{ultima(peca).v}</p>
-    <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">Ajuste interno: não conta como refação da Débora.</p>
+    <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">Ajuste interno: não conta como refação do Marketing B&M Log.</p>
     <div className="grid gap-1.5"><label htmlFor="dv" className="text-sm font-semibold">O que ainda precisa mudar (um por linha)</label><textarea id="dv" rows={4} className={cx} value={dev} onChange={(e) => setDev(e.target.value)} /></div>
     {rodape("Devolver", async () => {
       const itens = linhasParaItens(dev); if (!itens.length) { setErro("Liste ao menos um ajuste."); return; }

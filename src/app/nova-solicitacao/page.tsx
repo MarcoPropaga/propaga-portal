@@ -232,7 +232,7 @@ function Conteudo() {
   const mudar = useCallback((p: Partial<Rascunho>) => setR((a) => (a ? { ...a, ...p } : a)), []);
   const limparErro = (k: string) => setErros((e) => { if (!e[k]) return e; const n = { ...e }; delete n[k]; return n; });
 
-  const tituloTela = editar ? `Editar solicitação ${editar}` : marcelo ? "Nova solicitação (em nome da Débora)" : "Nova solicitação";
+  const tituloTela = editar ? `Editar solicitação ${editar}` : marcelo ? "Nova solicitação (em nome do Marketing B&M Log)" : "Nova solicitação";
   if (editar && statusOrig && !["enviada", "ajuste"].includes(statusOrig))
     return <Casca titulo={tituloTela}><Aviso tipo="erro">Esta solicitação já foi aceita e não pode mais ser editada.</Aviso></Casca>;
   if (falhaCarga) return <Casca titulo="Nova solicitação"><Aviso tipo="erro">{falhaCarga}</Aviso></Casca>;
@@ -289,15 +289,15 @@ function Conteudo() {
   /* ---- envio concluído ---- */
   if (envio.tipo === "ok") {
     return (
-      <Casca titulo={editar ? "Solicitação atualizada" : marcelo ? "Enviada para a Débora aprovar" : "Solicitação enviada"}>
+      <Casca titulo={editar ? "Solicitação atualizada" : marcelo ? "Enviada para o Marketing B&M Log aprovar" : "Solicitação enviada"}>
         <div className="grid max-w-2xl gap-5">
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <p className="text-sm text-gray-600">Protocolo</p>
             <p className="font-display text-3xl font-semibold">{envio.protocolo}</p>
             {editar || marcelo ? (
               <p>{editar && statusOrig === "enviada"
-                ? "Alterações salvas. A Débora foi avisada por e-mail do que mudou. Agora é só aceitar e enviar ao criativo em Minhas tarefas."
-                : "A Débora recebeu por e-mail para aprovar, pedir ajuste ou recusar. Quando ela aprovar, a solicitação aparece em Minhas tarefas › Aceitar pedidos."}</p>
+                ? "Alterações salvas. O Marketing B&M Log foi avisado por e-mail do que mudou. Agora é só aceitar e enviar ao criativo em Minhas tarefas."
+                : "O Marketing B&M Log recebeu por e-mail para aprovar, pedir ajuste ou recusar. Quando aprovar, a solicitação aparece em Minhas tarefas › Aceitar pedidos."}</p>
             ) : <>
             <p>A Propaga recebeu sua solicitação. As pessoas responsáveis foram avisadas por e-mail.</p>
             <ol className="grid list-decimal gap-1.5 pl-5 text-sm text-gray-600">
@@ -323,14 +323,14 @@ function Conteudo() {
     <Casca titulo={tituloTela}>
       <form noValidate onSubmit={(e) => { e.preventDefault(); enviar(); }} className="grid max-w-5xl gap-4">
         <p className="max-w-[70ch] text-gray-600">{editar
-          ? (statusOrig === "ajuste" ? "Faça os ajustes pedidos pela Débora e reenvie para a aprovação dela. O que mudou fica registrado no histórico." : "Ajuste a solicitação da Débora antes de aceitar. Ela recebe um e-mail com o que mudou, e tudo fica registrado no histórico.")
-          : marcelo ? "Monte a solicitação em nome da Débora. Ao enviar, ela recebe para aprovar, pedir ajuste ou recusar. Tudo o que você preenche fica salvo como rascunho."
+          ? (statusOrig === "ajuste" ? "Faça os ajustes pedidos pelo Marketing B&M Log e reenvie para aprovação. O que mudou fica registrado no histórico." : "Ajuste a solicitação do Marketing B&M Log antes de aceitar. Ele recebe um e-mail com o que mudou, e tudo fica registrado no histórico.")
+          : marcelo ? "Monte a solicitação em nome do Marketing B&M Log. Ao enviar, ele recebe para aprovar, pedir ajuste ou recusar. Tudo o que você preenche fica salvo como rascunho."
           : "Organize o briefing, escolha os serviços e confira o prazo antes de enviar. Tudo o que você preenche fica salvo como rascunho."}</p>
 
         <Secao n={1} chave="dados" titulo="Dados da solicitação">
           <div className="grid gap-4 md:grid-cols-3">
             <Texto id="titulo" rotulo="Título da solicitação" maxLength={120} valor={r.titulo} erro={erros.titulo} onChange={(v) => { mudar({ titulo: v }); limparErro("titulo"); }} />
-            <Texto id="solicitante" rotulo={marcelo || editar ? "Em nome de" : "Solicitante"} valor={editar ? solicitanteOrig : marcelo ? "Débora · marketing B&M Log" : s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#C9D7DC] bg-paper`} />
+            <Texto id="solicitante" rotulo={marcelo || editar ? "Em nome de" : "Solicitante"} valor={editar ? solicitanteOrig : marcelo ? "Marketing B&M Log" : s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#C9D7DC] bg-paper`} />
             <Selecao id="unidade" rotulo="Unidade (matriz ou filial)" valor={r.unidade} vazio="Selecione" erro={erros.unidade}
               opcoes={cliente.unidades.map((u) => [u, u])} onChange={(v) => { mudar({ unidade: v }); limparErro("unidade"); }} />
             <Texto id="email" rotulo="E-mail de contato" type="email" autoComplete="email" valor={r.email} erro={erros.email} onChange={(v) => { mudar({ email: v }); limparErro("email"); }} />
@@ -461,7 +461,7 @@ function Conteudo() {
               <span>Conferi os serviços, os materiais e as informações.</span>
             </label>
             {!editar && <span className="text-sm text-gray-600" aria-live="polite">{salvoEm ? `Rascunho salvo às ${salvoEm}` : "Rascunho automático ativo"}</span>}
-            <Botao type="submit" disabled={!r.conferido} carregando={aguardando}>{editar ? (statusOrig === "ajuste" ? "Reenviar para aprovação da Débora" : "Salvar alterações") : marcelo ? "Enviar para aprovação da Débora" : "Enviar solicitação"}</Botao>
+            <Botao type="submit" disabled={!r.conferido} carregando={aguardando}>{editar ? (statusOrig === "ajuste" ? "Reenviar para aprovação do Marketing B&M Log" : "Salvar alterações") : marcelo ? "Enviar para aprovação do Marketing B&M Log" : "Enviar solicitação"}</Botao>
           </div>
           <p className="text-sm text-gray-600">Ao enviar, as pessoas responsáveis da {cliente.nome} e da Propaga recebem um aviso por e-mail. Recebimento, aprovações e entregas ficam registrados no acompanhamento.</p>
         </Secao>

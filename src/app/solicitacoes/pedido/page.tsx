@@ -55,7 +55,7 @@ function Conteudo() {
   const ehAdmin = s.papel === "admin";
   const podeCancelar = ehAdmin && podeExecutar("cancelar", pedido.status, "admin");
   const podePublicar = ehAdmin && ["producao", "apresentacao"].includes(pedido.status);
-  const minhas = contarPendencias(s.papel, [pedido]) > 0 && (s.papel !== "solicitante" || pedido.solicitanteUid === s.usuario?.uid);
+  const minhas = contarPendencias(s.papel, [pedido]) > 0;
   const ehCliente = s.papel === "solicitante" || s.papel === "financeiro_cliente";
   // Linha do tempo única: eventos do pedido + ações de cada peça, do mais recente para o mais antigo.
   const tms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : Date.parse(String(v)) || 0);
@@ -74,13 +74,13 @@ function Conteudo() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-display text-xl font-semibold">{pedido.protocolo}</span>
           <SeloStatus status={pedido.status} />
-          <span className="text-sm text-gray-600">{pedido.criadoPor ? `Criada por ${pedido.criadoPor.nome} em nome de ${pedido.solicitanteNome}` : `Enviada por ${pedido.solicitanteNome}`} em {brDataHora(pedido.criadoEm)}</span>
+          <span className="text-sm text-gray-600">{pedido.criadoPor ? `Criada por ${pedido.criadoPor.nome} em nome do Marketing B&M Log` : `Enviada por ${pedido.solicitanteNome}`} em {brDataHora(pedido.criadoEm)}</span>
         </div>
 
         {/* Etapas */}
         {(pedido.status === "proposta" || pedido.status === "ajuste") && <Aviso>{pedido.status === "proposta"
-          ? "Solicitação criada pelo Marcelo, aguardando a Débora aprovar, pedir ajuste ou recusar."
-          : "A Débora pediu ajuste. O Marcelo edita e reenvia para a aprovação dela. O pedido de ajuste está no histórico."}</Aviso>}
+          ? "Solicitação criada pelo Marcelo, aguardando o Marketing B&M Log aprovar, pedir ajuste ou recusar."
+          : "O Marketing B&M Log pediu ajuste. O Marcelo edita e reenvia para aprovação. O pedido de ajuste está no histórico."}</Aviso>}
         {pedido.status === "cancelada" ? <Aviso>Este pedido foi cancelado{fatorCobranca(pedido) > 0 ? " depois de apresentado e é cobrado em 50% do seu valor, conforme o contrato" : ""}. O motivo está no histórico.</Aviso> : (
           <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Etapas do pedido">
             {ETAPAS.map((e, i) => (
@@ -104,7 +104,7 @@ function Conteudo() {
         {!publicando && !acao && podePublicar && (
           <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Atalhos do administrador">
             <span className="mr-auto text-sm text-gray-600">Atalhos do administrador</span>
-            {podePublicar && <Botao variante="discreto" onClick={() => setPublicando(true)}>Publicar peças direto para a Débora</Botao>}
+            {podePublicar && <Botao variante="discreto" onClick={() => setPublicando(true)}>Publicar peças direto para o Marketing B&M Log</Botao>}
           </section>
         )}
 

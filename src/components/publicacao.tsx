@@ -57,16 +57,16 @@ export function PainelPublicacao({ aba, cals, ctx }: { aba: AbaPub; cals: Calend
       ? await ctx.enviar("publicacao", { acao: "avaliarCalendario", decisoes: lista.map((i) => ({ ...ref(i), tipo: "aprovada" })) })
       : await ctx.enviar("publicacao", { acao, itens: lista.map(ref) });
     setOcupado(false);
-    ctx.onMsg(r.ok ? "ok" : "erro", r.ok ? (acao === "aprovar" ? "Calendário aprovado. Marcelo e Kauan foram avisados." : "Calendário enviado à Débora.") : r.msg);
+    ctx.onMsg(r.ok ? "ok" : "erro", r.ok ? (acao === "aprovar" ? "Calendário aprovado. Marcelo e Kauan foram avisados." : "Calendário enviado ao Marketing B&M Log.") : r.msg);
   };
   const emLote = aba.k === "pub:analisar" ? "enviarADebora" : aba.k === "pub:aprovar" ? "aprovar" : null;
   return (
     <div className="grid gap-4">
       {aba.k === "pub:calendario" && <FormCalendario cals={cals} ctx={ctx} hoje={hoje} />}
-      {aba.k === "pub:aguardando" && <p className="text-sm text-gray-600">O calendário está aprovado. Falta a Mariane criar a arte, a Débora aprovar e o arquivo final ficar pronto; você será avisado.</p>}
+      {aba.k === "pub:aguardando" && <p className="text-sm text-gray-600">O calendário está aprovado. Falta a Mariane criar a arte, o Marketing B&M Log aprovar e o arquivo final ficar pronto; você será avisado.</p>}
       {aba.k === "pub:publicar" && <p className="text-sm text-gray-600">Arte aprovada e arquivo final pronto. Agende no mLabs (fora do portal) e registre aqui. Se o arquivo estiver incorreto, devolva ao Marcelo com o motivo.</p>}
       {emLote && itens.length > 1 && (
-        <div><Botao carregando={ocupado} onClick={() => lote(emLote, itens.map((x) => x.i))}>{emLote === "aprovar" ? `Aprovar todos (${itens.length})` : `Enviar todos à Débora (${itens.length})`}</Botao></div>
+        <div><Botao carregando={ocupado} onClick={() => lote(emLote, itens.map((x) => x.i))}>{emLote === "aprovar" ? `Aprovar todos (${itens.length})` : `Enviar todos ao Marketing B&M Log (${itens.length})`}</Botao></div>
       )}
       {!itens.length && aba.k !== "pub:calendario" && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
       {meses.map((mes) => (
@@ -96,7 +96,7 @@ function Resumo({ it, arte, hoje, ctx }: { it: CalItem; arte: Arte; hoje: string
       <p className="max-w-[75ch] whitespace-pre-wrap rounded bg-paper px-3 py-2">{it.legenda}</p>
       {it.peca && <p className="text-gray-600">Peça: <a className="underline" href={`/solicitacoes/pedido/?p=${encodeURIComponent(it.peca.protocolo)}`}>{it.peca.nome} ({it.peca.protocolo})</a>{x ? ` · ${arte.pronta ? "arquivo final pronto" : "em andamento"}` : ""}</p>}
       {!it.peca && it.etapa === "aprovado" && <p className="text-gray-600">Aguardando o Marcelo vincular a peça da Mariane.</p>}
-      {it.ajuste && ["ajuste", "analise", "devolvida"].includes(it.etapa) && <p className="rounded bg-alerta-100 px-3 py-2 text-alerta-700"><b>{{ marcelo: "Marcelo", debora: "Débora", kauan: "Kauan" }[it.ajuste.de]}</b> pediu ajuste: {it.ajuste.motivo}</p>}
+      {it.ajuste && ["ajuste", "analise", "devolvida"].includes(it.etapa) && <p className="rounded bg-alerta-100 px-3 py-2 text-alerta-700"><b>{{ marcelo: "Marcelo", debora: "Marketing B&M Log", kauan: "Kauan" }[it.ajuste.de]}</b> pediu ajuste: {it.ajuste.motivo}</p>}
       {it.publicada && <p className="text-gray-600">Publicada em {brData(it.publicada.data)}{it.publicada.link ? <> · <a href={it.publicada.link} target="_blank" rel="noopener noreferrer" className="underline">ver publicação<span className="sr-only"> (nova aba)</span></a></> : ` · sem link: ${it.publicada.semLink}`}</p>}
     </div>
   );
@@ -144,7 +144,7 @@ function LinhaCal({ it, arte, aba, ctx, hoje }: { it: CalItem; arte: Arte; aba: 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       <div className="flex flex-wrap items-end gap-3">
         {aba === "pub:analisar" && marcelo && modo !== "devolver" && <>
-          {btn("Enviar à Débora", { acao: "enviarADebora", itens: [r] }, "Enviado à Débora.")}
+          {btn("Enviar ao Marketing B&M Log", { acao: "enviarADebora", itens: [r] }, "Enviado ao Marketing B&M Log.")}
           <Botao variante="linha" onClick={() => setModo("devolver")}>Devolver ao Kauan</Botao>
         </>}
         {aba === "pub:aprovar" && debora && modo !== "ajuste" && <>
@@ -220,7 +220,7 @@ function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoj
   }
   return (
     <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); void enviar(); }} noValidate>
-      <p className="max-w-[75ch] text-sm text-gray-600">Monte o calendário do mês: tema, canais, data, horário e legenda de cada post. Envie com pelo menos {ANTECEDENCIA_DIAS} dias de antecedência. O Marcelo analisa e a Débora aprova; o agendamento no mLabs é feito por você, fora do portal.</p>
+      <p className="max-w-[75ch] text-sm text-gray-600">Monte o calendário do mês: tema, canais, data, horário e legenda de cada post. Envie com pelo menos {ANTECEDENCIA_DIAS} dias de antecedência. O Marcelo analisa e o Marketing B&M Log aprova; o agendamento no mLabs é feito por você, fora do portal.</p>
       {corrigidos.length > 0 && <h2 className="text-lg">Posts devolvidos para ajuste</h2>}
       {corrigidos.map((r) => <LinhaRascunho key={r.chave} r={r} canais={canais} hoje={hoje} onChange={trocar} />)}
       <h2 className="text-lg">Novos posts</h2>
@@ -243,7 +243,7 @@ function LinhaRascunho({ r, canais, hoje, onChange, onRemover }: { r: Rascunho; 
       {r.motivo && <p className="rounded bg-alerta-100 px-3 py-2 text-sm text-alerta-700">Ajuste pedido: {r.motivo}</p>}
       <label className="grid gap-1 text-sm font-semibold" htmlFor={`${id}-t`}>Tema ou orientação do post<input id={`${id}-t`} value={r.titulo} maxLength={300} onChange={(e) => onChange({ ...r, titulo: e.target.value })} className={campo} /></label>
       <label className="inline-flex min-h-10 items-center gap-2 text-sm">
-        <input type="checkbox" checked={!!r.avulso} onChange={(e) => onChange({ ...r, avulso: e.target.checked })} />Fora do calendário aprovado (pedido avulso da Débora)
+        <input type="checkbox" checked={!!r.avulso} onChange={(e) => onChange({ ...r, avulso: e.target.checked })} />Fora do calendário aprovado (pedido avulso do Marketing B&M Log)
       </label>
       <div className="flex flex-wrap gap-3" role="group" aria-label="Canais">
         {canais.map((c) => (

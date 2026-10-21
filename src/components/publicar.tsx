@@ -25,13 +25,13 @@ export function FormPublicar({ pedido, onFechar, onOk }: { pedido: PedidoDoc; on
     setOcupado(true);
     const r = await enviar("peca", { acao: "publicar", protocolo: pedido.protocolo, pecas });
     setOcupado(false);
-    if (r.ok) { onOk?.(criativo ? "Peças enviadas ao Marcelo para revisão." : "Peças enviadas à Débora."); onFechar(); } else setErro(r.msg);
+    if (r.ok) { onOk?.(criativo ? "Peças enviadas ao Marcelo para revisão." : "Peças enviadas ao Marketing B&M Log."); onFechar(); } else setErro(r.msg);
   }
   const cx2 = "min-h-11 w-full rounded border border-[#C9D7DC] bg-white px-3";
   return (
     <form onSubmit={confirmar} noValidate className="grid gap-4 rounded border border-marca-500 bg-white p-4 md:p-5" aria-labelledby="pub-t">
       <h3 id="pub-t" className="text-base">{criativo ? "Enviar peças criadas ao Marcelo" : pedido.temPecas ? "Publicar mais peças" : "Publicar peças para aprovação"}</h3>
-      <p className="text-sm text-gray-600">Uma linha por peça, com o link do arquivo na pasta <b>03 Provas</b> do Drive. {criativo ? "O Marcelo revisa e envia à Débora." : "A Débora avalia peça por peça em Minhas tarefas."}</p>
+      <p className="text-sm text-gray-600">Uma linha por peça, com o link do arquivo na pasta <b>03 Provas</b> do Drive. {criativo ? "O Marcelo revisa e envia ao Marketing B&M Log." : "O Marketing B&M Log avalia peça por peça em Minhas tarefas."}</p>
       <div className="grid gap-3">
         {linhas.map((l, k) => (
           <fieldset key={k} className="grid gap-2 rounded border border-gray-200 p-3 md:grid-cols-[1fr_1fr_1.4fr_auto] md:items-end">
@@ -48,7 +48,7 @@ export function FormPublicar({ pedido, onFechar, onOk }: { pedido: PedidoDoc; on
       </div>
       <Botao type="button" variante="discreto" className="w-fit" onClick={() => setLinhas([...linhas, { nome: "", item: 0, link: "" }])}>+ Adicionar peça</Botao>
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
-      <div className="flex flex-wrap gap-3"><Botao type="submit" carregando={ocupado}>{criativo ? "Enviar ao Marcelo" : "Enviar à Débora"}</Botao><Botao type="button" variante="linha" onClick={onFechar}>Voltar</Botao></div>
+      <div className="flex flex-wrap gap-3"><Botao type="submit" carregando={ocupado}>{criativo ? "Enviar ao Marcelo" : "Enviar ao Marketing B&M Log"}</Botao><Botao type="button" variante="linha" onClick={onFechar}>Voltar</Botao></div>
     </form>
   );
 }

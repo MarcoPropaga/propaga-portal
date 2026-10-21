@@ -44,13 +44,17 @@ describe("regras do Firestore", () => {
   it("isola clientes", async () => {
     await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog")));
   });
-  it("solicitante lê só os próprios pedidos", async () => {
+  it("solicitantes do mesmo cliente (Débora e Glauco) leem todos os pedidos do cliente, nunca os de outro cliente", async () => {
+    const glauco = { ...debora };
     await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-1")));
-    await assertFails(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-2")));
+    await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-2"))); // pedido de outra pessoa da equipe
+    await assertSucceeds(getDoc(doc(db("glauco", glauco), "clientes/bmlog/solicitacoes/BML-1")));
+    await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog/solicitacoes/BML-1")));
   });
-  it("valores: financeiros e Propaga veem tudo; solicitante só os próprios pedidos", async () => {
+  it("valores: financeiros, Propaga e a equipe de marketing do cliente veem; outro cliente não", async () => {
     await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-1")));
-    await assertFails(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-2")));
+    await assertSucceeds(getDoc(doc(db("glauco", { ...debora }), "clientes/bmlog/valores/BML-1")));
+    await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog/valores/BML-1")));
     await assertSucceeds(getDoc(doc(db("mariana", mariana), "clientes/bmlog/valores/BML-1")));
   });
   it("Criativo Propaga lê pedidos, mas não vê preços nem valores", async () => {

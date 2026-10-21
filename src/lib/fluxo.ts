@@ -44,7 +44,7 @@ export const REGRAS: Record<Acao, Regra> = {
   ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao Marcelo" },
   recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
   // Marcelo, ao analisar o pedido, tem dúvida ou sugestão: devolve à Débora (volta a "Aguardando aprovação da Débora").
-  devolverDuvida: { de: ["enviada"], para: "proposta", papeis: ["atendimento", "admin"], rotulo: "Devolver à Débora (dúvida ou sugestão)" },
+  devolverDuvida: { de: ["enviada"], para: "proposta", papeis: ["atendimento", "admin"], rotulo: "Devolver ao Marketing B&M Log (dúvida ou sugestão)" },
   aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar ao criativo" },
   // Troca de criativo: o status não muda (o servidor mantém o atual).
   trocarCriativo: { de: ["producao", "apresentacao", "aprovada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Trocar o criativo" },
@@ -66,7 +66,7 @@ export const ETAPAS: { status: Status; rotulo: string }[] = [
 export const NOME_STATUS: Record<Status, string> = {
   ...(Object.fromEntries(ETAPAS.map((e) => [e.status, e.rotulo])) as Record<Status, string>),
   rascunho: "Rascunho", cancelada: "Cancelada",
-  proposta: "Aguardando aprovação da Débora", ajuste: "Ajuste pedido pela Débora",
+  proposta: "Aguardando aprovação do Marketing B&M Log", ajuste: "Ajuste pedido pelo Marketing B&M Log",
 };
 
 export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx = {}): boolean {

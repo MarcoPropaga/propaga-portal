@@ -1,7 +1,7 @@
 "use client";
 /* Envia uma ação para a fila e espera o servidor responder (ok/erro). */
 import { useEffect, useState } from "react";
-import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, where } from "firebase/firestore";
+import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
 import { useSessao } from "@/components/auth/sessao";
 import { CLIENTES } from "@/content/clientes";
@@ -40,7 +40,7 @@ export function usePedidos(ativo = true) {
   useEffect(() => {
     if (!ativo || !uid) return;
     const col = collection(db(), "clientes", clienteId, "solicitacoes");
-    return onSnapshot(s.papel === "solicitante" ? query(col, where("solicitanteUid", "==", uid)) : col,
+    return onSnapshot(col, // Marketing do cliente é equipe compartilhada (21/10/2026): todos os solicitantes veem todos os pedidos do cliente.
       // Criativo vê só os pedidos atribuídos a ele (ou ainda sem criativo definido).
       (q) => setLista(q.docs.map((d) => d.data() as PedidoDoc).filter((p) => s.papel !== "criativo" || !p.criativo || p.criativo.uid === uid)),
       () => setErro("Não foi possível carregar os pedidos."));

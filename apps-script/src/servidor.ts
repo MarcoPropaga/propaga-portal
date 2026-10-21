@@ -204,7 +204,9 @@ export function enviarSolicitacao(
   const proposta = u.papel === "atendimento";
   if (proposta) {
     const sol = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; clienteId: string | null }) }))
-      .find((x) => x.papel === "solicitante" && x.clienteId === clienteId);
+      .filter((x) => x.papel === "solicitante" && x.clienteId === clienteId && (x as { status?: string }).status !== "desativado")
+      // Equipe de marketing com mais de uma pessoa (Débora e Glauco): ordem alfabética, para o titular ser sempre o mesmo.
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))[0];
     if (!sol) throw new ErroUsuario("Não há Solicitante cadastrada para este cliente.");
     titular = { uid: sol.uid, nome: sol.nome };
   }
@@ -238,7 +240,7 @@ export function enviarSolicitacao(
         },
         { caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
         proposta
-          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome de ${titular.nome}; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
+          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome do Marketing B&M Log; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
           : ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
       ]);
       break;
@@ -251,7 +253,7 @@ export function enviarSolicitacao(
   if (proposta) {
     const ped = { protocolo, titulo: d.titulo, solicitanteUid: titular.uid } as Parameters<typeof avisarPessoas>[4];
     avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"], "Nova solicitação para sua aprovação",
-      `${u.nome} criou esta solicitação em seu nome. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
+      `${u.nome} criou esta solicitação em nome do Marketing B&M Log. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
     return { protocolo, proposta: true };
   }
 
@@ -342,7 +344,7 @@ function editarSolicitacao(
   }
   const ped = { protocolo: d.editar!, titulo: d.titulo, solicitanteUid: ant.solicitanteUid } as Parameters<typeof avisarPessoas>[4];
   avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"],
-    reenvio ? "Solicitação ajustada para sua aprovação" : "O Marcelo ajustou sua solicitação", nota, novo as never,
+    reenvio ? "Solicitação ajustada para sua aprovação" : "O Marcelo ajustou a solicitação", nota, novo as never,
     reenvio ? "/aprovacoes/" : "/solicitacoes/pedido/");
   return { protocolo: d.editar, editado: true, status: novo };
 }
