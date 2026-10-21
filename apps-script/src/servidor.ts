@@ -204,7 +204,9 @@ export function enviarSolicitacao(
   const proposta = u.papel === "atendimento";
   if (proposta) {
     const sol = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; clienteId: string | null }) }))
-      .find((x) => x.papel === "solicitante" && x.clienteId === clienteId);
+      .filter((x) => x.papel === "solicitante" && x.clienteId === clienteId && (x as { status?: string }).status !== "desativado")
+      // Equipe de marketing com mais de uma pessoa (Débora e Glauco): ordem alfabética, para o titular ser sempre o mesmo.
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))[0];
     if (!sol) throw new ErroUsuario("Não há Solicitante cadastrada para este cliente.");
     titular = { uid: sol.uid, nome: sol.nome };
   }

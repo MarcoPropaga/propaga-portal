@@ -31,7 +31,7 @@ O código de regras (`src/lib`) é o mesmo no navegador e no Apps Script: `apps-
 ## Papéis (claims `papel`, `clienteId` ou `propaga`)
 | Papel | Pessoa (B&M Log) | Pode |
 |---|---|---|
-| solicitante | Débora | Criar e acompanhar os próprios pedidos, pedir ajustes (2 rodadas), aprovar, confirmar recebimento, cancelar antes da produção |
+| solicitante | Débora e Glauco (Marketing B&M Log, equipe compartilhada desde 21/10/2026) | Ver e acompanhar todos os pedidos do cliente, criar pedidos, pedir ajustes (2 rodadas) e refação, aprovar, confirmar recebimento, cancelar antes da produção. Qualquer um dos dois age em pedido do outro; os avisos vão aos dois (menos a quem fez a ação) |
 | financeiro_cliente | Mariana | Ver pedidos e Relatórios, aceitar orçamento de itens a cotar |
 | atendimento | Marcelo (Propaga) | Receber, verificar Drive, orçar, confirmar cronograma, entregar versões e arquivos |
 | financeiro_propaga | Marisa (Propaga) | Relatórios, faturamento, pagamento |

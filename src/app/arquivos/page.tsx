@@ -1,7 +1,7 @@
 "use client";
 /* Arquivos no Drive: pasta de cada pedido (os arquivos ficam no Drive compartilhado do cliente; o portal guarda os links). */
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
@@ -21,7 +21,7 @@ function Conteudo() {
 
   useEffect(() => {
     const col = collection(db(), "clientes", clienteId, "solicitacoes");
-    const q = s.papel === "solicitante" ? query(col, where("solicitanteUid", "==", s.usuario!.uid)) : col;
+    const q = col;
     return onSnapshot(q, (snap) => setLista(snap.docs.map((d) => d.data() as PedidoDoc).filter((p) => p.status !== "cancelada" && !(s.papel === "criativo" && ["proposta", "ajuste", "enviada"].includes(p.status))).sort((a, b) => ms(b.criadoEm) - ms(a.criadoEm))),
       () => setErro("Não foi possível carregar as pastas."));
   }, [clienteId, s.papel, s.usuario]);

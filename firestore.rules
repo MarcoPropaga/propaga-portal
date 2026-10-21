@@ -32,12 +32,12 @@ service cloud.firestore {
       }
 
       match /solicitacoes/{protocolo} {
-        allow read: if membro(c) && (papel() != 'solicitante' || resource.data.solicitanteUid == request.auth.uid);
+        // Marketing do cliente é equipe compartilhada (21/10/2026): todos os solicitantes do cliente leem todos os pedidos dele.
+        allow read: if membro(c);
         allow write: if false;
 
         match /eventos/{id} {
-          allow read: if membro(c) && (papel() != 'solicitante'
-            || get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.solicitanteUid == request.auth.uid);
+          allow read: if membro(c);
           allow write: if false;
         }
       }
@@ -49,9 +49,8 @@ service cloud.firestore {
       }
 
       match /valores/{protocolo} {
-        // Solicitante: só os valores dos próprios pedidos (Relatórios dela).
-        allow read: if veRelatorios(c) || (membro(c) && papel() == 'solicitante'
-          && get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.solicitanteUid == request.auth.uid);
+        // Solicitante: valores dos pedidos do próprio cliente (equipe de marketing compartilhada, 21/10/2026).
+        allow read: if veRelatorios(c) || (membro(c) && papel() == 'solicitante');
         allow write: if false;
       }
 

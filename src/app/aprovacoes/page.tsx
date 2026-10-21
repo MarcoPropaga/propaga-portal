@@ -201,7 +201,7 @@ function Conteudo() {
   const [aviso, setAviso] = useState<{ tipo: "ok" | "erro"; msg: string } | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
-  const todos = useMemo(() => (lista ?? []).filter((p) => (!filtro || p.protocolo === filtro) && (papel !== "solicitante" || p.solicitanteUid === s.usuario?.uid))
+  const todos = useMemo(() => (lista ?? []).filter((p) => (!filtro || p.protocolo === filtro))
     .sort((a, b) => b.protocolo.localeCompare(a.protocolo)), [lista, filtro, papel, s.usuario?.uid]);
   const pedidos = useMemo(() => todos.filter((p) => p.temPecas), [todos]);
   const [abrindo, setAbrindo] = useState<string | null>(null); // formulário de tarefa de pedido aberto

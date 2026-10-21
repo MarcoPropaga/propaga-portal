@@ -44,7 +44,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const doc = fs.ler(caminho);
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
-  if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Este pedido não é seu.");
+  // Marketing do cliente é equipe compartilhada (decisão de 21/10/2026): o pedido é de todos os solicitantes do cliente, já validado acima.
   if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) throw new ErroUsuario(`Este pedido está com ${ped.criativo.nome}.`);
   const autoria = u.papel === "criativo" ? { uid: u.uid, nome: u.nome } : null;
   const cri = ped.criativo?.nome.split(" ")[0] ?? "o criativo";
@@ -210,7 +210,7 @@ export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: 
   try {
     const cfg = lerConfig(p);
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
-      (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
+      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid)) ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
@@ -242,7 +242,6 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
     const linhas: { protocolo: string; titulo: string; peca: string; etapa: string; prazo: string | null; atrasada: boolean }[] = [];
     for (const ped of pedidos) {
       if (!u.propaga && u.clienteId !== ped.c) continue;
-      if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) continue;
       if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) continue;
       if (u.papel === "criativo" && aguardaCriacao(ped)) {
         const z = (ped as unknown as { prazo?: { primeira?: string } }).prazo?.primeira ?? null;

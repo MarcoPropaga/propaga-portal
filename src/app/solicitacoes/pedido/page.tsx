@@ -55,7 +55,7 @@ function Conteudo() {
   const ehAdmin = s.papel === "admin";
   const podeCancelar = ehAdmin && podeExecutar("cancelar", pedido.status, "admin");
   const podePublicar = ehAdmin && ["producao", "apresentacao"].includes(pedido.status);
-  const minhas = contarPendencias(s.papel, [pedido]) > 0 && (s.papel !== "solicitante" || pedido.solicitanteUid === s.usuario?.uid);
+  const minhas = contarPendencias(s.papel, [pedido]) > 0;
   const ehCliente = s.papel === "solicitante" || s.papel === "financeiro_cliente";
   // Linha do tempo única: eventos do pedido + ações de cada peça, do mais recente para o mais antigo.
   const tms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : Date.parse(String(v)) || 0);

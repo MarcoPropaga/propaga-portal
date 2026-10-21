@@ -2,7 +2,7 @@
 /* Relatórios: valores por pedido, período, unidade e etapa. Somente perfis com acesso a valores
    (Financeiro do cliente, Atendimento, Financeiro Propaga e Admin). Exporta planilha (CSV) e PDF (impressão). */
 import { useEffect, useMemo, useState } from "react";
-import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { fatorCobranca, NOME_STATUS, REGRA_REFACAO, VE_RELATORIOS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
@@ -48,7 +48,7 @@ function Conteudo() {
   const uid = s.usuario?.uid;
   useEffect(() => {
     const col = collection(db(), "clientes", clienteId, "solicitacoes");
-    const a = onSnapshot(soMeus ? query(col, where("solicitanteUid", "==", uid)) : col,
+    const a = onSnapshot(col,
       (q) => setPedidos(q.docs.map((d) => d.data() as PedidoDoc).sort((x, y) => dataDe(y.criadoEm).getTime() - dataDe(x.criadoEm).getTime())),
       () => setErro("Não foi possível carregar os pedidos."));
     if (soMeus) return a;

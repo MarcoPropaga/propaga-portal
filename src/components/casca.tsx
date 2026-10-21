@@ -36,7 +36,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
   const veAprov = !!s.papel && (VE_TAREFAS as string[]).includes(s.papel);
   const { lista } = usePedidos(veAprov);
   const cals = useCalendarios(veAprov);
-  const pend = contarPendencias(s.papel, (lista ?? []).filter((p) => s.papel !== "solicitante" || p.solicitanteUid === s.usuario?.uid)) + contarPendenciasCal(s.papel, cals, lista ?? []);
+  const pend = contarPendencias(s.papel, lista ?? []) + contarPendenciasCal(s.papel, cals, lista ?? []);
   const nome = s.usuario?.displayName || s.usuario?.email || "";
   return (
     <div className="grid min-h-screen md:grid-cols-[248px_minmax(0,1fr)] print:block">

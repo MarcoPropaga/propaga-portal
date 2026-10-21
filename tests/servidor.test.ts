@@ -237,11 +237,12 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(acao(mcl, "entregar").mensagem).toMatch(/peças em andamento/); // sem peças não há entrega
   });
 
-  it("bloqueios: Financeiro do cliente não age, solicitante não aceita, outro cliente não mexe", () => {
+  it("bloqueios: Financeiro do cliente não age, solicitante (qualquer um da equipe) não aceita", () => {
     expect(acao(mar, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
     expect(acao(deb, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
-    const outro = convidar(f.p, { nome: "Outra", email: "o@x.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "M" }).uid;
-    expect(acao(outro, "cancelar", { nota: "teste" }).mensagem).toMatch(/não é seu/);
+    // Marketing do cliente é equipe compartilhada (21/10/2026): o segundo solicitante tem as mesmas permissões da Débora, nem mais, nem menos.
+    const outro = convidar(f.p, { nome: "Glauco", email: "glauco@bmlog.com.br", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "M" }).uid;
+    expect(acao(outro, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
     expect(ped().status).toBe("enviada");
   });
 
@@ -285,6 +286,18 @@ describe("solicitação criada pelo Marcelo (proposta em nome da Débora)", () =
     expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
     expect(f.emails[0].html).toContain("/aprovacoes/");
     expect(acao(mcl, "aceitarPedido", { cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" } }).mensagem).toMatch(/não está disponível/);
+  });
+
+  it("equipe de marketing compartilhada: Glauco também é avisado, aprova a proposta e o titular continua a Débora", () => {
+    const glauco = convidar(f.p, { nome: "Glauco", email: "glauco@bmlog.com.br", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    f.emails.length = 0;
+    fila("enviar", mcl, base);
+    expect(ped()).toMatchObject({ status: "proposta", solicitanteUid: deb, solicitanteNome: "Débora" }); // ordem alfabética: sempre a mesma titular
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "glauco@bmlog.com.br"]);
+    f.emails.length = 0;
+    expect(acao(glauco, "ajustarProposta", { nota: "Trocar para 3 posts" }).status).toBe("ok"); // pede ajuste em pedido da Débora
+    expect(ped().status).toBe("ajuste");
+    expect(acao(glauco, "aprovarProposta").mensagem).toMatch(/não está disponível|ajuste/i);
   });
 
   it("Débora pede ajuste → Marcelo edita e reenvia → Débora aprova → Marcelo aceita e a Mariane recebe", () => {

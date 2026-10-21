@@ -49,7 +49,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const doc = fs.ler(caminho);
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
-  if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Este pedido não é seu.");
+  // Marketing do cliente é equipe compartilhada (decisão de 21/10/2026): o pedido é de todos os solicitantes do cliente, já validado acima.
 
   // Aprovação, refação e cancelamento de peças ficam em Minhas tarefas (fila "peca").
   if (acao === "entregar" && (!ped.temPecas || (ped.pecas ?? []).some((x) => x.etapa !== "concluida" && x.etapa !== "encerrada")))
@@ -174,7 +174,7 @@ export function avisarPessoas(
     const cfg = lerConfig(p);
     const todos = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as Omit<Usuario, "uid">) }));
     const dest = todos.filter((x) => x.uid !== autor.uid && (
-      (quem.includes("solicitante") && x.uid === ped.solicitanteUid) ||
+      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
       (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid))));
