@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
 import { assertFails, assertSucceeds, initializeTestEnvironment, type RulesTestEnvironment } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, getDocs, query, where, setDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
 
 let env: RulesTestEnvironment;
 const fb2 = { firebase: { sign_in_second_factor: "totp" } };
@@ -26,6 +26,9 @@ beforeEach(async () => {
     await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-1"), { solicitanteUid: "debora", titulo: "x" });
     await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-2"), { solicitanteUid: "outra", titulo: "y" });
     await setDoc(doc(d, "clientes/bmlog/valores/BML-1"), { total: 100 });
+    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-1/eventos/e1"), { rotulo: "a" });
+    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-2/eventos/e1"), { rotulo: "b" });
+    await setDoc(doc(d, "equipe/solicitantes"), { porCliente: {} });
     await setDoc(doc(d, "interno/catalogos/versoes/bmlog-1.0"), { x: 1 });
     await setDoc(doc(d, "criativo/tabela"), { itens: [] });
     await setDoc(doc(d, "relatoriosCriativo/mariane_2026-10"), { total: 355 });
@@ -44,18 +47,36 @@ describe("regras do Firestore", () => {
   it("isola clientes", async () => {
     await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog")));
   });
-  it("solicitantes do mesmo cliente (Débora e Glauco) leem todos os pedidos do cliente, nunca os de outro cliente", async () => {
-    const glauco = { ...debora };
-    await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-1")));
-    await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-2"))); // pedido de outra pessoa da equipe
-    await assertSucceeds(getDoc(doc(db("glauco", glauco), "clientes/bmlog/solicitacoes/BML-1")));
-    await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog/solicitacoes/BML-1")));
+  it("solicitante lê só os pedidos que originou (24/10/2026), nunca os do colega nem de outro cliente", async () => {
+    const P = (uid: string, c: Record<string, unknown>, id: string) => doc(db(uid, c), `clientes/bmlog/solicitacoes/${id}`);
+    await assertSucceeds(getDoc(P("debora", debora, "BML-1")));
+    await assertFails(getDoc(P("debora", debora, "BML-2"))); // pedido do colega
+    await assertSucceeds(getDoc(P("outra", debora, "BML-2")));
+    await assertFails(getDoc(P("x", outroCliente, "BML-1")));
+    // financeiro do cliente e equipe Propaga continuam vendo o cliente todo
+    await assertSucceeds(getDoc(P("mariana", mariana, "BML-2")));
+    await assertSucceeds(getDoc(P("marco", marco, "BML-2")));
   });
-  it("valores: financeiros, Propaga e a equipe de marketing do cliente veem; outro cliente não", async () => {
+  it("lista de pedidos do solicitante só passa com o filtro por solicitanteUid", async () => {
+    const col = collection(db("debora", debora), "clientes/bmlog/solicitacoes");
+    await assertFails(getDocs(col));
+    const r = await assertSucceeds(getDocs(query(col, where("solicitanteUid", "==", "debora"))));
+    if (r.size !== 1) throw new Error(`esperava 1 pedido, veio ${r.size}`);
+    await assertFails(getDocs(query(col, where("solicitanteUid", "==", "outra"))));
+  });
+  it("eventos e valores do pedido seguem o dono do pedido", async () => {
+    const E = (uid: string, c: Record<string, unknown>, p: string) => doc(db(uid, c), `clientes/bmlog/solicitacoes/${p}/eventos/e1`);
+    await assertSucceeds(getDoc(E("debora", debora, "BML-1")));
+    await assertFails(getDoc(E("debora", debora, "BML-2")));
+    await assertSucceeds(getDoc(E("marco", marco, "BML-2")));
     await assertSucceeds(getDoc(doc(db("debora", debora), "clientes/bmlog/valores/BML-1")));
-    await assertSucceeds(getDoc(doc(db("glauco", { ...debora }), "clientes/bmlog/valores/BML-1")));
+    await assertFails(getDoc(doc(db("outra", debora), "clientes/bmlog/valores/BML-1")));
     await assertFails(getDoc(doc(db("x", outroCliente), "clientes/bmlog/valores/BML-1")));
     await assertSucceeds(getDoc(doc(db("mariana", mariana), "clientes/bmlog/valores/BML-1")));
+  });
+  it("lista de solicitantes por cliente: só a equipe Propaga", async () => {
+    await assertSucceeds(getDoc(doc(db("marco", marco), "equipe/solicitantes")));
+    await assertFails(getDoc(doc(db("debora", debora), "equipe/solicitantes")));
   });
   it("Criativo Propaga lê pedidos, mas não vê preços nem valores", async () => {
     const mariane = { papel: "criativo", propaga: true, firebase: { sign_in_second_factor: "totp" } };
@@ -130,5 +151,11 @@ describe("regras do Firestore", () => {
     await assertSucceeds(fila("mariane", mariane, "tabelaCriativo"));
     await assertFails(fila("marcelo", marcelo, "tabelaCriativo"));
     await assertFails(fila("marisa", marisa, "tabelaCriativo"));
+  });
+  it("fila: lista fechada por papel; Financeiro do cliente não escreve", async () => {
+    const item = (uid: string, tipo: string) => ({ tipo, uid, clienteId: "bmlog", dados: {}, status: "pendente", criadoEm: serverTimestamp() });
+    await assertSucceeds(addDoc(collection(db("debora", debora), "fila"), item("debora", "acao")));
+    await assertFails(addDoc(collection(db("debora", debora), "fila"), item("debora", "convidar")));
+    await assertFails(addDoc(collection(db("mariana", mariana), "fila"), item("mariana", "acao")));
   });
 });

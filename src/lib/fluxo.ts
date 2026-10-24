@@ -36,7 +36,16 @@ export function fatorCobranca(p: { status: Status; versao?: number; temPecas?: b
   return (p.versao ?? 0) > 0 ? COBRANCA_CANCELADA_APRESENTADA : 0;
 }
 
-export interface Ctx { rodadas?: number; /** Pedido cancelado que tem valor a cobrar (50%). */ cobravel?: boolean }
+export interface Ctx {
+  rodadas?: number; /** Pedido cancelado que tem valor a cobrar (50%). */ cobravel?: boolean;
+  /** Recusa indisponível (24/10/2026): só se recusa pedido criado pelo Atendimento, e nunca uma edição devolvida ao Marketing. */
+  recusaBloqueada?: boolean;
+}
+
+/** Contexto de recusa a partir do pedido: recusar só vale para pedido criado pelo Atendimento e sem edição pendente. */
+export function recusaBloqueada(ped: { criadoPor?: unknown; edicaoPendente?: boolean }): boolean {
+  return !ped.criadoPor || !!ped.edicaoPendente;
+}
 interface Regra { de: Status[]; para: Status; papeis: Papel[]; rotulo: string }
 
 export const REGRAS: Record<Acao, Regra> = {
@@ -74,6 +83,7 @@ export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx 
   if (!r.de.includes(status) || !r.papeis.includes(papel)) return false;
   // Pedido cancelado só é faturado quando há valor a cobrar (peças canceladas depois de apresentadas = 50%).
   if (acao === "faturar" && status === "cancelada" && !ctx.cobravel) return false;
+  if (acao === "recusarProposta" && ctx.recusaBloqueada) return false;
   // Pedido inteiro: Solicitante e Atendimento só cancelam antes do aceite; depois, só o admin.
   // (Depois das peças, a Débora cancela peça por peça, com 50%.)
   // A proposta do Marcelo: a Débora recusa (recusarProposta); o Marcelo pode cancelar a dele antes da aprovação.

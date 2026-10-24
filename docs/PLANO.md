@@ -1,15 +1,18 @@
 # Plano de construção (um PR por etapa)
 
-1. ✅ **Fundação** (PR #1): marca, catálogo tipado, regras de preço e fluxo com testes, documentação.
-2. 🔄 **Acesso** (PR #2): Spark + Apps Script, convite por e-mail, criar senha, TOTP, recuperação, guarda de rotas, gestão de usuários, regras testadas no emulador.
-3. **Nova solicitação**: formulário das 6 seções, rascunho automático, validação no navegador e no servidor, protocolo, e-mails de aviso.
-4. **Solicitações**: lista, detalhe, linha do tempo, ações por papel via fila.
-5. **Valores e Relatórios**: catálogo, relatórios por período e por pedido, exportação PDF/planilha.
-6. **Contrato, Drive, Ajuda**.
-7. **Integrações**: job no Briefing Hub, domínio portal.propaga.com.
-8. **Piloto** com a B&M Log e checklist de aceite do contrato (Anexo B3).
+O portal está em uso real com a B&M Log desde 05/10/2026. Este plano cobre só as próximas etapas; o plano original de 8 etapas foi substituído por ele.
+
+## Próximas etapas (decisões de 24/10/2026)
+1. **Documentação:** `docs/ARQUITETURA.md` e este plano.
+2. ✅ **Visibilidade do solicitante e edição devolvida:** cada solicitante vê só os próprios pedidos; edição de itens devolve ao Marketing e bloqueia o aceite; o Atendimento escolhe o solicitante ao criar pedido; `/fila` com lista fechada de tipos por papel.
+3. **Cadastro de profissionais e vínculo com clientes:** pré-cadastro e liberação pelo admin, refinamento de perfil, vínculo por tipo de material, isolamento nas regras e nos testes (inclui o isolamento de leitura do criativo).
+4. **Contratos e tabela por criativo, e registro de horas.**
+5. **Material novo:** fluxo de precificação (criativo → admin → Atendimento → Marketing), com tabelas atualizadas na aprovação do admin.
+6. **Pré-seleção do criativo:** exige classificar os 68 serviços do catálogo por tipo de material.
+7. **Resultados por e-mail programado;** painel só depois da integração com as redes.
+8. **Configuração por cliente** (cadastro, unidades e textos), para replicar em outras agências.
 
 ## Depende do Marco
-- Seguir `docs/IMPLANTACAO.md` (ou autorizar o Claude a fazer pelo Chrome).
 - PDF do contrato assinado e data de assinatura.
-- Confirmar: aceite de orçamento pela Mariana; e-mail de login da Débora.
+- E-mails definitivos da Débora e da Mariana.
+- Respostas da seção "Em aberto" de `docs/ARQUITETURA.md`.

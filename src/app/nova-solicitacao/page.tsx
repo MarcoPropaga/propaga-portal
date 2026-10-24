@@ -174,6 +174,16 @@ function Conteudo() {
   const [statusOrig, setStatusOrig] = useState("");
   const [solicitanteOrig, setSolicitanteOrig] = useState("");
   const marcelo = s.papel === "atendimento";
+  // Dono do pedido criado pelo Atendimento (24/10/2026): automático se o cliente tem um só solicitante.
+  const [solicitantes, setSolicitantes] = useState<{ uid: string; nome: string }[]>([]);
+  const [donoUid, setDonoUid] = useState("");
+  useEffect(() => {
+    if (!marcelo || editar) return;
+    getDoc(doc(db(), "equipe", "solicitantes")).then((d) => {
+      const l = ((d.data()?.porCliente ?? {}) as Record<string, { uid: string; nome: string }[]>)[clienteId] ?? [];
+      setSolicitantes(l); if (l.length === 1) setDonoUid(l[0].uid);
+    }).catch(() => {});
+  }, [marcelo, editar, clienteId]);
 
   // Catálogo vigente (do Firestore, protegido por login e 2FA) + rascunho salvo.
   useEffect(() => {
@@ -249,6 +259,7 @@ function Conteudo() {
     itens: r.itens.map((it) => normalizarItem(servico(it.cod), { ...it, opcao: it.opcao || undefined, canal: it.canal || undefined, audio: it.audio || undefined })),
     drive: { link: r.drive.link.trim(), conferido: r.drive.conferido }, obs: r.obs,
     prazo: r.prazo, conferido: r.conferido,
+    ...(marcelo && !editar && donoUid ? { solicitanteUid: donoUid } : {}),
   });
 
   function validar() {
@@ -259,6 +270,7 @@ function Conteudo() {
       const k = a === "drive" ? (b === "link" ? "driveLink" : "driveOk") : a === "prazo" ? "desejada" : a === "itens" && b ? `it${b}-${c}` : a;
       e[k] ??= iss.message;
     }
+    if (marcelo && !editar && solicitantes.length > 1 && !donoUid) e.dono = "Escolha o solicitante dono deste pedido.";
     Object.assign(e, validarItens(cat!.servicos, r!.itens, cliente));
     if (r!.prazo.desejada && r!.prazo.desejada < hoje) e.desejada = "A data desejada já passou. Escolha outra data.";
     return e;
@@ -296,7 +308,7 @@ function Conteudo() {
             <p className="font-display text-3xl font-semibold">{envio.protocolo}</p>
             {editar || marcelo ? (
               <p>{editar && statusOrig === "enviada"
-                ? "Alterações salvas. O Marketing B&M Log foi avisado por e-mail do que mudou. Agora é só aceitar e enviar ao criativo em Minhas tarefas."
+                ? "Alterações salvas. O Marketing B&M Log foi avisado por e-mail do que mudou. Se os serviços mudaram, o pedido volta ao Marketing para aprovar antes do aceite; senão, é só aceitar e enviar ao criativo em Minhas tarefas."
                 : "O Marketing B&M Log recebeu por e-mail para aprovar, pedir ajuste ou recusar. Quando aprovar, a solicitação aparece em Minhas tarefas › Aceitar pedidos."}</p>
             ) : <>
             <p>A Propaga recebeu sua solicitação. As pessoas responsáveis foram avisadas por e-mail.</p>
@@ -330,7 +342,12 @@ function Conteudo() {
         <Secao n={1} chave="dados" titulo="Dados da solicitação">
           <div className="grid gap-4 md:grid-cols-3">
             <Texto id="titulo" rotulo="Título da solicitação" maxLength={120} valor={r.titulo} erro={erros.titulo} onChange={(v) => { mudar({ titulo: v }); limparErro("titulo"); }} />
+            {marcelo && !editar && solicitantes.length > 1 ? (
+              <Selecao id="dono" rotulo="Em nome de (dono do pedido)" valor={donoUid} vazio="Selecione" erro={erros.dono}
+                opcoes={solicitantes.map((x) => [x.uid, x.nome])} onChange={(v) => { setDonoUid(v); limparErro("dono"); }} />
+            ) : (
             <Texto id="solicitante" rotulo={marcelo || editar ? "Em nome de" : "Solicitante"} valor={editar ? solicitanteOrig : marcelo ? "Marketing B&M Log" : s.usuario?.displayName || s.usuario?.email || ""} readOnly obrigatorio={false} onChange={() => {}} className={`${cx} border-[#C9D7DC] bg-paper`} />
+            )}
             <Selecao id="unidade" rotulo="Unidade (matriz ou filial)" valor={r.unidade} vazio="Selecione" erro={erros.unidade}
               opcoes={cliente.unidades.map((u) => [u, u])} onChange={(v) => { mudar({ unidade: v }); limparErro("unidade"); }} />
             <Texto id="email" rotulo="E-mail de contato" type="email" autoComplete="email" valor={r.email} erro={erros.email} onChange={(v) => { mudar({ email: v }); limparErro("email"); }} />

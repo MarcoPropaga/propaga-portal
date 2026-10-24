@@ -30,6 +30,8 @@ export const solicitacaoSchema = z.object({
     urgente: z.boolean(),
   }),
   conferido: z.literal(true, { message: "Confirme que conferiu serviços, materiais e informações." }),
+  /** Pedido criado pelo Atendimento: solicitante dono do pedido (automático se o cliente tem só um). */
+  solicitanteUid: z.string().min(1).max(128).optional(),
   /** Edição pelo Marcelo de uma solicitação existente (protocolo). */
   editar: z.string().regex(/^[A-Z]{2,5}-\d{4}-\d{4}$/).optional(),
 });

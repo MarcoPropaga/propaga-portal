@@ -44,7 +44,8 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const doc = fs.ler(caminho);
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
-  // Marketing do cliente é equipe compartilhada (decisão de 21/10/2026): o pedido é de todos os solicitantes do cliente, já validado acima.
+  // O pedido pertence a quem o originou (24/10/2026): o solicitante só age e só vê o que é dele; para ele, o dos colegas "não existe".
+  if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Pedido não encontrado.");
   if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) throw new ErroUsuario(`Este pedido está com ${ped.criativo.nome}.`);
   const autoria = u.papel === "criativo" ? { uid: u.uid, nome: u.nome } : null;
   const cri = ped.criativo?.nome.split(" ")[0] ?? "o criativo";
@@ -210,7 +211,7 @@ export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: 
   try {
     const cfg = lerConfig(p);
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
-      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
+      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId && x.uid === ped.solicitanteUid) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid)) ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||

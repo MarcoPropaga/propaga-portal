@@ -237,13 +237,36 @@ describe("ações do pedido (fila 'acao')", () => {
     expect(acao(mcl, "entregar").mensagem).toMatch(/peças em andamento/); // sem peças não há entrega
   });
 
-  it("bloqueios: Financeiro do cliente não age, solicitante (qualquer um da equipe) não aceita", () => {
+  it("bloqueios: Financeiro do cliente não age, solicitante não aceita; pedido de outro solicitante não existe para ele", () => {
     expect(acao(mar, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
     expect(acao(deb, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
-    // Marketing do cliente é equipe compartilhada (21/10/2026): o segundo solicitante tem as mesmas permissões da Débora, nem mais, nem menos.
+    // O pedido pertence a quem o originou (24/10/2026): o colega não age nele, nem sabe que existe.
     const outro = convidar(f.p, { nome: "Glauco", email: "glauco@bmlog.com.br", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "M" }).uid;
-    expect(acao(outro, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/);
+    expect(acao(outro, "cancelar", { nota: "Teste" }).mensagem).toMatch(/Pedido não encontrado/);
+    expect(acao(outro, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/Pedido não encontrado/);
     expect(ped().status).toBe("enviada");
+  });
+
+  it("edição de itens pelo Marcelo devolve ao Marketing (bloqueia aceite e recusa); outras mudanças não devolvem", () => {
+    const itens = [{ cod: "01", variante: 0, qtd: 3, opcao: "4:5" }, { cod: "02", variante: 1, qtd: 1, opcao: "1:1" }];
+    const env = (extra: Record<string, unknown>) => fila("enviar", mcl, {
+      titulo: "Campanha", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos", itens,
+      drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+      editar: "BML-2026-0001", ...extra,
+    });
+    // só o título muda: segue em "enviada"
+    expect(env({ titulo: "Campanha nova", itens: [{ cod: "01", variante: 0, qtd: 2, opcao: "4:5" }, { cod: "02", variante: 1, qtd: 1, opcao: "1:1" }] }).status).toBe("ok");
+    expect(ped().status).toBe("enviada");
+    expect(ped().edicaoPendente).toBeUndefined();
+    // muda a quantidade: volta ao Marketing
+    f.emails.length = 0;
+    expect(env({ titulo: "Campanha nova" }).status).toBe("ok");
+    expect(ped()).toMatchObject({ status: "proposta", edicaoPendente: true });
+    expect(f.emails.map((e) => e.para)).toEqual(["deborabmlog@gmail.com"]);
+    expect(acao(mcl, "aceitarPedido", { cronograma: cron }).mensagem).toMatch(/não está disponível/); // aceite bloqueado até a aprovação
+    expect(acao(deb, "recusarProposta", { nota: "Não quero" }).mensagem).toMatch(/não está disponível/); // edição não se recusa
+    expect(acao(deb, "aprovarProposta").status).toBe("ok");
+    expect(ped()).toMatchObject({ status: "enviada", edicaoPendente: false });
   });
 
   it("cancelar o pedido não existe no portal (fica só no contrato)", () => {
@@ -288,18 +311,28 @@ describe("solicitação criada pelo Marcelo (proposta em nome da Débora)", () =
     expect(acao(mcl, "aceitarPedido", { cronograma: { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" } }).mensagem).toMatch(/não está disponível/);
   });
 
-  it("equipe de marketing compartilhada: Glauco também é avisado, aprova a proposta e o titular continua a Débora", () => {
+  it("dois solicitantes: o Marcelo escolhe o dono; só o dono é avisado, vê e age; o colega não", () => {
     const glauco = convidar(f.p, { nome: "Glauco", email: "glauco@bmlog.com.br", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
     f.emails.length = 0;
-    fila("enviar", mcl, base);
-    expect(ped()).toMatchObject({ status: "proposta", solicitanteUid: deb, solicitanteNome: "Débora" }); // ordem alfabética: sempre a mesma titular
-    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "glauco@bmlog.com.br"]);
-    expect(f.emails[0].html).toMatch(/em nome do Marketing B(&amp;|&)M Log/); // texto neutro: vale para qualquer pessoa da equipe
-    expect(f.emails[0].html).not.toContain("em seu nome");
+    expect(fila("enviar", mcl, base).mensagem).toMatch(/Escolha o solicitante/); // com dois, não há escolha automática
+    expect(fila("enviar", mcl, { ...base, solicitanteUid: mcl }).mensagem).toMatch(/Solicitante inválido/);
+    expect(f.doc("clientes/bmlog/solicitacoes/BML-2026-0001")).toBeFalsy();
+    expect(fila("enviar", mcl, { ...base, solicitanteUid: glauco }).status).toBe("ok");
+    expect(ped()).toMatchObject({ status: "proposta", solicitanteUid: glauco, solicitanteNome: "Glauco" });
+    expect(f.emails.map((e) => e.para)).toEqual(["glauco@bmlog.com.br"]); // a Débora não é avisada
+    expect(f.emails[0].html).toMatch(/em nome do Marketing B(&amp;|&)M Log/);
+    expect(acao(deb, "aprovarProposta").mensagem).toMatch(/Pedido não encontrado/);
+    expect(acao(deb, "ajustarProposta", { nota: "Trocar" }).mensagem).toMatch(/Pedido não encontrado/);
     f.emails.length = 0;
-    expect(acao(glauco, "ajustarProposta", { nota: "Trocar para 3 posts" }).status).toBe("ok"); // pede ajuste em pedido da Débora
+    expect(acao(glauco, "ajustarProposta", { nota: "Trocar para 3 posts" }).status).toBe("ok");
     expect(ped().status).toBe("ajuste");
+    expect(f.emails.map((e) => e.para)).toEqual(["marcelo@propaga.com"]);
     expect(acao(glauco, "aprovarProposta").mensagem).toMatch(/não está disponível|ajuste/i);
+  });
+
+  it("com um só solicitante o dono é automático", () => {
+    expect(fila("enviar", mcl, base).status).toBe("ok");
+    expect(ped()).toMatchObject({ solicitanteUid: deb });
   });
 
   it("Débora pede ajuste → Marcelo edita e reenvia → Débora aprova → Marcelo aceita e a Mariane recebe", () => {
