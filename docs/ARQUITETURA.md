@@ -28,8 +28,8 @@ PORTAL PROPAGA
       ├─ Jobs Propaga: todos os materiais e valores atualizados (o cliente vê)
       └─ Vínculos feitos pelo admin com profissionais
 ```
-- **Profissional:** o admin faz o pré-cadastro e libera o acesso. No primeiro acesso, a pessoa refina o próprio perfil (para o criativo, os tipos de material; lista a completar).
-- **Vínculo profissional × cliente:** decisão humana do admin, pelo alinhamento com a marca. Para criativos, o vínculo também considera o tipo de material: digitais para redes sociais, impressos (catálogos, folders, material para feiras), sites, vídeos e outros.
+- **Profissional:** o admin faz o pré-cadastro e libera o acesso. No primeiro acesso, a pessoa refina o próprio perfil (para o criativo, as habilidades de criação de materiais, que são os tipos de material).
+- **Vínculo profissional × cliente:** decisão humana do admin, pelo alinhamento com a marca. **Um atendimento por cliente**; o admin escolhe entre os cadastrados e reatribui em troca ou cobertura. Para criativos, o vínculo também considera o tipo de material: digitais para redes sociais, impressos (catálogos, folders, material para feiras), sites, vídeos e outros.
 - **Isolamento:** cada profissional tem dashboard exclusivo. Mesmo colegas da mesma função e do mesmo segmento não veem pedidos, tabelas, contratos nem pastas uns dos outros.
 - **Menus por função:** contrato, tabela ou horas, relatório, tarefas.
 
@@ -88,11 +88,16 @@ PORTAL PROPAGA
 5. Aprovada a arte e entregue o arquivo final, a mídia social agenda no mLabs e registra "Agendada" e "Publicada" (data não futura e link, ou justificativa).
 - O portal não publica nem se integra ao mLabs.
 - O faturamento não espera a publicação.
-- Relatório de redes ao cliente: proposta de e-mail programado para líderes e diretores, sem login (aguarda resposta).
+- **Relatório de redes:** a fonte e os indicadores são lançados pelo próprio profissional de mídia social. Não há integração com as plataformas.
+- Envio ao cliente: proposta de e-mail programado para líderes e diretores, sem login (aguarda resposta).
 
 ## Fluxo 4 — remuneração dos profissionais
 - **Criativo:** tabela própria acordada com o admin. Envia o relatório mensal das peças concluídas; o Financeiro Propaga confere e paga. Cada tabela guarda versão e data, e meses fechados mantêm o valor da época.
-- **Atendimento e mídia social:** contrato de horas (pacote mensal fechado, por exemplo 20 h por R$ 1.500). Horas acima do pacote são pagas pelas horas trabalhadas, com justificativa. O valor da hora consta no contrato assinado.
+- **Atendimento e mídia social:** contrato de horas (pacote mensal fechado, por exemplo 20 h por R$ 1.500).
+  - **Valor da hora:** o valor do pacote dividido pelas horas contratadas (no exemplo, R$ 75). Consta no contrato assinado.
+  - **Horas extras:** são a fração das horas do contrato, pagas pelo valor da hora. Uso esperado: raro, em casos urgentes ou em viagem pedida pelo cliente.
+  - **Lançamento:** feito pelo próprio profissional, com justificativa.
+  - **Aprovação:** o admin aprova as horas extras.
 - **Contrato assinado:** visto pelo próprio profissional, pelo admin e pelo Financeiro Propaga.
 
 ## Quem vê qual valor
@@ -147,6 +152,7 @@ relatoriosCriativo/{uid}_{AAAA-MM}   relatório mensal de cada criativo (já iso
 | Tabela do criativo | Documento único, legível por qualquer criativo | Uma por criativo, com versão e data |
 | `/fila` | Papel fora da lista cai numa lista padrão | Lista fechada por papel |
 | Contratos e horas de profissionais | Não existem | Fluxo 4; retenção e acesso a definir |
+| Um atendimento por cliente | Todo atendimento atua em todos os clientes | Vínculo único por cliente, reatribuído pelo admin |
 
 ## Segurança
 - Regras testadas no emulador (`npm run test:regras`): 2FA obrigatório, isolamento entre clientes, nenhuma gravação de pedido pelo navegador, referência interna inacessível. Os testes de visibilidade por solicitante e por criativo serão reescritos junto com as regras.
@@ -157,10 +163,7 @@ relatoriosCriativo/{uid}_{AAAA-MM}   relatório mensal de cada criativo (já iso
 - Drive: só links + verificação manual nesta fase.
 
 ## Em aberto
-- Quem aprova a justificativa das horas acima do pacote e qual o valor da hora excedente.
-- Como lançar horas: por dia, por pedido ou por publicação.
-- Campos do refinamento de perfil (para o criativo, a lista de tipos de material).
-- Fonte do relatório de redes (mLabs ou plataformas) e indicadores.
+- Campos do lançamento de horas extras (data, horas, justificativa e, se houver, cliente ou pedido) e a lista final de habilidades do criativo.
+- Envio do relatório de redes ao cliente: e-mail programado a líderes e diretores, sem login (proposta sem resposta).
 - Como o plano mensal se encaixa no catálogo por serviço; "anexo" do deck B&M Log × tabela Jobs Propaga.
-- Um atendimento titular por cliente, com reatribuição pelo admin (proposta sem resposta).
 - Relatório de resultados do cliente: fica na arquitetura, construído depois.
