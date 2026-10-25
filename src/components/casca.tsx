@@ -16,6 +16,7 @@ const ITENS = [
   { href: "/aprovacoes/", rotulo: "Minhas tarefas", papeis: VE_TAREFAS as string[] },
   { href: "/valores/", rotulo: "Jobs Propaga", papeis: VE_VALORES as string[] },
   { href: "/relatorios/", rotulo: "Relatórios", papeis: VE_RELATORIOS as string[] },
+  { href: "/criativo/perfil/", rotulo: "Meu perfil", papeis: ["criativo"] },
   { href: "/criativo/relatorio/", rotulo: "Meu relatório", papeis: ["criativo"] },
   { href: "/criativo/tabela/", rotulo: "Minha tabela", papeis: ["criativo"] },
   { href: "/criativo/pagamentos/", rotulo: "Pagamento dos criativos", papeis: ["financeiro_propaga", "admin"] },

@@ -9,8 +9,10 @@ import { Casca } from "@/components/casca";
 import { Aviso, Botao, Campo } from "@/components/ui";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 import { ehVinculado } from "@/lib/vinculos";
+import { EditorHabilidades, ResumoHabilidades } from "@/components/habilidades";
+import type { PerfilHabilidades } from "@/lib/habilidades";
 
-interface Usuario { id: string; nome: string; email: string; papel: string; clienteId: string | null; status: string; clientes?: string[] }
+interface Usuario { id: string; nome: string; email: string; papel: string; clienteId: string | null; status: string; clientes?: string[]; habilidades?: PerfilHabilidades }
 type Acesso = { senha: boolean; doisFatores: boolean; ultimoAcesso: string | null };
 type Estado = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
@@ -97,6 +99,23 @@ function Conteudo() {
   }
   const profissionais = lista.filter((u) => ehVinculado(u.papel));
 
+  // Habilidades do criativo (etapa 3b): o criativo marca no perfil dele; o admin revisa, ajusta e confirma.
+  const criativos = lista.filter((u) => u.papel === "criativo");
+  const [revisando, setRevisando] = useState("");
+  const [hab, setHab] = useState<{ tipo: "ocioso" } | { tipo: "salvando" } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string }>({ tipo: "ocioso" });
+  async function salvarHabilidades(u: Usuario, v: { primarias: string[]; secundarias: string[]; confirmar: boolean }) {
+    setHab({ tipo: "salvando" });
+    try {
+      const ref = await addDoc(collection(db(), "fila"), { tipo: "habilidades", uid: s.usuario!.uid, clienteId: null, dados: { uid: u.id, ...v }, status: "pendente", criadoEm: serverTimestamp() });
+      avisarServidor();
+      const fim = onSnapshot(doc(db(), "fila", ref.id), (d) => {
+        const x = d.data() as { status: string; mensagem?: string } | undefined;
+        if (x?.status === "ok") { fim(); setHab({ tipo: "ok", msg: `Habilidades de ${u.nome} salvas.` }); setRevisando(""); carregar(); }
+        if (x?.status === "erro") { fim(); setHab({ tipo: "erro", msg: x.mensagem || "Não foi possível salvar as habilidades." }); }
+      }, () => setHab({ tipo: "erro", msg: "Não foi possível salvar as habilidades." }));
+    } catch { setHab({ tipo: "erro", msg: "Não foi possível salvar as habilidades." }); }
+  }
+
   const cliente = (PAPEIS_CLIENTE as readonly string[]).includes(form.papel);
   return (
     <Casca titulo="Usuários">
@@ -159,6 +178,27 @@ function Conteudo() {
                 {!profissionais.length && <tr><td colSpan={2 + Object.keys(CLIENTES).length} className="px-3 py-6 text-center text-gray-600">Nenhum profissional cadastrado ainda.</td></tr>}
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <section className="grid gap-3" aria-labelledby="hab-titulo">
+          <h2 id="hab-titulo" className="text-lg">Habilidades dos criativos</h2>
+          <p className="max-w-[70ch] text-sm text-gray-600">O criativo marca as habilidades no primeiro acesso (até 2 primárias). Aqui você revisa, ajusta e confirma. Alterações feitas pelo criativo voltam para confirmação.</p>
+          {hab.tipo === "salvando" && <Aviso>Salvando… costuma levar poucos segundos.</Aviso>}
+          {hab.tipo === "ok" && <Aviso tipo="ok">{hab.msg}</Aviso>}
+          {hab.tipo === "erro" && <Aviso tipo="erro">{hab.msg}</Aviso>}
+          <div className="grid gap-3">
+            {criativos.map((u) => (
+              <div key={u.id} className="grid gap-3 rounded border border-gray-200 bg-white p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div><b>{u.nome}</b><div className="text-sm text-gray-600">{u.email}</div></div>
+                  <Botao variante="discreto" className="min-h-9 px-3 text-sm" onClick={() => setRevisando(revisando === u.id ? "" : u.id)}>{revisando === u.id ? "Fechar" : u.habilidades?.confirmado ? "Ajustar" : "Revisar e confirmar"}</Botao>
+                </div>
+                <ResumoHabilidades perfil={u.habilidades} />
+                {revisando === u.id && <EditorHabilidades key={u.id} inicial={u.habilidades} confirmavel enviando={hab.tipo === "salvando"} textoBotao="Salvar habilidades" onSalvar={(v) => salvarHabilidades(u, v)} />}
+              </div>
+            ))}
+            {!criativos.length && <p className="rounded border border-gray-200 bg-white px-3 py-6 text-center text-gray-600">Nenhum criativo cadastrado ainda.</p>}
           </div>
         </section>
 

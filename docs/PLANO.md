@@ -5,7 +5,7 @@ O portal está em uso real com a B&M Log desde 05/10/2026. Este plano cobre só 
 ## Próximas etapas (decisões de 24/10/2026)
 1. **Documentação:** `docs/ARQUITETURA.md` e este plano.
 2. ✅ **Visibilidade do solicitante e edição devolvida:** cada solicitante vê só os próprios pedidos; edição de itens devolve ao Marketing e bloqueia o aceite; o Atendimento escolhe o solicitante ao criar pedido; `/fila` com lista fechada de tipos por papel.
-3. **Profissionais e vínculo com clientes.** ✅ **3a:** vínculo por cliente (admin), um atendimento por cliente, isolamento nas regras e no servidor, incluindo a leitura do criativo. **3b (próxima):** pré-cadastro e liberação pelo admin, refinamento de perfil e vínculo por tipo de material (depende da lista de habilidades do criativo).
+3. **Profissionais e vínculo com clientes.** ✅ **3a:** vínculo por cliente (admin), um atendimento por cliente, isolamento nas regras e no servidor, incluindo a leitura do criativo. **3b:** ✅ habilidades do criativo (até 2 primárias + secundárias, perfil do criativo e confirmação do admin). Falta nesta etapa: liberação do acesso pelo admin como passo separado do convite e vínculo por tipo de material (usa as habilidades; entra junto da pré-seleção da etapa 6).
 4. **Contratos e tabela por criativo, e registro de horas.**
 5. **Material novo:** fluxo de precificação (criativo → admin → Atendimento → Marketing), com tabelas atualizadas na aprovação do admin.
 6. **Pré-seleção do criativo:** exige classificar os 68 serviços do catálogo por tipo de material.

@@ -1106,3 +1106,54 @@ describe("vínculo profissional × cliente (etapa 3a)", () => {
     expect(usr(m2).clientes).toEqual([]); // quem já tinha o campo não muda
   });
 });
+
+describe("habilidades do criativo (etapa 3b)", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, deb: string, cr1: string, cr2: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `h${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const usr = (uid: string) => f.doc(`usuarios/${uid}`);
+  beforeEach(() => {
+    f = fake();
+    adm = convidarBase(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidarBase(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    cr1 = convidarBase(f.p, { nome: "Mariane Garcia", email: "contato@mondesign.com.br", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    cr2 = convidarBase(f.p, { nome: "Paula Criativa", email: "paula@exemplo.com", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+  });
+
+  it("o criativo grava as próprias habilidades, a confirmar, e a lista da equipe leva o perfil", () => {
+    const r = fila("habilidades", cr1, { primarias: ["redes-estaticas", "impressos"], secundarias: ["brindes"], uid: cr2, confirmar: true });
+    expect(r.status).toBe("ok");
+    expect(usr(cr1).habilidades).toMatchObject({ primarias: ["redes-estaticas", "impressos"], secundarias: ["brindes"], confirmado: false, definidoPor: cr1 });
+    expect(usr(cr2).habilidades).toBeUndefined(); // criativo não mexe no perfil de outro nem se confirma
+    const eq = f.doc("equipe/criativos").lista.find((x: any) => x.uid === cr1);
+    expect(eq.habilidades.primarias).toEqual(["redes-estaticas", "impressos"]);
+  });
+
+  it("recusa 3 primárias, nenhuma primária, repetida, primária também secundária e habilidade desconhecida", () => {
+    expect(fila("habilidades", cr1, { primarias: ["redes-estaticas", "impressos", "brindes"], secundarias: [] }).mensagem).toMatch(/No máximo 2/);
+    expect(fila("habilidades", cr1, { primarias: [], secundarias: ["brindes"] }).mensagem).toMatch(/ao menos 1/);
+    expect(fila("habilidades", cr1, { primarias: ["impressos", "impressos"], secundarias: [] }).mensagem).toMatch(/repetida/);
+    expect(fila("habilidades", cr1, { primarias: ["impressos"], secundarias: ["impressos"] }).mensagem).toMatch(/primária e secundária/);
+    expect(fila("habilidades", cr1, { primarias: ["inexistente"], secundarias: [] }).mensagem).toMatch(/desconhecida/);
+    expect(usr(cr1).habilidades).toBeUndefined();
+  });
+
+  it("o admin define e confirma o perfil de um criativo; nova edição do criativo volta a confirmar", () => {
+    expect(fila("habilidades", adm, { uid: cr2, primarias: ["video-curto"], secundarias: ["redes-estaticas"], confirmar: true }).status).toBe("ok");
+    expect(usr(cr2).habilidades.confirmado).toBe(true);
+    expect(fila("habilidades", cr2, { primarias: ["video-curto", "video-institucional"], secundarias: [] }).status).toBe("ok");
+    expect(usr(cr2).habilidades.confirmado).toBe(false);
+  });
+
+  it("admin sem criativo, alvo que não é criativo e outros perfis são recusados", () => {
+    expect(fila("habilidades", adm, { primarias: ["impressos"], secundarias: [] }).mensagem).toMatch(/Escolha o criativo/);
+    expect(fila("habilidades", adm, { uid: deb, primarias: ["impressos"], secundarias: [] }).mensagem).toMatch(/Criativo não encontrado/);
+    expect(fila("habilidades", deb, { primarias: ["impressos"], secundarias: [] }).mensagem).toMatch(/Somente o criativo ou o administrador/);
+  });
+});

@@ -10,6 +10,7 @@ import { hojeSP } from "@/lib/datas";
 import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput, type SolicitacaoInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { atendeCliente, ehVinculado, MSG_SEM_VINCULO } from "@/lib/vinculos";
+import { habilidadesSchema, type PerfilHabilidades } from "@/lib/habilidades";
 import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
@@ -89,8 +90,9 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
 
 /** Lista pública (só equipe Propaga) dos criativos ativos, usada pelo Marcelo no aceite e na troca. Sem valores. */
 export function atualizarEquipe(fs: Firestore) {
-  const lista = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string }) }))
-    .filter((x) => x.papel === "criativo" && x.status !== "desativado").map((x) => ({ uid: x.uid, nome: x.nome }));
+  const lista = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string; habilidades?: PerfilHabilidades }) }))
+    .filter((x) => x.papel === "criativo" && x.status !== "desativado")
+    .map((x) => ({ uid: x.uid, nome: x.nome, ...(x.habilidades ? { habilidades: x.habilidades } : {}) }));
   // Solicitantes ativos por cliente: o Atendimento escolhe o dono do pedido que cria (24/10/2026).
   const porCliente: Record<string, { uid: string; nome: string }[]> = {};
   for (const x of fs.listar("usuarios").map((y) => ({ uid: y.caminho.split("/").pop()!, ...(y.dados as { nome: string; papel: string; clienteId?: string | null; status?: string }) }))
@@ -137,6 +139,26 @@ export function definirVinculos(fs: Firestore, bruto: unknown) {
   fs.gravar(ops);
   atualizarEquipe(fs);
   return { uid, clientes, substituiu: trocas };
+}
+
+/** Habilidades do criativo (etapa 3b): até 2 primárias e as secundárias.
+    O criativo define as próprias (ficam "a confirmar"); o admin define as de qualquer criativo e confirma. */
+export function salvarHabilidades(fs: Firestore, u: { uid: string; papel: string }, bruto: unknown, agora: Date) {
+  if (u.papel !== "criativo" && u.papel !== "admin") throw new ErroUsuario("Somente o criativo ou o administrador definem habilidades.");
+  const r = habilidadesSchema.safeParse(bruto);
+  if (!r.success) throw new ErroUsuario(r.error.issues[0]?.message || "Habilidades inválidas.");
+  const d = r.data;
+  const alvoUid = u.papel === "admin" ? d.uid : u.uid;
+  if (!alvoUid) throw new ErroUsuario("Escolha o criativo.");
+  const alvo = fs.ler(`usuarios/${alvoUid}`)?.dados as { papel: string } | undefined;
+  if (!alvo || alvo.papel !== "criativo") throw new ErroUsuario("Criativo não encontrado.");
+  const confirmado = u.papel === "admin" && d.confirmar === true;
+  const habilidades: PerfilHabilidades & { atualizadoEm: Date; definidoPor: string } = {
+    primarias: d.primarias, secundarias: d.secundarias, confirmado, atualizadoEm: agora, definidoPor: u.uid,
+  };
+  fs.gravar([{ caminho: `usuarios/${alvoUid}`, mesclar: true, dados: { habilidades } }]);
+  atualizarEquipe(fs);
+  return { uid: alvoUid, confirmado };
 }
 
 /** Migração da etapa 3a (idempotente): profissionais sem o campo `clientes` ficam vinculados a todos os clientes atuais,
@@ -201,6 +223,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       if (u.papel !== "admin") throw new ErroUsuario("Somente o administrador define vínculos.");
       return definirVinculos(fs, dados);
     }
+    case "habilidades":
+      return salvarHabilidades(fs, { uid, papel: u.papel }, dados, p.agora());
     case "acessos": {
       if (u.papel !== "admin") throw new ErroUsuario("Somente o administrador consulta os acessos.");
       const cfg = lerConfig(p);

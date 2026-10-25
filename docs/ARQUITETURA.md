@@ -30,6 +30,9 @@ PORTAL PROPAGA
 ```
 - **Profissional:** o admin faz o pré-cadastro e libera o acesso. No primeiro acesso, a pessoa refina o próprio perfil (para o criativo, as habilidades de criação de materiais, que são os tipos de material).
 - **Vínculo profissional × cliente:** decisão humana do admin, pelo alinhamento com a marca. **Um atendimento por cliente**; o admin escolhe entre os cadastrados e reatribui em troca ou cobertura. Para criativos, o vínculo também considera o tipo de material: digitais para redes sociais, impressos (catálogos, folders, material para feiras), sites, vídeos e outros.
+- **Habilidades do criativo (aprovadas em 25/10/2026):** o criativo marca no primeiro acesso (`/criativo/perfil`), o admin revisa e confirma em Usuários; alterar volta a "a confirmar". **Até 2 primárias** (recebem os pedidos por padrão; a pré-seleção da etapa 6 usa só estas) e quantas **secundárias** quiser (só quando o Atendimento indicar); o resto é "não faço". Lista (`src/content/habilidades.ts`), 12 cobrindo os 68 serviços do catálogo B&M Log v1.0, cada serviço em exatamente uma:
+  1. Redes sociais: imagens estáticas (01–04, 07–09) · 2. Vídeo curto e motion simples (05, 19) · 3. Vídeo institucional e promocional de 30 s ou mais (20–23) · 4. Impressos e material promocional (24–31) · 5. Brindes e produtos personalizados (32–36) · 6. Eventos e sinalização (37, 39–43) · 7. Endomarketing e comunicação interna (44–48, 52) · 8. Campanhas integradas e direção de arte (49–51, 53, A01, A02, A05–A07, A14, A15) · 9. Apresentações e documentos corporativos (15–18, A03, A04, A08–A10) · 10. E-mail, web e landing pages (10–14, A11–A13) · 11. Fotografia e tratamento de imagem (A17) · 12. Redação e conteúdo editorial (A16).
+  Fora do catálogo (atendem material novo, etapa 5): identidade visual e manual da marca, embalagem e rótulos, ilustração e infográficos, animação e motion avançado.
 - **Isolamento:** cada profissional tem dashboard exclusivo. Mesmo colegas da mesma função e do mesmo segmento não veem pedidos, tabelas, contratos nem pastas uns dos outros.
 - **Menus por função:** contrato, tabela ou horas, relatório, tarefas.
 
@@ -147,7 +150,7 @@ relatoriosCriativo/{uid}_{AAAA-MM}   relatório mensal de cada criativo (já iso
 | Edição de itens | ✅ Etapa 2: volta a `proposta` com `edicaoPendente`, bloqueia o aceite e a recusa; mudança só de texto não devolve | — |
 | Pedido criado pelo Atendimento | ✅ Etapa 2: o Atendimento escolhe o solicitante (automático se houver um só); lista em `equipe/solicitantes` | — |
 | Aceite de orçamento | Não existe; o Atendimento valora itens a cotar no aceite | Fluxo 2 (material novo) |
-| Profissionais Propaga | ✅ Etapa 3a: atendimento, criativo e mídia social só entram nos clientes vinculados (`usuarios/{uid}.clientes`, regras e servidor); admin e Financeiro Propaga veem todos | Cadastro e perfil (3b) |
+| Profissionais Propaga | ✅ Etapa 3a: atendimento, criativo e mídia social só entram nos clientes vinculados (`usuarios/{uid}.clientes`, regras e servidor); admin e Financeiro Propaga veem todos | Pré-cadastro e liberação pelo admin; vínculo por tipo de material (3b, restante) |
 | Isolamento do criativo | ✅ Etapa 3a: regras e consulta por `criativoUid`; pedido sem criativo só aparece depois do aceite | — |
 | Tabela do criativo | Documento único, legível por qualquer criativo | Uma por criativo, com versão e data |
 | `/fila` | ✅ Etapa 2: lista fechada por papel | — |
@@ -163,7 +166,7 @@ relatoriosCriativo/{uid}_{AAAA-MM}   relatório mensal de cada criativo (já iso
 - Drive: só links + verificação manual nesta fase.
 
 ## Em aberto
-- Campos do lançamento de horas extras (data, horas, justificativa e, se houver, cliente ou pedido) e a lista final de habilidades do criativo.
+- Campos do lançamento de horas extras (data, horas, justificativa e, se houver, cliente ou pedido).
 - Envio do relatório de redes ao cliente: e-mail programado a líderes e diretores, sem login (proposta sem resposta).
 - Como o plano mensal se encaixa no catálogo por serviço; "anexo" do deck B&M Log × tabela Jobs Propaga.
 - Relatório de resultados do cliente: fica na arquitetura, construído depois.

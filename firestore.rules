@@ -79,9 +79,9 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos']
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos', 'habilidades']
           : papel() == 'midia_social' ? ['publicacao']
-          : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo', 'arquivarRodada']
+          : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo', 'arquivarRodada', 'habilidades']
           : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']
           : papel() in ['solicitante', 'atendimento'] ? ['enviar', 'acao', 'peca', 'publicacao']
           : []; // lista fechada (24/10/2026): papel fora da lista, como o Financeiro do cliente, não escreve na fila

@@ -182,6 +182,11 @@ describe("regras do Firestore", () => {
     await assertSucceeds(fila("mariane", mariane, "tabelaCriativo"));
     await assertFails(fila("marcelo", marcelo, "tabelaCriativo"));
     await assertFails(fila("marisa", marisa, "tabelaCriativo"));
+    // Habilidades (3b): só o criativo e o admin.
+    await assertSucceeds(fila("mariane", mariane, "habilidades"));
+    await assertSucceeds(fila("marco", marco, "habilidades"));
+    await assertFails(fila("marcelo", marcelo, "habilidades"));
+    await assertFails(fila("marisa", marisa, "habilidades"));
   });
   it("fila: lista fechada por papel; Financeiro do cliente não escreve", async () => {
     const item = (uid: string, tipo: string) => ({ tipo, uid, clienteId: "bmlog", dados: {}, status: "pendente", criadoEm: serverTimestamp() });
