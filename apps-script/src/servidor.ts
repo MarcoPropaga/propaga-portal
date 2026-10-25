@@ -9,6 +9,7 @@ import { calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
 import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput, type SolicitacaoInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
+import { atendeCliente, ehVinculado, MSG_SEM_VINCULO } from "@/lib/vinculos";
 import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
@@ -43,6 +44,7 @@ export function configurarProjeto(p: Plataforma) {
   });
   fs.gravar(ops);
   publicarTabelaCriativo(fs, agora);
+  migrarVinculos(p, fs);
   atualizarEquipe(fs);
   p.log(`Projeto ${cfg.projeto} configurado: TOTP, política de senha e ${Object.keys(CLIENTES).length} cliente(s).`);
 }
@@ -70,14 +72,18 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
   const msg = emailConvite({ nome: d.nome.split(" ")[0], link, cliente: nomePortal, convidadoPor: convidadoPor.nome });
   p.enviarEmail({ para: d.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente });
 
-  new Firestore(p, cfg.projeto).gravar([{
+  const fsU = new Firestore(p, cfg.projeto);
+  const atual = fsU.ler(`usuarios/${uid}`)?.dados as { clientes?: string[] } | undefined;
+  fsU.gravar([{
     caminho: `usuarios/${uid}`, mesclar: true,
     dados: {
       nome: d.nome, email: d.email, papel: d.papel, perfil: NOMES_PAPEIS[d.papel], clienteId, propaga,
       status: "convidado", convidadoEm: p.agora(), convidadoPor: convidadoPor.uid,
+      // Profissional novo começa sem clientes; o admin vincula depois. Reenvio de convite não apaga vínculos.
+      ...(ehVinculado(d.papel) && !atual?.clientes ? { clientes: [] } : {}),
     },
   }]);
-  atualizarEquipe(new Firestore(p, cfg.projeto));
+  atualizarEquipe(fsU);
   return { uid, novo: !existente };
 }
 
@@ -90,7 +96,12 @@ export function atualizarEquipe(fs: Firestore) {
   for (const x of fs.listar("usuarios").map((y) => ({ uid: y.caminho.split("/").pop()!, ...(y.dados as { nome: string; papel: string; clienteId?: string | null; status?: string }) }))
     .filter((y) => y.papel === "solicitante" && y.clienteId && y.status !== "desativado").sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")))
     (porCliente[x.clienteId!] ??= []).push({ uid: x.uid, nome: x.nome });
-  fs.gravar([{ caminho: "equipe/criativos", dados: { lista } }, { caminho: "equipe/solicitantes", dados: { porCliente } }]);
+  // Criativos por cliente: o Atendimento só escolhe entre os vinculados ao cliente (etapa 3a).
+  const criativosPorCliente: Record<string, { uid: string; nome: string }[]> = {};
+  for (const x of fs.listar("usuarios").map((y) => ({ uid: y.caminho.split("/").pop()!, ...(y.dados as { nome: string; papel: string; clientes?: string[]; status?: string }) }))
+    .filter((y) => y.papel === "criativo" && y.status !== "desativado"))
+    for (const c of x.clientes ?? []) (criativosPorCliente[c] ??= []).push({ uid: x.uid, nome: x.nome });
+  fs.gravar([{ caminho: "equipe/criativos", dados: { lista, porCliente: criativosPorCliente } }, { caminho: "equipe/solicitantes", dados: { porCliente } }]);
 }
 
 /** Primeiro administrador (Marco). Executar uma vez, depois de configurarProjeto. */
@@ -99,6 +110,49 @@ export function criarAdministrador(p: Plataforma) {
   const nome = p.propriedade("ADMIN_NOME") || "Administrador";
   if (!email) throw new Error("Defina a propriedade ADMIN_EMAIL nas configurações do script.");
   return convidar(p, { nome, email, papel: "admin" }, { uid: "sistema", nome: "Portal Propaga" });
+}
+
+/** Vínculos (admin): define os clientes de um profissional. Atendimento é único por cliente: quem assume tira o anterior. */
+export function definirVinculos(fs: Firestore, bruto: unknown) {
+  const d = bruto as { uid?: unknown; clientes?: unknown };
+  const uid = String(d?.uid ?? "");
+  if (!uid || !Array.isArray(d.clientes) || d.clientes.some((c) => typeof c !== "string")) throw new ErroUsuario("Dados do vínculo inválidos.");
+  const clientes = [...new Set(d.clientes as string[])];
+  if (clientes.some((c) => !CLIENTES[c])) throw new ErroUsuario("Cliente não encontrado.");
+  const alvo = fs.ler(`usuarios/${uid}`);
+  const a = alvo?.dados as { nome: string; papel: string; status?: string } | undefined;
+  if (!alvo || !a) throw new ErroUsuario("Profissional não encontrado.");
+  if (!ehVinculado(a.papel)) throw new ErroUsuario("Este perfil não usa vínculos: ele atua em todos os clientes.");
+  const ops: { caminho: string; dados: Record<string, unknown>; mesclar?: boolean }[] = [{ caminho: `usuarios/${uid}`, mesclar: true, dados: { clientes } }];
+  const trocas: string[] = [];
+  if (a.papel === "atendimento") {
+    for (const x of fs.listar("usuarios")) {
+      const o = x.dados as { nome: string; papel: string; clientes?: string[] };
+      const ouid = x.caminho.split("/").pop()!;
+      if (ouid === uid || o.papel !== "atendimento") continue;
+      const resto = (o.clientes ?? []).filter((c) => !clientes.includes(c));
+      if (resto.length !== (o.clientes ?? []).length) { ops.push({ caminho: x.caminho, mesclar: true, dados: { clientes: resto } }); trocas.push(o.nome); }
+    }
+  }
+  fs.gravar(ops);
+  atualizarEquipe(fs);
+  return { uid, clientes, substituiu: trocas };
+}
+
+/** Migração da etapa 3a (idempotente): profissionais sem o campo `clientes` ficam vinculados a todos os clientes atuais,
+    e os pedidos com criativo ganham `criativoUid` (usado pelas regras). */
+export function migrarVinculos(p: Plataforma, fs: Firestore) {
+  const todos = Object.keys(CLIENTES);
+  let vinculados = 0, pedidos = 0;
+  for (const x of fs.listar("usuarios")) {
+    const o = x.dados as { papel: string; clientes?: string[] };
+    if (ehVinculado(o.papel) && !o.clientes) { fs.gravar([{ caminho: x.caminho, mesclar: true, dados: { clientes: todos } }]); vinculados++; }
+  }
+  for (const c of todos) for (const x of fs.listar(`clientes/${c}/solicitacoes`)) {
+    const o = x.dados as { criativo?: { uid: string } | null; criativoUid?: string };
+    if (o.criativoUid === undefined) { fs.gravar([{ caminho: x.caminho, mesclar: true, dados: { criativoUid: o.criativo?.uid ?? "" } }]); pedidos++; }
+  }
+  p.log(`Vínculos migrados: ${vinculados} profissional(is), ${pedidos} pedido(s).`);
 }
 
 /** Processa pedidos pendentes da fila. Seguro para rodar em paralelo: cada item é "travado" por versão. */
@@ -143,6 +197,10 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       const r = convidar(p, dados, { uid, nome: u.nome });
       return { uid: r.uid, novo: r.novo };
     }
+    case "vinculos": {
+      if (u.papel !== "admin") throw new ErroUsuario("Somente o administrador define vínculos.");
+      return definirVinculos(fs, dados);
+    }
     case "acessos": {
       if (u.papel !== "admin") throw new ErroUsuario("Somente o administrador consulta os acessos.");
       const cfg = lerConfig(p);
@@ -183,6 +241,7 @@ export function enviarSolicitacao(
 ) {
   if (!["solicitante", "atendimento", "admin"].includes(u.papel)) throw new ErroUsuario("Seu perfil não envia solicitações.");
   if (u.papel === "solicitante" && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
+  if (u.papel !== "solicitante" && !atendeCliente({ ...u, propaga: true }, clienteId)) throw new ErroUsuario(MSG_SEM_VINCULO);
   const cliente = CLIENTES[clienteId];
   if (!cliente) throw new ErroUsuario("Cliente não encontrado.");
 
@@ -236,7 +295,7 @@ export function enviarSolicitacao(
         {
           caminho: `${base}/solicitacoes/${protocolo}`, seNaoExiste: true,
           dados: {
-            protocolo, clienteId, titulo: d.titulo, solicitanteUid: titular.uid, solicitanteNome: titular.nome,
+            protocolo, clienteId, titulo: d.titulo, solicitanteUid: titular.uid, solicitanteNome: titular.nome, criativoUid: "",
             ...(proposta ? { criadoPor: { uid: u.uid, nome: u.nome } } : {}),
             unidade: d.unidade, email: d.email, objetivo: d.objetivo, publico: d.publico, itens,
             drive: { link: d.drive.link, conferido: true, verificado: false }, obs: d.obs,
@@ -267,7 +326,7 @@ export function enviarSolicitacao(
   // Avisos por e-mail (falha de e-mail não desfaz o pedido; fica registrada no histórico).
   try {
     const destinatarios = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as { nome: string; email: string; papel: string; propaga?: boolean }) }))
-      .filter((x) => x.uid !== u.uid && x.propaga && DESTINO_AVISO.includes(x.papel));
+      .filter((x) => x.uid !== u.uid && x.propaga && DESTINO_AVISO.includes(x.papel) && atendeCliente({ ...x, propaga: true, clientes: (x as { clientes?: string[] }).clientes }, clienteId));
     const autor = fs.ler(`usuarios/${u.uid}`)?.dados as { email?: string } | undefined;
     const msg = emailNovaSolicitacao({
       cliente: cliente.nomePortal, protocolo, titulo: d.titulo, solicitante: u.nome, unidade: d.unidade, publico: d.publico,

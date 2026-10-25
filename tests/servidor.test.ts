@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { paraValor, deValor } from "../apps-script/src/firestore";
-import { configurarProjeto, convidar, processarFila } from "../apps-script/src/servidor";
+import { configurarProjeto, convidar as convidarBase, definirVinculos, processarFila } from "../apps-script/src/servidor";
 import { resumoDiario } from "../apps-script/src/pecas";
 import { Firestore } from "../apps-script/src/firestore";
 import { CLIENTES } from "@/content/clientes";
@@ -8,6 +8,13 @@ import { situacaoRelatorio } from "@/lib/pecas";
 import type { Plataforma, RespostaHttp } from "../apps-script/src/plataforma";
 
 /* Simula Firestore REST + Identity Toolkit em memória. */
+/** Como o admin faria depois do convite: profissional novo vinculado à B&M Log (os testes de vínculo usam convidarBase). */
+function convidar(p: Plataforma, dados: Record<string, unknown>, por: { uid: string; nome: string }) {
+  const r = convidarBase(p, dados, por);
+  if (["atendimento", "criativo", "midia_social"].includes(String(dados.papel))) definirVinculos(new Firestore(p, "propaga-portal"), { uid: r.uid, clientes: ["bmlog"] });
+  return r;
+}
+
 function fake() {
   const docs = new Map<string, { fields: Record<string, unknown>; updateTime: string }>();
   const usuarios = new Map<string, { localId: string; email: string; claims?: string }>();
@@ -994,5 +1001,108 @@ describe("publicação nas redes sociais (fila 'publicacao'): calendário do Kau
     expect(resumoDiario(f.p, new Firestore(f.p, "propaga-portal"))).toBeGreaterThan(0);
     const m = f.emails.find((e) => e.para === "marcelo@propaga.com");
     expect(m?.html).toMatch(/Dia do motorista/);
+  });
+});
+
+describe("vínculo profissional × cliente (etapa 3a)", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, deb: string, m1: string, m2: string, cr1: string, cr2: string;
+  let seq = 0;
+  const fila = (tipo: string, uid: string, dados: unknown) => {
+    const id = `v${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo, uid, clienteId: "bmlog", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const base = {
+    titulo: "Campanha", unidade: "Matriz · Itajaí/SC", email: "m@bmlog.com.br", objetivo: "Reforçar", publico: "Ambos os públicos",
+    itens: [{ cod: "01", variante: 0, qtd: 2, opcao: "4:5" }],
+    drive: { link: "https://drive.google.com/drive/folders/abc", conferido: true }, obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+  };
+  const cron = { inicio: "2026-10-05", primeira: "2026-10-09", final: "2026-10-16" };
+  const fsx = () => new Firestore(f.p, "propaga-portal");
+  const acao = (uid: string, a: string, extra: Record<string, unknown> = {}) => fila("acao", uid, { protocolo: "BML-2026-0001", acao: a, ...extra });
+  const ped = () => f.doc("clientes/bmlog/solicitacoes/BML-2026-0001");
+  const usr = (uid: string) => f.doc(`usuarios/${uid}`);
+  beforeEach(() => {
+    f = fake();
+    adm = convidarBase(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    deb = convidarBase(f.p, { nome: "Débora", email: "deborabmlog@gmail.com", papel: "solicitante", clienteId: "bmlog" }, { uid: adm, nome: "Marco" }).uid;
+    m1 = convidarBase(f.p, { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    m2 = convidarBase(f.p, { nome: "Paulo Cobertura", email: "paulo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    cr1 = convidarBase(f.p, { nome: "Mariane Garcia", email: "contato@mondesign.com.br", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    cr2 = convidarBase(f.p, { nome: "Paula Criativa", email: "paula@exemplo.com", papel: "criativo" }, { uid: adm, nome: "Marco" }).uid;
+    f.emails.length = 0;
+  });
+
+  it("profissional novo nasce sem clientes; reenviar o convite não apaga vínculos", () => {
+    expect(usr(m1).clientes).toEqual([]);
+    definirVinculos(fsx(), { uid: m1, clientes: ["bmlog"] });
+    convidarBase(f.p, { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" });
+    expect(usr(m1).clientes).toEqual(["bmlog"]);
+    expect(usr(deb).clientes).toBeUndefined(); // perfil de cliente não usa vínculo
+  });
+
+  it("sem vínculo, o atendimento não cria pedido nem age; com vínculo, sim", () => {
+    expect(fila("enviar", m1, base).mensagem).toMatch(/não está vinculado/);
+    definirVinculos(fsx(), { uid: m1, clientes: ["bmlog"] });
+    expect(fila("enviar", deb, base).status).toBe("ok");
+    expect(acao(m2, "aceitarPedido", { cronograma: cron, pastaPropaga: "https://drive.google.com/drive/folders/p" }).mensagem).toMatch(/não está vinculado/);
+    expect(ped().status).toBe("enviada");
+  });
+
+  it("atendimento é único por cliente: quem assume tira o anterior", () => {
+    definirVinculos(fsx(), { uid: m1, clientes: ["bmlog"] });
+    const r = definirVinculos(fsx(), { uid: m2, clientes: ["bmlog"] });
+    expect(r.substituiu).toEqual(["Marcelo Brum"]);
+    expect(usr(m1).clientes).toEqual([]);
+    expect(usr(m2).clientes).toEqual(["bmlog"]);
+    expect(() => definirVinculos(fsx(), { uid: deb, clientes: ["bmlog"] })).toThrow(/não usa vínculos/);
+    expect(() => definirVinculos(fsx(), { uid: m1, clientes: ["inexistente"] })).toThrow(/Cliente não encontrado/);
+  });
+
+  it("só o admin define vínculos pela fila", () => {
+    expect(fila("vinculos", m1, { uid: m1, clientes: ["bmlog"] }).mensagem).toMatch(/Somente o administrador/);
+    expect(fila("vinculos", adm, { uid: m1, clientes: ["bmlog"] }).status).toBe("ok");
+    expect(usr(m1).clientes).toEqual(["bmlog"]);
+  });
+
+  it("avisos de nova solicitação vão só ao atendimento vinculado; o criativo da lista é só o vinculado", () => {
+    definirVinculos(fsx(), { uid: m1, clientes: ["bmlog"] });
+    definirVinculos(fsx(), { uid: cr1, clientes: ["bmlog"] });
+    f.emails.length = 0;
+    fila("enviar", deb, base);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["deborabmlog@gmail.com", "marcelo@propaga.com", "marco@propaga.com"]); // recibo da Débora; Paulo (sem vínculo) fora
+    expect(f.doc("equipe/criativos").porCliente.bmlog.map((x: { uid: string }) => x.uid)).toEqual([cr1]);
+    // aceite: só a Mariane é elegível; a Paula (sem vínculo) não
+    expect(acao(m1, "aceitarPedido", { cronograma: cron, pastaPropaga: "https://drive.google.com/drive/folders/p", criativoUid: cr2 }).mensagem).toMatch(/Criativo não encontrado/);
+    expect(acao(m1, "aceitarPedido", { cronograma: cron, pastaPropaga: "https://drive.google.com/drive/folders/p" }).status).toBe("ok");
+    expect(ped()).toMatchObject({ criativo: { uid: cr1 }, criativoUid: cr1 });
+  });
+
+  it("trocar o criativo atualiza criativoUid; pedido novo nasce sem criativo", () => {
+    definirVinculos(fsx(), { uid: m1, clientes: ["bmlog"] });
+    definirVinculos(fsx(), { uid: cr1, clientes: ["bmlog"] });
+    definirVinculos(fsx(), { uid: cr2, clientes: ["bmlog"] });
+    fila("enviar", deb, base);
+    expect(ped().criativoUid).toBe("");
+    acao(m1, "aceitarPedido", { cronograma: cron, pastaPropaga: "https://drive.google.com/drive/folders/p", criativoUid: cr1 });
+    expect(ped().criativoUid).toBe(cr1);
+    expect(acao(m1, "trocarCriativo", { criativoUid: cr2, nota: "Cobertura" }).status).toBe("ok");
+    expect(ped()).toMatchObject({ criativo: { uid: cr2 }, criativoUid: cr2 });
+  });
+
+  it("migração: profissionais antigos sem 'clientes' ficam na B&M Log e pedidos ganham criativoUid", () => {
+    const x = fsx();
+    x.gravar([{ caminho: `usuarios/${m1}`, mesclar: true, dados: { clientes: null as unknown as string[] } }]);
+    // simula cadastro legado: remove o campo
+    f.docs.get(`usuarios/${m1}`)!.fields = Object.fromEntries(Object.entries(f.docs.get(`usuarios/${m1}`)!.fields).filter(([k]) => k !== "clientes"));
+    f.docs.set("clientes/bmlog/solicitacoes/BML-2026-0009", { updateTime: "t0", fields: (paraValor({ protocolo: "BML-2026-0009", criativo: { uid: cr1, nome: "Mariane" } }) as any).mapValue.fields });
+    configurarProjeto(f.p);
+    expect(usr(m1).clientes).toEqual(["bmlog"]);
+    expect(f.doc("clientes/bmlog/solicitacoes/BML-2026-0009").criativoUid).toBe(cr1);
+    configurarProjeto(f.p); // idempotente
+    expect(usr(m1).clientes).toEqual(["bmlog"]);
+    expect(usr(m2).clientes).toEqual([]); // quem já tinha o campo não muda
   });
 });

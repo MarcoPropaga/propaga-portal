@@ -2,6 +2,7 @@
    Grava as peças no próprio documento do pedido (campo `pecas`), com pré-condição de versão. */
 import { CLIENTES } from "@/content/clientes";
 import { MAX_RODADAS, NOME_STATUS } from "@/lib/fluxo";
+import { atendeCliente, MSG_SEM_VINCULO } from "@/lib/vinculos";
 import { hojeSP, somarDiasUteis } from "@/lib/datas";
 import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, refacoesDaPeca, statusPorPecas, ultima, type Peca } from "@/lib/pecas";
 import { pecaAcaoSchema } from "@/lib/schemas";
@@ -14,7 +15,7 @@ import { foraDaTabela, chaveServico } from "@/lib/criativo";
 import { tabelaCriativoAtual } from "./criativo";
 import { lerConfig } from "./servidor";
 
-export interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
+export interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean; clientes?: string[] }
 export interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; rodadas: number; versao: number;
   itens: { nome: string }[]; pecas?: Peca[]; temPecas?: boolean; criativo?: { uid: string; nome: string } | null;
@@ -37,7 +38,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   if (!r.success) throw new ErroUsuario(r.error.issues[0]?.message || "Dados inválidos.");
   const d = r.data;
   if (!CLIENTES[clienteId]) throw new ErroUsuario("Cliente não encontrado.");
-  if (!u.propaga && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
+  if (!atendeCliente(u, clienteId)) throw new ErroUsuario(u.propaga ? MSG_SEM_VINCULO : "Cliente inválido para o seu acesso.");
   if (!PODE[d.acao].includes(u.papel)) throw new ErroUsuario("Esta ação não está disponível para o seu perfil.");
 
   const caminho = `clientes/${clienteId}/solicitacoes/${d.protocolo}`;
@@ -212,10 +213,10 @@ export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: 
     const cfg = lerConfig(p);
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
       (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId && x.uid === ped.solicitanteUid) ||
-      (quem.includes("atendimento") && x.papel === "atendimento") ||
-      (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid)) ||
+      (quem.includes("atendimento") && x.papel === "atendimento" && atendeCliente(x, clienteId)) ||
+      (quem.includes("criativo") && x.papel === "criativo" && atendeCliente(x, clienteId) && (!ped.criativo || ped.criativo.uid === x.uid)) ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
-      (quem.includes("midia_social") && x.papel === "midia_social")));
+      (quem.includes("midia_social") && x.papel === "midia_social" && atendeCliente(x, clienteId))));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
       autor: autor.nome, etapa: NOME_STATUS[status], link: `${cfg.portalUrl}/aprovacoes/?p=${encodeURIComponent(ped.protocolo)}` });
@@ -242,7 +243,7 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
     if ((u as { status?: string }).status === "desativado") continue;
     const linhas: { protocolo: string; titulo: string; peca: string; etapa: string; prazo: string | null; atrasada: boolean }[] = [];
     for (const ped of pedidos) {
-      if (!u.propaga && u.clienteId !== ped.c) continue;
+      if (!atendeCliente(u, ped.c)) continue;
       if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) continue;
       if (u.papel === "criativo" && aguardaCriacao(ped)) {
         const z = (ped as unknown as { prazo?: { primeira?: string } }).prazo?.primeira ?? null;
@@ -252,7 +253,7 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
         linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: x.nome, etapa: x.etapa, prazo: prazoEtapa(x), atrasada: atrasada(x, hoje) });
     }
     if (u.propaga || u.clienteId) for (const c of Object.keys(CLIENTES)) {
-      if (!u.propaga && u.clienteId !== c) continue;
+      if (!atendeCliente(u, c)) continue;
       const itens = itensDe(fs.listar(`clientes/${c}/calendarios`).map((x) => x.dados as unknown as { mes: string; itens: CalItem[] }));
       for (const it of itens) if (pendentePub(u.papel, it, arteDe(it, pedidos.filter((q) => q.c === c))))
         linhas.push({ protocolo: `Calendário ${it.mes}`, titulo: it.titulo, peca: NOME_CAL[it.etapa], etapa: it.etapa, prazo: prazoPub(it), atrasada: atrasadaPub(it, hoje) });

@@ -15,13 +15,21 @@ service cloud.firestore {
     function papel() { return request.auth.token.papel; }
     function equipePropaga() { return request.auth.token.propaga == true; }
     function admin() { return logado() && doisFatores() && equipePropaga() && papel() == 'admin'; }
+    // Vínculo profissional × cliente (etapa 3a, 24/10/2026): atendimento, criativo e mídia social só entram nos clientes
+    // listados em usuarios/{uid}.clientes (gravado só pelo servidor). Admin e Financeiro da Propaga veem todos.
+    function vinculado(c) {
+      return !(papel() in ['atendimento', 'criativo', 'midia_social'])
+        || c in get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.get('clientes', []);
+    }
     function membro(c) {
-      return logado() && doisFatores() && (equipePropaga() || request.auth.token.clienteId == c);
+      return logado() && doisFatores() && ((equipePropaga() && vinculado(c)) || request.auth.token.clienteId == c);
     }
     // Solicitante (Marketing do cliente) vê só os pedidos que originou (24/10/2026); os demais papéis veem o cliente todo.
+    // Criativo vê só os pedidos atribuídos a ele (criativoUid), e só nos clientes a que está vinculado.
     function pedidoVisivel(c, protocolo) {
-      return papel() != 'solicitante'
-        || get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.solicitanteUid == request.auth.uid;
+      return (papel() != 'solicitante' && papel() != 'criativo')
+        || (papel() == 'solicitante' && get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.solicitanteUid == request.auth.uid)
+        || (papel() == 'criativo' && get(/databases/$(database)/documents/clientes/$(c)/solicitacoes/$(protocolo)).data.criativoUid == request.auth.uid);
     }
     function veRelatorios(c) {
       return membro(c) && papel() in ['financeiro_cliente', 'atendimento', 'financeiro_propaga', 'admin'];
@@ -39,7 +47,9 @@ service cloud.firestore {
       match /solicitacoes/{protocolo} {
         // Solicitante lê só os próprios pedidos (24/10/2026, substitui a equipe compartilhada de 21/10). A consulta do navegador
         // precisa filtrar por solicitanteUid, senão a leitura inteira é negada.
-        allow read: if membro(c) && (papel() != 'solicitante' || resource.data.solicitanteUid == request.auth.uid);
+        allow read: if membro(c)
+          && (papel() != 'solicitante' || resource.data.solicitanteUid == request.auth.uid)
+          && (papel() != 'criativo' || resource.data.criativoUid == request.auth.uid);
         allow write: if false;
 
         match /eventos/{id} {
@@ -69,7 +79,7 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada']
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos']
           : papel() == 'midia_social' ? ['publicacao']
           : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo', 'arquivarRodada']
           : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']

@@ -8,8 +8,9 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Aviso, Botao, Campo } from "@/components/ui";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
+import { ehVinculado } from "@/lib/vinculos";
 
-interface Usuario { id: string; nome: string; email: string; papel: string; clienteId: string | null; status: string }
+interface Usuario { id: string; nome: string; email: string; papel: string; clienteId: string | null; status: string; clientes?: string[] }
 type Acesso = { senha: boolean; doisFatores: boolean; ultimoAcesso: string | null };
 type Estado = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
@@ -74,6 +75,28 @@ function Conteudo() {
     if (!reenviar) setForm({ ...form, nome: "", email: "" });
   }
 
+  // Vínculos (etapa 3a): quais clientes cada profissional atende. Atendimento é único por cliente: quem assume tira o anterior.
+  const [vinc, setVinc] = useState<{ tipo: "ocioso" } | { tipo: "salvando" } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string }>({ tipo: "ocioso" });
+  async function alternar(u: Usuario, clienteId: string) {
+    const atuais = u.clientes ?? [];
+    const novos = atuais.includes(clienteId) ? atuais.filter((c) => c !== clienteId) : [...atuais, clienteId];
+    setVinc({ tipo: "salvando" });
+    try {
+      const ref = await addDoc(collection(db(), "fila"), { tipo: "vinculos", uid: s.usuario!.uid, clienteId: null, dados: { uid: u.id, clientes: novos }, status: "pendente", criadoEm: serverTimestamp() });
+      avisarServidor();
+      const fim = onSnapshot(doc(db(), "fila", ref.id), (d) => {
+        const x = d.data() as { status: string; mensagem?: string; resultado?: { substituiu?: string[] } } | undefined;
+        if (x?.status === "ok") {
+          fim();
+          const t = x.resultado?.substituiu?.length ? ` ${x.resultado.substituiu.join(", ")} deixou de atender este cliente.` : "";
+          setVinc({ tipo: "ok", msg: `Vínculo de ${u.nome} atualizado.${t}` }); carregar();
+        }
+        if (x?.status === "erro") { fim(); setVinc({ tipo: "erro", msg: x.mensagem || "Não foi possível salvar o vínculo." }); }
+      }, () => setVinc({ tipo: "erro", msg: "Não foi possível salvar o vínculo." }));
+    } catch { setVinc({ tipo: "erro", msg: "Não foi possível salvar o vínculo." }); }
+  }
+  const profissionais = lista.filter((u) => ehVinculado(u.papel));
+
   const cliente = (PAPEIS_CLIENTE as readonly string[]).includes(form.papel);
   return (
     <Casca titulo="Usuários">
@@ -106,6 +129,38 @@ function Conteudo() {
           {estado.tipo === "erro" && <Aviso tipo="erro">{estado.msg}</Aviso>}
           <Botao type="submit" className="justify-self-start" carregando={estado.tipo === "aguardando"}>Enviar convite</Botao>
         </form>
+
+        <section className="grid gap-3" aria-labelledby="vinculos-titulo">
+          <h2 id="vinculos-titulo" className="text-lg">Vínculos com clientes</h2>
+          <p className="max-w-[70ch] text-sm text-gray-600">Atendimento, criativo e mídia social só veem e atuam nos clientes marcados aqui. O atendimento é um por cliente: ao marcar outra pessoa, a anterior deixa de atender. Admin e Financeiro da Propaga atuam em todos.</p>
+          {vinc.tipo === "salvando" && <Aviso>Salvando… costuma levar poucos segundos.</Aviso>}
+          {vinc.tipo === "ok" && <Aviso tipo="ok">{vinc.msg}</Aviso>}
+          {vinc.tipo === "erro" && <Aviso tipo="erro">{vinc.msg}</Aviso>}
+          <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
+            <table className="w-full text-sm">
+              <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
+                <tr><th className="px-3 py-2.5">Profissional</th><th className="px-3 py-2.5">Perfil</th>{Object.values(CLIENTES).map((c) => <th key={c.id} className="px-3 py-2.5">{c.nome}</th>)}</tr>
+              </thead>
+              <tbody>
+                {profissionais.map((u) => (
+                  <tr key={u.id} className="border-t border-gray-200">
+                    <td className="px-3 py-2.5"><b>{u.nome}</b><div className="text-gray-600">{u.email}</div></td>
+                    <td className="px-3 py-2.5">{NOMES_PAPEIS[u.papel] ?? u.papel}</td>
+                    {Object.values(CLIENTES).map((c) => (
+                      <td key={c.id} className="px-3 py-2.5">
+                        <label className="inline-flex min-h-11 items-center gap-2">
+                          <input type="checkbox" className="size-5 accent-marca-700" checked={(u.clientes ?? []).includes(c.id)} disabled={vinc.tipo === "salvando"} onChange={() => alternar(u, c.id)} />
+                          <span className="sr-only">{u.nome} atende {c.nome}</span>
+                        </label>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                {!profissionais.length && <tr><td colSpan={2 + Object.keys(CLIENTES).length} className="px-3 py-6 text-center text-gray-600">Nenhum profissional cadastrado ainda.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <section className="grid gap-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
