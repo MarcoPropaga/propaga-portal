@@ -34,7 +34,10 @@ export function useFila() {
 /** Consulta dos pedidos: solicitante vê só os que originou (24/10/2026); sem o filtro as regras negam a leitura toda. */
 export function pedidosDoUsuario(clienteId: string, papel: string | null | undefined, uid: string | undefined) {
   const base = collection(db(), "clientes", clienteId, "solicitacoes");
-  return papel === "solicitante" && uid ? query(base, where("solicitanteUid", "==", uid)) : base;
+  if (papel === "solicitante" && uid) return query(base, where("solicitanteUid", "==", uid));
+  // Criativo: só os pedidos atribuídos a ele (etapa 3a); pedido sem criativo aparece só depois do aceite.
+  if (papel === "criativo" && uid) return query(base, where("criativoUid", "==", uid));
+  return base;
 }
 
 export function usePedidos(ativo = true) {

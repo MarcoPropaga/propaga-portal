@@ -40,7 +40,8 @@ export function FormAcao({ acao, pedido, onFechar, onOk }: { acao: Acao; pedido:
   useEffect(() => {
     if (!escolhe) return;
     getDoc(doc(db(), "equipe", "criativos")).then((d) => {
-      const l = ((d.data()?.lista ?? []) as { uid: string; nome: string }[]).filter((x) => acao !== "trocarCriativo" || x.uid !== pedido.criativo?.uid);
+      const doCliente = ((d.data()?.porCliente ?? {}) as Record<string, { uid: string; nome: string }[]>)[pedido.clienteId] ?? [];
+      const l = doCliente.filter((x) => acao !== "trocarCriativo" || x.uid !== pedido.criativo?.uid);
       setEquipe(l); if (l.length === 1) setCriativoUid(l[0].uid);
     }).catch(() => {});
   }, [escolhe, acao, pedido.criativo?.uid]);

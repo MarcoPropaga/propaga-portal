@@ -11,6 +11,7 @@ import type { Firestore } from "./firestore";
 import { usuarios, type Pedido, type Quem, type Usuario } from "./pecas";
 import { lerConfig } from "./servidor";
 import { ErroUsuario, type Plataforma } from "./plataforma";
+import { atendeCliente, MSG_SEM_VINCULO } from "@/lib/vinculos";
 
 const PODE: Record<string, string[]> = {
   enviarCalendario: ["midia_social", "admin"],
@@ -31,7 +32,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
   const d = r.data;
   const cli = CLIENTES[clienteId];
   if (!cli) throw new ErroUsuario("Cliente não encontrado.");
-  if (!u.propaga && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
+  if (!atendeCliente(u, clienteId)) throw new ErroUsuario(u.propaga ? MSG_SEM_VINCULO : "Cliente inválido para o seu acesso.");
   if (!PODE[d.acao].includes(u.papel)) throw new ErroUsuario("Esta ação não está disponível para o seu perfil.");
 
   const agora = p.agora().toISOString();
@@ -207,8 +208,8 @@ function avisarCalendario(p: Plataforma, fs: Firestore, autor: Usuario, clienteI
     const cfg = lerConfig(p);
     const dest = usuarios(fs).filter((x) => x.uid !== autor.uid && (x as { status?: string }).status !== "desativado" && (
       (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
-      (quem.includes("atendimento") && x.papel === "atendimento") ||
-      (quem.includes("midia_social") && x.papel === "midia_social")));
+      (quem.includes("atendimento") && x.papel === "atendimento" && atendeCliente(x, clienteId)) ||
+      (quem.includes("midia_social") && x.papel === "midia_social" && atendeCliente(x, clienteId))));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: `Calendário ${mes}`, titulo: `Publicações de ${NOME_MES(mes)}`, rotulo, nota,
       autor: autor.nome, etapa: "Redes sociais", link: `${cfg.portalUrl}/aprovacoes/` });

@@ -9,6 +9,10 @@ const fb2 = { firebase: { sign_in_second_factor: "totp" } };
 const debora = { papel: "solicitante", clienteId: "bmlog", ...fb2 };
 const mariana = { papel: "financeiro_cliente", clienteId: "bmlog", ...fb2 };
 const marco = { papel: "admin", propaga: true, ...fb2 };
+const mariane = { papel: "criativo", propaga: true, ...fb2 };
+const marcelo = { papel: "atendimento", propaga: true, ...fb2 };
+const kauan = { papel: "midia_social", propaga: true, ...fb2 };
+const marisa = { papel: "financeiro_propaga", propaga: true, ...fb2 };
 const outroCliente = { papel: "solicitante", clienteId: "outro", ...fb2 };
 
 beforeAll(async () => {
@@ -23,8 +27,13 @@ beforeEach(async () => {
   await env.withSecurityRulesDisabled(async (c) => {
     const d = c.firestore();
     await setDoc(doc(d, "clientes/bmlog"), { nome: "B&M Log" });
-    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-1"), { solicitanteUid: "debora", titulo: "x" });
-    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-2"), { solicitanteUid: "outra", titulo: "y" });
+    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-1"), { solicitanteUid: "debora", criativoUid: "mariane", titulo: "x" });
+    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-2"), { solicitanteUid: "outra", criativoUid: "outro-criativo", titulo: "y" });
+    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-3"), { solicitanteUid: "outra", criativoUid: "", titulo: "z" });
+    await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-4"), { solicitanteUid: "outra", criativoUid: "semvinculo", titulo: "w" });
+    for (const [uid, papel, clientes] of [["mariane", "criativo", ["bmlog"]], ["semvinculo", "criativo", []], ["marcelo", "atendimento", ["bmlog"]],
+      ["paulo", "atendimento", []], ["kauan", "midia_social", ["bmlog"]], ["kauan2", "midia_social", []]] as const)
+      await setDoc(doc(d, `usuarios/${uid}`), { papel, clientes });
     await setDoc(doc(d, "clientes/bmlog/valores/BML-1"), { total: 100 });
     await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-1/eventos/e1"), { rotulo: "a" });
     await setDoc(doc(d, "clientes/bmlog/solicitacoes/BML-2/eventos/e1"), { rotulo: "b" });
@@ -78,11 +87,33 @@ describe("regras do Firestore", () => {
     await assertSucceeds(getDoc(doc(db("marco", marco), "equipe/solicitantes")));
     await assertFails(getDoc(doc(db("debora", debora), "equipe/solicitantes")));
   });
-  it("Criativo Propaga lê pedidos, mas não vê preços nem valores", async () => {
-    const mariane = { papel: "criativo", propaga: true, firebase: { sign_in_second_factor: "totp" } };
-    await assertSucceeds(getDoc(doc(db("mariane", mariane), "clientes/bmlog/solicitacoes/BML-2")));
+  it("criativo lê só os pedidos atribuídos a ele, nos clientes vinculados, sem preços nem valores", async () => {
+    const P = (id: string) => doc(db("mariane", mariane), `clientes/bmlog/solicitacoes/${id}`);
+    await assertSucceeds(getDoc(P("BML-1"))); // atribuído a ela
+    await assertFails(getDoc(P("BML-2"))); // atribuído a outro criativo
+    await assertFails(getDoc(P("BML-3"))); // ainda sem criativo
+    await assertSucceeds(getDoc(doc(db("mariane", mariane), "clientes/bmlog/solicitacoes/BML-1/eventos/e1")));
+    await assertFails(getDoc(doc(db("mariane", mariane), "clientes/bmlog/solicitacoes/BML-2/eventos/e1")));
+    const col = collection(db("mariane", mariane), "clientes/bmlog/solicitacoes");
+    await assertFails(getDocs(col)); // lista sem filtro é negada
+    const r = await assertSucceeds(getDocs(query(col, where("criativoUid", "==", "mariane"))));
+    if (r.size !== 1) throw new Error(`esperava 1 pedido, veio ${r.size}`);
     await assertFails(getDoc(doc(db("mariane", mariane), "clientes/bmlog/catalogo/1.0")));
     await assertFails(getDoc(doc(db("mariane", mariane), "clientes/bmlog/valores/BML-1")));
+    // criativo sem vínculo com o cliente não lê nem o que é dele
+    await assertFails(getDoc(doc(db("semvinculo", { ...mariane }), "clientes/bmlog/solicitacoes/BML-4")));
+  });
+  it("atendimento e mídia social só entram nos clientes vinculados; admin e financeiro Propaga em todos", async () => {
+    const C = (uid: string, c: Record<string, unknown>, p = "clientes/bmlog") => doc(db(uid, c), p);
+    await assertSucceeds(getDoc(C("marcelo", marcelo, "clientes/bmlog/solicitacoes/BML-2")));
+    await assertSucceeds(getDoc(C("marcelo", marcelo)));
+    await assertFails(getDoc(C("paulo", { ...marcelo }, "clientes/bmlog/solicitacoes/BML-2"))); // atendimento sem vínculo
+    await assertFails(getDoc(C("paulo", { ...marcelo })));
+    await assertFails(getDoc(C("paulo", { ...marcelo }, "clientes/bmlog/valores/BML-1")));
+    await assertSucceeds(getDoc(C("kauan", kauan, "clientes/bmlog")));
+    await assertFails(getDoc(C("kauan2", { ...kauan }, "clientes/bmlog")));
+    await assertSucceeds(getDoc(C("marco", marco, "clientes/bmlog/solicitacoes/BML-2")));
+    await assertSucceeds(getDoc(C("marisa", marisa, "clientes/bmlog/valores/BML-1")));
   });
   it("ninguém grava pedido direto pelo navegador", async () => {
     await assertFails(setDoc(doc(db("debora", debora), "clientes/bmlog/solicitacoes/BML-9"), { solicitanteUid: "debora" }));

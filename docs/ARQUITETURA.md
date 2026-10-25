@@ -147,15 +147,15 @@ relatoriosCriativo/{uid}_{AAAA-MM}   relatório mensal de cada criativo (já iso
 | Edição de itens | ✅ Etapa 2: volta a `proposta` com `edicaoPendente`, bloqueia o aceite e a recusa; mudança só de texto não devolve | — |
 | Pedido criado pelo Atendimento | ✅ Etapa 2: o Atendimento escolhe o solicitante (automático se houver um só); lista em `equipe/solicitantes` | — |
 | Aceite de orçamento | Não existe; o Atendimento valora itens a cotar no aceite | Fluxo 2 (material novo) |
-| Profissionais Propaga | Equipe Propaga lê todos os clientes | Vínculo por cliente, com isolamento nas regras |
-| Isolamento do criativo | Só na tela (`usePedidos`); as regras deixam ler todos os pedidos | Regras e servidor |
+| Profissionais Propaga | ✅ Etapa 3a: atendimento, criativo e mídia social só entram nos clientes vinculados (`usuarios/{uid}.clientes`, regras e servidor); admin e Financeiro Propaga veem todos | Cadastro e perfil (3b) |
+| Isolamento do criativo | ✅ Etapa 3a: regras e consulta por `criativoUid`; pedido sem criativo só aparece depois do aceite | — |
 | Tabela do criativo | Documento único, legível por qualquer criativo | Uma por criativo, com versão e data |
 | `/fila` | ✅ Etapa 2: lista fechada por papel | — |
 | Contratos e horas de profissionais | Não existem | Fluxo 4; retenção e acesso a definir |
-| Um atendimento por cliente | Todo atendimento atua em todos os clientes | Vínculo único por cliente, reatribuído pelo admin |
+| Um atendimento por cliente | ✅ Etapa 3a: único por cliente; ao vincular outro, o anterior sai (tela *Usuários › Vínculos*) | — |
 
 ## Segurança
-- Regras testadas no emulador (`npm run test:regras`): 2FA obrigatório, isolamento entre clientes, nenhuma gravação de pedido pelo navegador, referência interna inacessível. Os testes de visibilidade por solicitante e por criativo serão reescritos junto com as regras.
+- Regras testadas no emulador (`npm run test:regras`): 2FA obrigatório, isolamento entre clientes, nenhuma gravação de pedido pelo navegador, referência interna inacessível. Testes cobrem visibilidade por solicitante, por criativo e por vínculo.
 - O servidor nunca confia no perfil enviado pelo navegador: lê `usuarios/{uid}` gravado por ele mesmo.
 - Convite: link de senha de uso único (validade de 1 hora); se expirar, a página gera outro.
 - Política de senha: 8+ caracteres, maiúscula, número e símbolo. Proteção contra enumeração de e-mails ligada.

@@ -3,6 +3,7 @@
 import { CLIENTES } from "@/content/clientes";
 import { catalogo } from "@/content/catalogos";
 import { aplicar, NOME_STATUS, recusaBloqueada, type Acao } from "@/lib/fluxo";
+import { atendeCliente, MSG_SEM_VINCULO } from "@/lib/vinculos";
 import { calcularValores } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
@@ -13,7 +14,7 @@ import { ErroUsuario, type Plataforma } from "./plataforma";
 import { lerConfig } from "./servidor";
 import { cancelaCobravel } from "@/lib/pecas";
 
-interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean }
+interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean; clientes?: string[] }
 interface Pedido {
   protocolo: string; titulo: string; status: Status; solicitanteUid: string; solicitanteNome: string;
   itens: (ItemSolicitacao & { nome: string; sobOrcamento: boolean })[]; rodadas: number; versao: number;
@@ -23,12 +24,12 @@ interface Pedido {
 }
 
 /** Criativos ativos (Mariane e outros), para o aceite e a troca. */
-function criativos(fs: Firestore) {
-  return fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string }) }))
-    .filter((x) => x.papel === "criativo" && x.status !== "desativado");
+function criativos(fs: Firestore, clienteId: string) {
+  return fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string; clientes?: string[] }) }))
+    .filter((x) => x.papel === "criativo" && x.status !== "desativado" && (x.clientes ?? []).includes(clienteId));
 }
-function escolherCriativo(fs: Firestore, uid?: string) {
-  const lista = criativos(fs);
+function escolherCriativo(fs: Firestore, clienteId: string, uid?: string) {
+  const lista = criativos(fs, clienteId);
   if (uid) { const c = lista.find((x) => x.uid === uid); if (!c) throw new ErroUsuario("Criativo não encontrado."); return { uid: c.uid, nome: c.nome }; }
   if (lista.length === 1) return { uid: lista[0].uid, nome: lista[0].nome };
   if (!lista.length) return null;
@@ -44,7 +45,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const acao = d.acao as Acao;
   const cliente = CLIENTES[clienteId];
   if (!cliente) throw new ErroUsuario("Cliente não encontrado.");
-  if (!u.propaga && u.clienteId !== clienteId) throw new ErroUsuario("Cliente inválido para o seu acesso.");
+  if (!atendeCliente(u, clienteId)) throw new ErroUsuario(u.propaga ? MSG_SEM_VINCULO : "Cliente inválido para o seu acesso.");
 
   const caminho = `clientes/${clienteId}/solicitacoes/${d.protocolo}`;
   const doc = fs.ler(caminho);
@@ -106,8 +107,8 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       mudancas.prazo = { ...ped.prazo, ...d.cronograma };
       if (!d.pastaPropaga) throw new ErroUsuario("Cole o link da pasta do pedido no Drive compartilhado da Propaga.");
       mudancas.drive = { ...ped.drive, verificado: !!d.driveVerificado, propaga: d.pastaPropaga };
-      const cri = escolherCriativo(fs, d.criativoUid);
-      if (cri) mudancas.criativo = cri;
+      const cri = escolherCriativo(fs, clienteId, d.criativoUid);
+      if (cri) { mudancas.criativo = cri; mudancas.criativoUid = cri.uid; }
       mudancas.aceitoPor = { uid: u.uid, nome: u.nome, em: agora };
       rotulo = "Pedido aceito pela Propaga; produção iniciada";
       const qtdOrc = Object.keys(orcados).length;
@@ -123,11 +124,11 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       break;
     }
     case "trocarCriativo": {
-      const cri = escolherCriativo(fs, d.criativoUid);
+      const cri = escolherCriativo(fs, clienteId, d.criativoUid);
       if (!cri) throw new ErroUsuario("Não há criativo cadastrado.");
       if (ped.criativo?.uid === cri.uid) throw new ErroUsuario(`${cri.nome} já é o criativo deste pedido.`);
       novo = ped.status; mudancas.status = ped.status;
-      mudancas.criativo = cri;
+      mudancas.criativo = cri; mudancas.criativoUid = cri.uid;
       rotulo = `Criativo do pedido: ${ped.criativo?.nome ?? "—"} → ${cri.nome}`;
       criativoJob = true;
       break;
@@ -178,9 +179,9 @@ export function avisarPessoas(
     const todos = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as Omit<Usuario, "uid">) }));
     const dest = todos.filter((x) => x.uid !== autor.uid && (
       (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId && x.uid === ped.solicitanteUid) ||
-      (quem.includes("atendimento") && x.papel === "atendimento") ||
+      (quem.includes("atendimento") && x.papel === "atendimento" && atendeCliente(x, clienteId)) ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
-      (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid))));
+      (quem.includes("criativo") && x.papel === "criativo" && atendeCliente(x, clienteId) && (!ped.criativo || ped.criativo.uid === x.uid))));
     if (!dest.length) return;
     const msg = emailAtualizacao({
       cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
