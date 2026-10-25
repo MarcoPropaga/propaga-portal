@@ -115,7 +115,7 @@ Simulação navegável: painel do cliente no Plano C (aprovações, clipagem, re
 **Módulo e aprovação**
 - **Módulo por cliente.** O admin liga "Assessoria de Imprensa" ao registrar o contrato (data, PDF, plano e quantidade por tipo). Sem contrato registrado, o módulo não aparece. Fora do catálogo de jobs de publicidade.
 - **Aprovador:** o contrato indica a(s) pessoa(s) da empresa (marketing e/ou diretoria) que aprovam releases e orçamentos. Nada sai sem essa aprovação. O cliente pode editar o texto antes de aprovar ou pedir ajuste.
-- **Prazo de resposta:** 24 h, ajustado conforme a urgência da pauta. O que acontece sem resposta ainda precisa ser definido.
+- **Prazo de resposta:** 24 h, ajustado conforme a urgência da pauta. Sem resposta no prazo, o release fica parado e o prazo é renegociado com o aprovador. Nada é enviado à imprensa automaticamente.
 - **Seis tipos de pauta (solicitação):** acontecimento da empresa, lançamento de produto, inauguração de filial, premiação, informação de interesse público e release para colunistas. Cada um com dados mínimos e a pergunta "pode ser divulgado?". Informação RESTRITO ou NÃO UTILIZAR volta ao cliente com o motivo.
 - **Matriz e filiais:** a filial informa o fato; a matriz decide, autoriza e define o porta-voz.
 - **Opcionais** (relacionamento com jornalistas, media training, porta-voz, distribuição internacional): entram no mesmo contrato, por solicitação ou como item do plano.
