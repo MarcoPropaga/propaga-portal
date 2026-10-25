@@ -103,6 +103,18 @@ PORTAL PROPAGA
   - **Aprovação:** o admin aprova as horas extras.
 - **Contrato assinado:** visto pelo próprio profissional, pelo admin e pelo Financeiro Propaga.
 
+## Fluxo 5 — assessoria de imprensa (decisões de 25/10/2026; análise: "Assessoria de Imprensa Propaga: escopo e aplicação no portal")
+- **Contrato próprio, separado do de publicidade.** O cliente que contrata imprensa tem um contrato só dela, com base no volume mensal de materiais: release, clipagem e gestão de crise. **Valores, excedente e plantão 24 h ficam só no contrato**; o portal mostra volume, não preço.
+- **Módulo por cliente.** O admin liga "Assessoria de Imprensa" ao registrar o contrato (data, PDF e volume mensal por tipo de material). Sem contrato registrado, o módulo não aparece. Fora do catálogo de jobs de publicidade.
+- **Seis tipos de pauta (solicitação):** acontecimento da empresa, lançamento de produto, inauguração de filial, premiação, informação de interesse público e release para colunistas. Cada um com dados mínimos e a pergunta "pode ser divulgado?". Informação RESTRITO ou NÃO UTILIZAR volta ao cliente com o motivo.
+- **Matriz e filiais:** a filial informa o fato; a matriz decide, autoriza e define o porta-voz. Nada sai sem aprovação do cliente.
+- **Opcionais** (relacionamento com jornalistas, media training, porta-voz): dentro do mesmo contrato, por solicitação. Os serviços além do volume contratado entram no **relatório mensal de excedentes**, para conferência e cobrança adicional conforme o contrato em vigor.
+- **Gestão de crise:** protocolo prévio (cenários, responsáveis, canais, mensagens autorizadas) + botão "Acionar crise". Plantão fora do horário comercial é opção contratual, com valores no contrato; o botão mostra o horário de atendimento contratado.
+- **Perfis novos:** assessor de imprensa Propaga (vínculo por cliente, como o atendimento) e informante de filial (envia fatos, vê só os próprios). O solicitante do cliente aprova pela matriz.
+- **Regras de texto:** status final "enviada", nunca "publicada"; nada promete publicação, veículo ou espaço editorial; clipagem qualitativa ("aparição registrada"), sem contagem de menções, alcance ou valor equivalente de mídia como resultado. Release pago para colunista é publicidade (art. 36 do CDC) e fica fora do módulo.
+- **Região:** o mapeamento por região vale só dentro do portal; o site público continua sem citar região.
+- **Primeiro cliente: B&M Log, como simulação** (25/10/2026): o módulo é ligado com contrato marcado "simulação", sem valores reais, e os dados entram na rodada de testes para poder ser arquivados.
+
 ## Quem vê qual valor
 | Quem | Vê |
 |---|---|
