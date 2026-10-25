@@ -2,7 +2,7 @@
    registra o histórico e avisa por e-mail só quem precisa agir ou acompanhar. */
 import { CLIENTES } from "@/content/clientes";
 import { catalogo } from "@/content/catalogos";
-import { aplicar, NOME_STATUS, type Acao } from "@/lib/fluxo";
+import { aplicar, NOME_STATUS, recusaBloqueada, type Acao } from "@/lib/fluxo";
 import { calcularValores } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
 import { acaoSchema } from "@/lib/schemas";
@@ -19,6 +19,7 @@ interface Pedido {
   itens: (ItemSolicitacao & { nome: string; sobOrcamento: boolean })[]; rodadas: number; versao: number;
   catalogoVersao: string; prazo: Record<string, unknown>; drive: Record<string, unknown>;
   temPecas?: boolean; pecas?: { etapa: string }[]; criativo?: { uid: string; nome: string } | null;
+  criadoPor?: { uid: string; nome: string }; edicaoPendente?: boolean;
 }
 
 /** Criativos ativos (Mariane e outros), para o aceite e a troca. */
@@ -49,7 +50,8 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   const doc = fs.ler(caminho);
   if (!doc) throw new ErroUsuario("Pedido não encontrado.");
   const ped = doc.dados as unknown as Pedido;
-  // Marketing do cliente é equipe compartilhada (decisão de 21/10/2026): o pedido é de todos os solicitantes do cliente, já validado acima.
+  // O pedido pertence a quem o originou (24/10/2026): o solicitante só age e só vê o que é dele; para ele, o dos colegas "não existe".
+  if (u.papel === "solicitante" && ped.solicitanteUid !== u.uid) throw new ErroUsuario("Pedido não encontrado.");
 
   // Aprovação, refação e cancelamento de peças ficam em Minhas tarefas (fila "peca").
   if (acao === "entregar" && (!ped.temPecas || (ped.pecas ?? []).some((x) => x.etapa !== "concluida" && x.etapa !== "encerrada")))
@@ -57,7 +59,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
 
   let novo: Status;
   try {
-    novo = aplicar(acao, ped.status, u.papel as Papel, { cobravel: cancelaCobravel(ped as never) });
+    novo = aplicar(acao, ped.status, u.papel as Papel, { cobravel: cancelaCobravel(ped as never), recusaBloqueada: recusaBloqueada(ped) });
   } catch (e) { throw new ErroUsuario((e as Error).message); }
 
   const agora = p.agora();
@@ -73,6 +75,7 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
     case "aprovarProposta":
       rotulo = `Solicitação aprovada por ${u.nome}; enviada ao atendimento`;
       avisar = ["atendimento"];
+      mudancas.edicaoPendente = false; // a edição devolvida foi aceita
       break;
     case "ajustarProposta":
       if (nota.length < 3) throw new ErroUsuario("Escreva o que precisa ser ajustado.");
@@ -174,7 +177,7 @@ export function avisarPessoas(
     const cfg = lerConfig(p);
     const todos = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/")[1], ...(x.dados as Omit<Usuario, "uid">) }));
     const dest = todos.filter((x) => x.uid !== autor.uid && (
-      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId) ||
+      (quem.includes("solicitante") && x.papel === "solicitante" && x.clienteId === clienteId && x.uid === ped.solicitanteUid) ||
       (quem.includes("atendimento") && x.papel === "atendimento") ||
       (quem.includes("financeiro_propaga") && x.papel === "financeiro_propaga") ||
       (quem.includes("criativo") && x.papel === "criativo" && (!ped.criativo || ped.criativo.uid === x.uid))));

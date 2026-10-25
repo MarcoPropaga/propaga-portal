@@ -2,7 +2,8 @@
 import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
 /* Lista de solicitações. Solicitante vê só as próprias (regra do banco); demais perfis veem todas do cliente. */
 import { useEffect, useMemo, useState } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { onSnapshot } from "firebase/firestore";
+import { pedidosDoUsuario } from "@/lib/usarFila";
 import { db } from "@/lib/firebase";
 import { NOME_STATUS } from "@/lib/fluxo";
 import { Protegido } from "@/components/auth/protegido";
@@ -24,8 +25,7 @@ function Conteudo() {
   const [etapa, setEtapa] = useState<"abertas" | "todas" | Status>("abertas");
 
   useEffect(() => {
-    const col = collection(db(), "clientes", clienteId, "solicitacoes");
-    const q = col;
+    const q = pedidosDoUsuario(clienteId, s.papel, s.usuario?.uid);
     return onSnapshot(q, (snap) => setLista(snap.docs.map((d) => d.data() as PedidoDoc).sort((a, b) => ordem(b.criadoEm) - ordem(a.criadoEm))),
       () => setErro("Não foi possível carregar as solicitações. Atualize a página."));
   }, [clienteId, s.papel, s.usuario]);

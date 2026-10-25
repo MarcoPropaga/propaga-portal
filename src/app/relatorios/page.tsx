@@ -3,6 +3,7 @@
    (Financeiro do cliente, Atendimento, Financeiro Propaga e Admin). Exporta planilha (CSV) e PDF (impressão). */
 import { useEffect, useMemo, useState } from "react";
 import { collection, doc, onSnapshot } from "firebase/firestore";
+import { pedidosDoUsuario } from "@/lib/usarFila";
 import { db } from "@/lib/firebase";
 import { fatorCobranca, NOME_STATUS, REGRA_REFACAO, VE_RELATORIOS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
@@ -47,8 +48,7 @@ function Conteudo() {
   const soMeus = s.papel === "solicitante";
   const uid = s.usuario?.uid;
   useEffect(() => {
-    const col = collection(db(), "clientes", clienteId, "solicitacoes");
-    const a = onSnapshot(col,
+    const a = onSnapshot(pedidosDoUsuario(clienteId, s.papel, uid),
       (q) => setPedidos(q.docs.map((d) => d.data() as PedidoDoc).sort((x, y) => dataDe(y.criadoEm).getTime() - dataDe(x.criadoEm).getTime())),
       () => setErro("Não foi possível carregar os pedidos."));
     if (soMeus) return a;

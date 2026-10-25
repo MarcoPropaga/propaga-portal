@@ -143,14 +143,14 @@ relatoriosCriativo/{uid}_{AAAA-MM}   relatório mensal de cada criativo (já iso
 ## Estado do código × alvo (conferência de 24/10/2026)
 | Tema | Hoje | Alvo |
 |---|---|---|
-| Visibilidade do solicitante | `solicitacoes` e `valores` legíveis por todo o cliente (PR #50) | Só os próprios pedidos; regras, servidor, listas e testes |
-| Edição de itens | Em `enviada`, o pedido continua `enviada` e o aceite fica liberado | Edição devolve ao Marketing e bloqueia `aceitarPedido` |
-| Pedido criado pelo Atendimento | O titular é o primeiro solicitante por ordem alfabética | O Atendimento escolhe o solicitante |
+| Visibilidade do solicitante | ✅ Etapa 2: só os próprios pedidos (regras, consultas filtradas por `solicitanteUid`, servidor e testes) | — |
+| Edição de itens | ✅ Etapa 2: volta a `proposta` com `edicaoPendente`, bloqueia o aceite e a recusa; mudança só de texto não devolve | — |
+| Pedido criado pelo Atendimento | ✅ Etapa 2: o Atendimento escolhe o solicitante (automático se houver um só); lista em `equipe/solicitantes` | — |
 | Aceite de orçamento | Não existe; o Atendimento valora itens a cotar no aceite | Fluxo 2 (material novo) |
 | Profissionais Propaga | Equipe Propaga lê todos os clientes | Vínculo por cliente, com isolamento nas regras |
 | Isolamento do criativo | Só na tela (`usePedidos`); as regras deixam ler todos os pedidos | Regras e servidor |
 | Tabela do criativo | Documento único, legível por qualquer criativo | Uma por criativo, com versão e data |
-| `/fila` | Papel fora da lista cai numa lista padrão | Lista fechada por papel |
+| `/fila` | ✅ Etapa 2: lista fechada por papel | — |
 | Contratos e horas de profissionais | Não existem | Fluxo 4; retenção e acesso a definir |
 | Um atendimento por cliente | Todo atendimento atua em todos os clientes | Vínculo único por cliente, reatribuído pelo admin |
 

@@ -49,6 +49,8 @@ export interface PedidoDoc {
   temPecas?: boolean; pecas?: Peca[];
   /** Solicitação criada pelo Marcelo em nome da Débora. */
   criadoPor?: { uid: string; nome: string };
+  /** Serviços editados pelo Atendimento e devolvidos ao Marketing: bloqueia o aceite e a recusa até a aprovação. */
+  edicaoPendente?: boolean;
   /** Pedido cancelado faturado a 50% pelo Financeiro da Propaga. */
   canceladoCobrado?: boolean;
   /** Criativo que cria as peças (escolhido no aceite; pode ser trocado). */

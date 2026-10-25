@@ -9,7 +9,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, type PedidoDoc } from "@/components/pedido";
-import { MAX_RODADAS, VE_TAREFAS, type Acao } from "@/lib/fluxo";
+import { MAX_RODADAS, VE_TAREFAS, recusaBloqueada, type Acao } from "@/lib/fluxo";
 import { arteDe, contarPendenciasCal, itensDe } from "@/lib/publicacao";
 import { hojeSP } from "@/lib/datas";
 import { pastaEquipe, atrasada, contarPendencias, linhasParaItens, tarefasDoPedido, type TarefaPedido, pendentePara, prazoEtapa, previewDrive, refacoesDaPeca, situacaoInterna, situacaoRelatorio, ultima, ultimaDecisao, type Peca, type TipoDecisao } from "@/lib/pecas";
@@ -291,7 +291,7 @@ function Conteudo() {
                 <div className="flex flex-wrap gap-3">
                   <Botao onClick={() => { setAcaoAberta("aprovarProposta"); setAbrindo(pd.protocolo); }}>Aprovar solicitação</Botao>
                   <Botao variante="linha" onClick={() => { setAcaoAberta("ajustarProposta"); setAbrindo(pd.protocolo); }}>Pedir ajuste ao Marcelo</Botao>
-                  <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => { setAcaoAberta("recusarProposta"); setAbrindo(pd.protocolo); }}>Recusar</Botao>
+                  {!recusaBloqueada(pd) && <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => { setAcaoAberta("recusarProposta"); setAbrindo(pd.protocolo); }}>Recusar</Botao>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver solicitação completa</a>
                 </div>
               ) : abaAtual.t === "ajustar" ? (
@@ -493,12 +493,12 @@ function AjustePedido({ protocolo, acao }: { protocolo: string; acao: "ajustarPr
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
   const [txt, setTxt] = useState<{ nota: string; nome: string; acao: string } | null>(null);
   useEffect(() => {
-    getDocs(query(collection(db(), "clientes", clienteId, "solicitacoes", protocolo, "eventos"), where("acao", "in", ["ajustarProposta", "devolverDuvida"])))
-      .then((q) => { const e = q.docs.map((d) => d.data() as { nota: string; nome: string; acao: string; em: { seconds: number } }).sort((a, b) => b.em.seconds - a.em.seconds)[0]; if (e && e.acao === acao) setTxt(e); })
+    getDocs(query(collection(db(), "clientes", clienteId, "solicitacoes", protocolo, "eventos"), where("acao", "in", ["ajustarProposta", "devolverDuvida", "editar"])))
+      .then((q) => { const e = q.docs.map((d) => d.data() as { nota: string; nome: string; acao: string; em: { seconds: number } }).sort((a, b) => b.em.seconds - a.em.seconds)[0]; if (e && (e.acao === acao || (acao === "devolverDuvida" && e.acao === "editar"))) setTxt(e); })
       .catch(() => {});
   }, [clienteId, protocolo, acao]);
   if (!txt) return null;
-  return <p className="whitespace-pre-wrap rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm"><b>{txt.nome} {acao === "devolverDuvida" ? "perguntou/sugeriu" : "pediu"}:</b> {txt.nota}</p>;
+  return <p className="whitespace-pre-wrap rounded border-l-4 border-aviso-700 bg-aviso-100 px-3 py-2 text-sm"><b>{txt.nome} {txt.acao === "editar" ? "alterou os serviços" : acao === "devolverDuvida" ? "perguntou/sugeriu" : "pediu"}:</b> {txt.nota}</p>;
 }
 
 /** Concluir a peça exige confirmar os arquivos abertos na pasta 05 (decisão de 15/10/2026). */

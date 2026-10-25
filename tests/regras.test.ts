@@ -105,3 +105,14 @@ describe("perfil Criativo Propaga", () => {
       expect(acoesDisponiveis(st, "criativo", { rodadas: 0 })).toEqual([]);
   });
 });
+
+describe("recusa de proposta (24/10/2026)", () => {
+  it("só se recusa pedido criado pelo Atendimento e nunca uma edição devolvida", async () => {
+    const { podeExecutar, recusaBloqueada } = await import("@/lib/fluxo");
+    expect(recusaBloqueada({})).toBe(true); // pedido do próprio solicitante
+    expect(recusaBloqueada({ criadoPor: { uid: "m" } })).toBe(false);
+    expect(recusaBloqueada({ criadoPor: { uid: "m" }, edicaoPendente: true })).toBe(true);
+    expect(podeExecutar("recusarProposta", "proposta", "solicitante", { recusaBloqueada: false })).toBe(true);
+    expect(podeExecutar("recusarProposta", "proposta", "solicitante", { recusaBloqueada: true })).toBe(false);
+  });
+});

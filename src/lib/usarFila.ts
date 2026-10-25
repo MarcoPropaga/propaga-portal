@@ -1,7 +1,7 @@
 "use client";
 /* Envia uma ação para a fila e espera o servidor responder (ok/erro). */
 import { useEffect, useState } from "react";
-import { addDoc, collection, doc, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, where } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
 import { useSessao } from "@/components/auth/sessao";
 import { CLIENTES } from "@/content/clientes";
@@ -31,6 +31,12 @@ export function useFila() {
 }
 
 /** Pedidos visíveis para o perfil (Solicitante: só os dela), em tempo real. */
+/** Consulta dos pedidos: solicitante vê só os que originou (24/10/2026); sem o filtro as regras negam a leitura toda. */
+export function pedidosDoUsuario(clienteId: string, papel: string | null | undefined, uid: string | undefined) {
+  const base = collection(db(), "clientes", clienteId, "solicitacoes");
+  return papel === "solicitante" && uid ? query(base, where("solicitanteUid", "==", uid)) : base;
+}
+
 export function usePedidos(ativo = true) {
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
@@ -39,8 +45,8 @@ export function usePedidos(ativo = true) {
   const uid = s.usuario?.uid;
   useEffect(() => {
     if (!ativo || !uid) return;
-    const col = collection(db(), "clientes", clienteId, "solicitacoes");
-    return onSnapshot(col, // Marketing do cliente é equipe compartilhada (21/10/2026): todos os solicitantes veem todos os pedidos do cliente.
+    const col = pedidosDoUsuario(clienteId, s.papel, uid);
+    return onSnapshot(col,
       // Criativo vê só os pedidos atribuídos a ele (ou ainda sem criativo definido).
       (q) => setLista(q.docs.map((d) => d.data() as PedidoDoc).filter((p) => s.papel !== "criativo" || !p.criativo || p.criativo.uid === uid)),
       () => setErro("Não foi possível carregar os pedidos."));

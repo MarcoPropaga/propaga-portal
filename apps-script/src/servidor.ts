@@ -85,7 +85,12 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
 export function atualizarEquipe(fs: Firestore) {
   const lista = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; status?: string }) }))
     .filter((x) => x.papel === "criativo" && x.status !== "desativado").map((x) => ({ uid: x.uid, nome: x.nome }));
-  fs.gravar([{ caminho: "equipe/criativos", dados: { lista } }]);
+  // Solicitantes ativos por cliente: o Atendimento escolhe o dono do pedido que cria (24/10/2026).
+  const porCliente: Record<string, { uid: string; nome: string }[]> = {};
+  for (const x of fs.listar("usuarios").map((y) => ({ uid: y.caminho.split("/").pop()!, ...(y.dados as { nome: string; papel: string; clienteId?: string | null; status?: string }) }))
+    .filter((y) => y.papel === "solicitante" && y.clienteId && y.status !== "desativado").sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")))
+    (porCliente[x.clienteId!] ??= []).push({ uid: x.uid, nome: x.nome });
+  fs.gravar([{ caminho: "equipe/criativos", dados: { lista } }, { caminho: "equipe/solicitantes", dados: { porCliente } }]);
 }
 
 /** Primeiro administrador (Marco). Executar uma vez, depois de configurarProjeto. */
@@ -203,11 +208,13 @@ export function enviarSolicitacao(
   let titular = { uid: u.uid, nome: u.nome };
   const proposta = u.papel === "atendimento";
   if (proposta) {
-    const sol = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; clienteId: string | null }) }))
+    const ativos = fs.listar("usuarios").map((x) => ({ uid: x.caminho.split("/").pop()!, ...(x.dados as { nome: string; papel: string; clienteId: string | null }) }))
       .filter((x) => x.papel === "solicitante" && x.clienteId === clienteId && (x as { status?: string }).status !== "desativado")
-      // Equipe de marketing com mais de uma pessoa (Débora e Glauco): ordem alfabética, para o titular ser sempre o mesmo.
-      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))[0];
-    if (!sol) throw new ErroUsuario("Não há Solicitante cadastrada para este cliente.");
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    if (!ativos.length) throw new ErroUsuario("Não há Solicitante cadastrada para este cliente.");
+    // O pedido pertence a quem o originou (24/10/2026): o Atendimento escolhe o solicitante; com um só, é automático.
+    const sol = d.solicitanteUid ? ativos.find((x) => x.uid === d.solicitanteUid) : ativos.length === 1 ? ativos[0] : undefined;
+    if (!sol) throw new ErroUsuario(d.solicitanteUid ? "Solicitante inválido para este cliente." : "Escolha o solicitante dono deste pedido.");
     titular = { uid: sol.uid, nome: sol.nome };
   }
 
@@ -324,8 +331,12 @@ function editarSolicitacao(
 
   const agora = p.agora();
   const reenvio = ant.status === "ajuste";
-  const novo = reenvio ? "proposta" : "enviada";
-  const rotulo = reenvio ? `Solicitação ajustada por ${u.nome} e reenviada para aprovação` : `Solicitação editada por ${u.nome}`;
+  // Mudança de itens devolve o pedido ao Marketing para aprovar de novo (24/10/2026) e bloqueia o aceite; outros campos não devolvem.
+  const itensMudaram = li !== ln;
+  const devolve = reenvio || itensMudaram;
+  const novo = devolve ? "proposta" : "enviada";
+  const rotulo = reenvio ? `Solicitação ajustada por ${u.nome} e reenviada para aprovação`
+    : itensMudaram ? `Serviços alterados por ${u.nome}; devolvida ao Marketing para aprovação` : `Solicitação editada por ${u.nome}`;
   const nota = mud.length ? mud.join(" · ") : "Sem alterações; reenviada para aprovação.";
   try {
     fs.gravar([
@@ -335,16 +346,17 @@ function editarSolicitacao(
         prazo: { ...(ant.prazo ?? {}), desejada: d.prazo.desejada, urgente: d.prazo.urgente },
         status: novo, catalogoVersao: cat.versao, atualizadoEm: agora,
         editadoPor: { uid: u.uid, nome: u.nome, em: agora },
+        ...(itensMudaram && !reenvio ? { edicaoPendente: true } : {}),
       } },
       { caminho: `clientes/${clienteId}/valores/${d.editar}`, dados: { ...calcularValores(d.editar!, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
-      { caminho: `${caminho}/eventos/${agora.getTime()}-edicao`, dados: { em: agora, uid: u.uid, nome: u.nome, rotulo, nota, chave: reenvio, acao: "editar" } },
+      { caminho: `${caminho}/eventos/${agora.getTime()}-edicao`, dados: { em: agora, uid: u.uid, nome: u.nome, rotulo, nota, chave: devolve, acao: "editar" } },
     ]);
   } catch {
     throw new ErroUsuario("O pedido foi atualizado por outra pessoa agora há pouco. Recarregue a página e tente de novo.");
   }
   const ped = { protocolo: d.editar!, titulo: d.titulo, solicitanteUid: ant.solicitanteUid } as Parameters<typeof avisarPessoas>[4];
   avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"],
-    reenvio ? "Solicitação ajustada para sua aprovação" : "O Marcelo ajustou a solicitação", nota, novo as never,
-    reenvio ? "/aprovacoes/" : "/solicitacoes/pedido/");
+    reenvio ? "Solicitação ajustada para sua aprovação" : itensMudaram ? "Serviços alterados: confirme para seguir" : "O Marcelo ajustou a solicitação", nota, novo as never,
+    devolve ? "/aprovacoes/" : "/solicitacoes/pedido/");
   return { protocolo: d.editar, editado: true, status: novo };
 }
