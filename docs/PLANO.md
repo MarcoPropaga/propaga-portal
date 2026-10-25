@@ -11,7 +11,7 @@ O portal está em uso real com a B&M Log desde 05/10/2026. Este plano cobre só 
 6. **Pré-seleção do criativo:** exige classificar os 68 serviços do catálogo por tipo de material.
 7. **Resultados por e-mail programado;** painel só depois da integração com as redes.
 8. **Assessoria de imprensa (módulo por cliente, decisões de 25/10/2026; ver Fluxo 5):** (a) contrato, plano A/B/C e perfis; (b) nova pauta, aprovação do release (24 h conforme urgência) e envio; (c) porta-vozes, protocolo de crise e botão de acionamento; (d) clipagem no Drive, relatório do mês e orçamento de cobertura de eventos. B&M Log como simulação. Encaixe no plano a definir (sugestão: depois da etapa 4, que cria contratos).
-9. **Configuração por cliente** (cadastro, unidades e textos), para replicar em outras agências.
+9. **Configuração por cliente** (cadastro, unidades, textos e equipe de cada cliente: 1 atendimento, 1 ou 2 criativos, 1 mídia social, 1 assessor de imprensa; ver "Configuração multicliente" em `docs/ARQUITETURA.md`), para replicar em outras agências.
 
 ## Depende do Marco
 - PDF do contrato assinado e data de assinatura.

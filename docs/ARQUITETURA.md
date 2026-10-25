@@ -134,6 +134,34 @@ Simulação navegável: painel do cliente no Plano C (aprovações, clipagem, re
 - **Região:** o mapeamento por região vale só dentro do portal; o site público continua sem citar região.
 - **Primeiro cliente: B&M Log, como simulação** (25/10/2026): o módulo é ligado com contrato marcado "simulação", sem valores reais, e os dados entram na rodada de testes para poder ser arquivados.
 
+## Configuração multicliente (simulação de 25/10/2026)
+Simulação com cinco clientes e a equipe Propaga já cadastrada. O admin conecta cada cliente aos profissionais. Dados da equipe e dos clientes 2 a 5 são ilustrativos; os nomes dos clientes 3, 4 e 5 são fictícios.
+
+**Equipe padrão por cliente:** 1 atendimento, 1 ou 2 criativos (máximo 2), 1 mídia social e 1 assessor de imprensa (só com contrato de imprensa registrado). Criativo só entra com tabela e contrato registrados. O financeiro Propaga vê todos os clientes.
+
+| Cliente | Segmento | Atendimento | Criativos | Mídia social | Imprensa |
+|---|---|---|---|---|---|
+| B&M Log | Logística internacional (real) | Marcelo H. Brum | Mariane Garcia, Bruno Teles | Kauan Guerreiro | Renato Alves (simulação) |
+| DalPet | Alimentos para pets, varejo e atacado | Rafael Duarte | Larissa Pires, Mariane Garcia | Diego Faria | sem contrato |
+| Rede Casa Nova | Rede de lojas de varejo | Camila Rocha | Fernanda Lopes, Gustavo Reis | Aline Costa | sem contrato |
+| Aurora Vertical | Construtora de edifícios residenciais e comerciais | Rafael Duarte | Bruno Teles, Larissa Pires | Diego Faria | sem contrato |
+| Rede Saúde Mais | Rede de farmácias | Camila Rocha | Paula Nogueira, Fernanda Lopes | Aline Costa | sem contrato |
+
+Assessores sugeridos se o cliente contratar imprensa: DalPet, Renato Alves; Rede Casa Nova e Rede Saúde Mais, Helena Duarte; Aurora Vertical, Otávio Lins.
+
+**Alertas já conhecidos (cobertura de habilidades da equipe)**
+- B&M Log 50%: faltam eventos e redação. Conteúdo em inglês não tem habilidade no catálogo; confirmar quem faz.
+- DalPet 57%: faltam vídeo curto e eventos.
+- Aurora Vertical 44%: faltam apresentações, web e e-mail e eventos. Trocar Larissa Pires por Tiago Menezes quando o contrato dele estiver registrado.
+- Rede Casa Nova 75% e Rede Saúde Mais 70%.
+- Gustavo Reis foi mantido fora da DalPet por atender a Rede Casa Nova (possível relação comercial entre os clientes).
+
+**Pontos regulatórios para o jurídico**
+- Farmácias: publicidade de medicamentos tem lei própria (Lei 9.294/96). O STJ limitou regras da Anvisa (RDC 96/2008) em um caso, sem efeito geral. Toda peça de medicamento passa por revisão jurídica.
+- Construtora: a Lei 4.591/64 (art. 32) exige o número do registro da incorporação na publicidade. Texto não conferido na fonte; confirmar com o jurídico.
+
+**Limite sugerido de clientes por pessoa:** atendimento 3, criativo 3, mídia social 4, imprensa 3. Aguarda a decisão de Marco.
+
 ## Quem vê qual valor
 | Quem | Vê |
 |---|---|
