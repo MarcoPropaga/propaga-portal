@@ -167,6 +167,7 @@ Assessores sugeridos se o cliente contratar imprensa: DalPet, Renato Alves; Rede
 - **Primeira tela do admin:** visão geral da Propaga (identidade Propaga) com indicadores, cartões dos clientes, pendências de decisão, carga da equipe e atalhos. Só o administrador a vê.
 - **Tema por cliente:** ao entrar em um cliente, o portal assume a identidade visual dele (cores do logotipo, contraste AA validado no cadastro). Atendimento, criativo e mídia social veem o tema do cliente enquanto estão dentro dele; a identidade Propaga fica só no admin.
 - **Cadastro de cliente:** passo a passo (dados, contrato, tema, equipe, módulos), feito somente pelo administrador.
+- **Limite de clientes por pessoa:** atendimento 3, criativo 3, mídia social 4, imprensa 3 (definido por Propaga em 25/10/2026, conforme "defina você e seguimos"). O admin alerta ao ultrapassar.
 - **Mudança de preço:** pedidos já abertos mantêm o valor antigo; novos pedidos usam o valor novo. Tabelas e catálogos com versão e vigência.
 
 ## Quem vê qual valor
