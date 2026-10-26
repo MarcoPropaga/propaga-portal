@@ -2,10 +2,24 @@
    O catálogo com valores de referência fica em src/content/catalogos e só é usado pelo servidor;
    o navegador lê o catálogo do Firestore (clientes/{id}/catalogo/{versao}), protegido por login e 2FA. */
 
+/** Identidade visual do portal do cliente. Muda por cliente; o fluxo e as permissões ficam no molde. */
+export interface Marca {
+  /** Nome curto do cliente nos textos ("B&M Log"). */
+  nomeCurto: string;
+  /** Rótulo do portal no menu e na tela de acesso. */
+  rotuloPortal: string;
+  /** Selo/logomarca do menu e da tela de acesso (arquivo em /public/brand). */
+  selo: string;
+  seloAlt: string;
+  /** Cores (hex). escura = menu e títulos; destaque = botão primário e item ativo (texto escuro sobre ela). */
+  cores: { escura: string; texto: string; destaque: string; claro: string; papel: string; borda: string; cinza: string };
+}
+
 export interface Cliente {
   id: string;
   nome: string;
   nomePortal: string;
+  marca: Marca;
   /** Prefixo do protocolo: BML-2026-0001. */
   prefixo: string;
   /** Versão vigente do catálogo (contrato assinado). */
@@ -30,6 +44,14 @@ export const CLIENTES: Record<string, Cliente> = {
     id: "bmlog",
     nome: "B&M Log",
     nomePortal: "Portal B&M Log",
+    // Paleta B&M Log aprovada em 03/10/2026: #003C57 e #55C5D0.
+    marca: {
+      nomeCurto: "B&M Log",
+      rotuloPortal: "Portal MKT B&M Log",
+      selo: "/brand/selo-mkt-bmlog.png",
+      seloAlt: "mkt B&M Log",
+      cores: { escura: "#003C57", texto: "#00708A", destaque: "#55C5D0", claro: "#DDF3F5", papel: "#F4F8F9", borda: "#E2EAED", cinza: "#4E6670" },
+    },
     prefixo: "BML",
     catalogoVersao: "1.0",
     unidades: [
@@ -61,3 +83,11 @@ export const NOMES_PAPEIS: Record<string, string> = {
   midia_social: "Mídias sociais Propaga",
   admin: "Admin Propaga",
 };
+
+/** Cliente do portal padrão (tela de acesso e equipe Propaga, até existir a escolha de cliente). */
+export const CLIENTE_PADRAO = "bmlog";
+
+/** Cliente ativo da sessão: o da pessoa, ou o padrão quando não há (equipe Propaga, tela de acesso). */
+export function clienteAtivo(clienteId: string | null | undefined): Cliente {
+  return (clienteId ? CLIENTES[clienteId] : undefined) ?? CLIENTES[CLIENTE_PADRAO];
+}

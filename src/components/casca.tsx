@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
-import { NOMES_PAPEIS } from "@/content/clientes";
+import { NOMES_PAPEIS, clienteAtivo } from "@/content/clientes";
 import { VE_NOVA_SOLICITACAO, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
 import { contarPendencias } from "@/lib/pecas";
 import { useCalendarios, usePedidos } from "@/lib/usarFila";
@@ -32,7 +32,8 @@ const ITENS = [
 export function Casca({ titulo, children }: { titulo: string; children: ReactNode }) {
   const s = useSessao();
   const caminho = usePathname();
-  const nomePortal = "Portal MKT B&M Log";
+  const marca = clienteAtivo(s.clienteId).marca;
+  const nomePortal = marca.rotuloPortal;
   const veAprov = !!s.papel && (VE_TAREFAS as string[]).includes(s.papel);
   const { lista } = usePedidos(veAprov);
   const cals = useCalendarios(veAprov);
@@ -43,7 +44,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
       <aside className="print:hidden flex flex-col gap-6 bg-ink-900 p-4 text-paper md:sticky md:top-0 md:h-screen md:overflow-y-auto md:p-5" aria-label="Menu principal">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/selo-mkt-bmlog.png" alt="mkt B&M Log" width={88} height={88} className="size-[88px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
+          <img src={marca.selo} alt={marca.seloAlt} width={88} height={88} className="size-[88px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
           <span className="mt-2 block text-sm text-[#A9CBD6]">{nomePortal}</span>
         </div>
         <nav className="flex flex-wrap gap-1 md:grid">

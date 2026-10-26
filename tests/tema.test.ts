@@ -1,0 +1,25 @@
+import { describe, expect, it } from "vitest";
+import { CLIENTES, clienteAtivo, CLIENTE_PADRAO } from "@/content/clientes";
+import { contraste, validarMarca, variaveisCss } from "@/lib/tema";
+
+describe("tema por cliente", () => {
+  it("a marca de todo cliente cadastrado passa no contraste AA", () => {
+    for (const c of Object.values(CLIENTES)) expect(validarMarca(c.marca), c.id).toEqual([]);
+  });
+  it("rejeita cor inválida e contraste baixo", () => {
+    const m = { ...CLIENTES[CLIENTE_PADRAO].marca };
+    expect(validarMarca({ ...m, cores: { ...m.cores, destaque: "azul" } })[0]).toMatch(/inválida/);
+    expect(validarMarca({ ...m, cores: { ...m.cores, destaque: "#003C58" } }).join()).toMatch(/contraste/);
+  });
+  it("contraste conhecido: preto sobre branco = 21", () => {
+    expect(Math.round(contraste("#000000", "#ffffff"))).toBe(21);
+  });
+  it("gera as variáveis CSS da marca", () => {
+    const v = variaveisCss(CLIENTES[CLIENTE_PADRAO].marca);
+    expect(v["--color-marca-500"]).toBe("#55C5D0");
+  });
+  it("sem cliente usa o padrão", () => {
+    expect(clienteAtivo(null).id).toBe(CLIENTE_PADRAO);
+    expect(clienteAtivo("inexistente").id).toBe(CLIENTE_PADRAO);
+  });
+});
