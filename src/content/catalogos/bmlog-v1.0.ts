@@ -1,6 +1,6 @@
 /* Catálogo B&M Log v1.0 (01/10/2026) — vigente, contrato assinado.
    referencia = valor de referência (USO INTERNO, nunca enviado ao cliente).
-   Preço B&M = referencia × 0,85 (src/lib/precos.ts). null = a cotar. */
+   Preço B&M = referencia × (1 − desconto do contrato) (src/lib/precos.ts). null = a cotar. */
 import type { Catalogo } from "@/lib/tipos";
 
 export const catalogoBmlogV1: Catalogo = {
@@ -8,6 +8,7 @@ export const catalogoBmlogV1: Catalogo = {
   "versao": "1.0",
   "data": "2026-10-01",
   "status": "vigente",
+  "desconto": 0.15,
   "categorias": [
     {
       "id": "rs",

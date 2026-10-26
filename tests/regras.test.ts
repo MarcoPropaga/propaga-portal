@@ -20,10 +20,31 @@ describe("catálogo B&M Log v1.0", () => {
 });
 
 describe("preços (cláusula 4)", () => {
-  it("aplica 15% e arredonda em centavos", () => {
-    expect(precoCliente(350)).toBe(297.5);
-    expect(precoCliente(200)).toBe(170);
-    expect(precoCliente(null)).toBeNull();
+  it("aplica o desconto do contrato (B&M Log, 15%) e arredonda em centavos", () => {
+    expect(cat.desconto).toBe(0.15);
+    expect(precoCliente(350, cat.desconto)).toBe(297.5);
+    expect(precoCliente(200, cat.desconto)).toBe(170);
+    expect(precoCliente(null, cat.desconto)).toBeNull();
+  });
+  it("cada cliente tem o seu desconto; valor inválido é recusado", () => {
+    expect(precoCliente(200, 0.1)).toBe(180);
+    expect(precoCliente(200, 0.05)).toBe(190);
+    expect(precoCliente(199.99, 0.07)).toBe(185.99);
+    expect(precoCliente(200, 0)).toBe(200);
+    expect(() => precoCliente(200, 1)).toThrow();
+    expect(() => precoCliente(200, -0.1)).toThrow();
+    expect(() => precoCliente(200, NaN)).toThrow();
+  });
+  it("calcularValores e o catálogo público seguem o desconto do contrato do cliente", () => {
+    const outro = { ...cat, desconto: 0.1 };
+    const itens = [{ cod: "24", variante: 0, qtd: 1 }];
+    const base = calcularValores("X", cat, itens).total!;
+    const com10 = calcularValores("X", outro, itens).total!;
+    expect(com10).toBeGreaterThan(base);
+    const ref = cat.servicos.find((x) => x.cod === "24")!.variantes[0].referencia!;
+    expect(com10).toBe(Math.round(ref * 0.9 * 100) / 100);
+    const pub = catalogoPublico(outro).servicos.find((x) => x.cod === "24")!.variantes[0].preco;
+    expect(pub).toBe(com10);
   });
   it("a cotar vira pendência, não R$ 0; orçamento entra no total", () => {
     const itens = [{ cod: "21", variante: 2, qtd: 1 }, { cod: "24", variante: 0, qtd: 3 }];

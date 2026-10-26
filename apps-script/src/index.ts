@@ -1,11 +1,12 @@
 /* Ponto de entrada do bundle para o Apps Script: liga a Plataforma às APIs do Google. */
 import { configurarProjeto, criarAdministrador, processarFila } from "./servidor";
 import type { Plataforma } from "./plataforma";
+import { comTrava } from "./trava";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare const UrlFetchApp: any, ScriptApp: any, MailApp: any, PropertiesService: any, Logger: any;
 
-function plataforma(): Plataforma {
+function plataformaBruta(): Plataforma {
   const props = PropertiesService.getScriptProperties();
   const projeto = props.getProperty("PROJETO_ID") || "propaga-portal";
   return {
@@ -27,6 +28,9 @@ function plataforma(): Plataforma {
     log: (m) => Logger.log(m),
   };
 }
+
+/** Toda a lógica recebe a plataforma já com a trava de e-mails de teste. */
+const plataforma = () => comTrava(plataformaBruta());
 
 export const api = {
   configurarProjeto: () => configurarProjeto(plataforma()),

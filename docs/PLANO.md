@@ -10,7 +10,8 @@ O portal está em uso real com a B&M Log desde 05/10/2026. Este plano cobre só 
 5. **Material novo:** fluxo de precificação (criativo → admin → Atendimento → Marketing), com tabelas atualizadas na aprovação do admin.
 6. **Pré-seleção do criativo:** exige classificar os 68 serviços do catálogo por tipo de material.
 7. **Resultados por e-mail programado;** painel só depois da integração com as redes.
-8. **Configuração por cliente** (cadastro, unidades e textos), para replicar em outras agências.
+8. **Configuração por cliente** (cadastro, unidades e textos), para replicar em outras agências. O portal da B&M Log é o molde: ver `docs/MOLDE.md` (o que é fixo, o que muda por cliente, desconto por contrato).
+9. **Trava de e-mails no servidor** durante o período de teste (só domínio da Propaga), desligada no piloto real.
 
 ## Depende do Marco
 - PDF do contrato assinado e data de assinatura.

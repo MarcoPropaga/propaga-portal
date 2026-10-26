@@ -15,6 +15,7 @@ Tudo gratuito: Firebase plano Spark + Google Apps Script na conta marco@propaga.
    | ADMIN_EMAIL | marco@propaga.com |
    | ADMIN_NOME | Marco Chaves |
    | REMETENTE_NOME | Portal Propaga |
+   | EMAILS_PERMITIDOS | **Período de teste:** `propaga.com` (domínios e/ou endereços exatos, separados por vírgula). O servidor só convida e envia e-mail para quem estiver na lista. **Apagar a propriedade só quando o piloto real for liberado.** |
 6. Executar, nesta ordem, autorizando quando pedir: `configurarProjeto` → `criarAdministrador` → `instalarGatilho`.
 7. **Implantar → Nova implantação → App da Web**: executar como *eu*, acesso *qualquer pessoa*. Copiar a URL para `NEXT_PUBLIC_SERVIDOR_URL`.
 
