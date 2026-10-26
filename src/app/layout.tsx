@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Outfit, Hanken_Grotesk } from "next/font/google";
 import { SessaoProvider } from "@/components/auth/sessao";
+import { TemaCliente } from "@/components/tema";
 import "./globals.css";
 
 const outfit = Outfit({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-outfit", display: "swap" });
@@ -19,7 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="pt-BR" className={`${outfit.variable} ${hanken.variable}`}>
       <body className="antialiased">
-        <SessaoProvider>{children}</SessaoProvider>
+        <SessaoProvider><TemaCliente />{children}</SessaoProvider>
       </body>
     </html>
   );

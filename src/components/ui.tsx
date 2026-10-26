@@ -2,6 +2,7 @@
 /* Componentes de interface básicos, com os tokens da marca. */
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from "react";
 import { useState } from "react";
+import { clienteAtivo } from "@/content/clientes";
 
 export function Logo({ className = "w-[170px]" }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
@@ -68,14 +69,15 @@ export function BotaoVoltar({ href, onClick, rotulo = "Voltar" }: { href?: strin
 }
 
 export function TelaAcesso({ titulo, subtitulo, children, voltar }: { titulo: string; subtitulo?: ReactNode; children: ReactNode; voltar?: { href?: string; onClick?: () => void; rotulo?: string } }) {
+  const marca = clienteAtivo(null).marca; // antes do login ainda não há cliente: usa o padrão
   return (
     <main className="grid min-h-screen md:grid-cols-[1.1fr_1fr]">
       <section className="flex flex-col gap-5 bg-ink-900 p-6 text-paper md:gap-7 md:p-12">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/brand/selo-mkt-bmlog.png" alt="mkt B&M Log" width={104} height={104} className="size-[88px] md:size-[104px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
-        <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-marca-900">Portal MKT B&M Log</span>
+        <img src={marca.selo} alt={marca.seloAlt} width={104} height={104} className="size-[88px] md:size-[104px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
+        <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-marca-900">{marca.rotuloPortal}</span>
         <p className="max-w-[18ch] font-display text-2xl font-semibold leading-tight md:text-4xl">Solicitações, aprovações, entregas e relatórios.</p>
-        <p className="hidden max-w-[46ch] text-[#A9CBD6] md:block">Área exclusiva / Marketing B&M Log e Propaga</p>
+        <p className="hidden max-w-[46ch] text-[#A9CBD6] md:block">Área exclusiva / Marketing {marca.nomeCurto} e Propaga</p>
       </section>
       <section className="grid place-items-center px-4 py-10 md:px-6">
         <div className="grid w-full max-w-[420px] gap-5">
