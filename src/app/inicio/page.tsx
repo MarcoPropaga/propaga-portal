@@ -6,6 +6,7 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 import { VE_TAREFAS, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
+import { useTxt } from "@/components/tema";
 
 const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] }[] = [
   { href: "/aprovacoes/", rotulo: "Minhas tarefas", texto: "Tudo o que está com você, num só lugar.", papeis: VE_TAREFAS },
@@ -21,6 +22,7 @@ const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] 
 ];
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   // Mídias sociais (Kauan) não tem Início: entra direto nas tarefas.
   useEffect(() => { if (s.papel === "midia_social") window.location.replace("/aprovacoes/"); }, [s.papel]);
@@ -32,7 +34,7 @@ function Conteudo() {
         <section className="grid gap-2 rounded border border-gray-200 bg-white p-5">
           <h2 className="text-lg">Seu acesso</h2>
           <dl className="grid grid-cols-[140px_1fr] gap-x-4 gap-y-1.5 text-sm">
-            <dt className="text-gray-600">Perfil</dt><dd>{s.papel ? NOMES_PAPEIS[s.papel] : "—"}</dd>
+            <dt className="text-gray-600">Perfil</dt><dd>{s.papel ? t(NOMES_PAPEIS[s.papel]) : "—"}</dd>
             <dt className="text-gray-600">Empresa</dt><dd>{s.propaga ? "Propaga" : (s.clienteId && CLIENTES[s.clienteId]?.nome) || "—"}</dd>
             <dt className="text-gray-600">Segurança</dt><dd className="text-[#1E7047]">Verificação em duas etapas ativa</dd>
           </dl>
@@ -41,7 +43,7 @@ function Conteudo() {
         {podeSolicitar && (
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <h2 className="text-lg">Precisa de uma peça ou campanha?</h2>
-            <p className="text-sm text-gray-600">{s.papel === "atendimento" ? "Monte a solicitação em nome do Marketing B&M Log. Ele recebe para aprovar antes de seguir para o criativo." : "Escolha os serviços do catálogo, organize o briefing e envie para a Propaga."}</p>
+            <p className="text-sm text-gray-600">{s.papel === "atendimento" ? t("Monte a solicitação em nome do {equipe}. Ele recebe para aprovar antes de seguir para o criativo.") : "Escolha os serviços do catálogo, organize o briefing e envie para a Propaga."}</p>
             <a href="/nova-solicitacao/" className="inline-flex min-h-11 w-fit items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">Nova solicitação</a>
           </section>
         )}

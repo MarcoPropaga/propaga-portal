@@ -3,7 +3,7 @@
    - configurar o login (TOTP, política de senha) e os dados iniciais;
    - convidar usuários (criar conta, definir perfil, enviar e-mail);
    - processar a /fila de ações enviadas pelo navegador, validando tudo de novo aqui. */
-import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
+import { CLIENTES, NOMES_PAPEIS, clienteAtivo } from "@/content/clientes";
 import { catalogoVigente } from "@/content/catalogos";
 import { calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
 import { hojeSP } from "@/lib/datas";
@@ -20,6 +20,7 @@ import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
 import { exigirPermitido } from "./trava";
 import { ErroUsuario, type Plataforma } from "./plataforma";
+import { aplicarMarca } from "@/lib/tema";
 
 export interface Config { projeto: string; portalUrl: string; remetente: string }
 
@@ -79,7 +80,7 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
   fsU.gravar([{
     caminho: `usuarios/${uid}`, mesclar: true,
     dados: {
-      nome: d.nome, email: d.email, papel: d.papel, perfil: NOMES_PAPEIS[d.papel], clienteId, propaga,
+      nome: d.nome, email: d.email, papel: d.papel, perfil: aplicarMarca(NOMES_PAPEIS[d.papel], clienteAtivo(clienteId).marca), clienteId, propaga,
       status: "convidado", convidadoEm: p.agora(), convidadoPor: convidadoPor.uid,
       // Profissional novo começa sem clientes; o admin vincula depois. Reenvio de convite não apaga vínculos.
       ...(ehVinculado(d.papel) && !atual?.clientes ? { clientes: [] } : {}),
@@ -308,7 +309,7 @@ export function enviarSolicitacao(
         },
         { caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
         proposta
-          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome do Marketing B&M Log; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
+          ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome do ${CLIENTES[clienteId].marca.equipe}; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
           : ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
       ]);
       break;
@@ -321,7 +322,7 @@ export function enviarSolicitacao(
   if (proposta) {
     const ped = { protocolo, titulo: d.titulo, solicitanteUid: titular.uid } as Parameters<typeof avisarPessoas>[4];
     avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"], "Nova solicitação para sua aprovação",
-      `${u.nome} criou esta solicitação em nome do Marketing B&M Log. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
+      `${u.nome} criou esta solicitação em nome do ${CLIENTES[clienteId].marca.equipe}. Confira e escolha: aprovar, pedir ajuste ou recusar.`, "proposta", "/aprovacoes/");
     return { protocolo, proposta: true };
   }
 

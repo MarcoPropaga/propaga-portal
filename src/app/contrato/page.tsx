@@ -7,16 +7,18 @@ import { brData, Painel } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import { REGRA_REFACAO, VE_CONTRATO } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
+import { useTxt } from "@/components/tema";
 
 /* Contrato da Mariane (Criativo Propaga): só ela vê esta versão da página (Marco, 15/10/2026). */
 function ContratoCriativo() {
+  const t = useTxt();
   const pontos: [string, string][] = [
-    ["Partes", "Prestação de serviços de criação para a Propaga, nos jobs do Portal MKT B&M Log."],
-    ["Como chega o trabalho", "O Marcelo (Atendimento Propaga) envia a solicitação pelo portal, sem valores. Você cria as peças, envia ao Marcelo e acompanha a aprovação, refação ou cancelamento pelo marketing da B&M Log."],
+    ["Partes", "Prestação de serviços de criação para a Propaga, nos jobs do Portal MKT {cliente}."],
+    ["Como chega o trabalho", "O Marcelo (Atendimento Propaga) envia a solicitação pelo portal, sem valores. Você cria as peças, envia ao Marcelo e acompanha a aprovação, refação ou cancelamento pelo marketing da {cliente}."],
     ["Valores", "Os da sua tabela de valores (Minha tabela), por peça/serviço. Projetos complexos são avaliados individualmente e o valor é informado por você no relatório."],
     ["O que entra no mês", "Cada peça entra no relatório do mês em que foi concluída (arquivo final em 04 Aprovados). Refações são registradas como observação, sem valor extra."],
     ["Relatório e pagamento", "No fim do mês você confere o relatório e envia à Marisa (Financeiro Propaga), que confere e registra o pagamento. Você é avisada por e-mail."],
-    ["Sigilo", "Sua tabela e este contrato são vistos só por você e pela administração da Propaga. O marketing e o financeiro da B&M Log e o Atendimento não têm acesso."],
+    ["Sigilo", "Sua tabela e este contrato são vistos só por você e pela administração da Propaga. O marketing e o financeiro da {cliente} e o Atendimento não têm acesso."],
   ];
   return (
     <Casca titulo="Contrato">
@@ -26,7 +28,7 @@ function ContratoCriativo() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Painel titulo="Pontos principais">
             <dl className="grid gap-4 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
-              {pontos.map(([a, b]) => <div key={a} className="contents"><dt className="font-semibold">{a}</dt><dd className="leading-relaxed text-gray-600">{b}</dd></div>)}
+              {pontos.map(([a, b]) => <div key={a} className="contents"><dt className="font-semibold">{a}</dt><dd className="leading-relaxed text-gray-600">{t(b)}</dd></div>)}
             </dl>
           </Painel>
           <div className="grid content-start gap-5">
@@ -45,6 +47,7 @@ function ContratoCriativo() {
 }
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   if (s.papel === "criativo") return <ContratoCriativo />;
   const c = CLIENTES[s.clienteId ?? Object.keys(CLIENTES)[0]];
@@ -69,7 +72,7 @@ function Conteudo() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
           <Painel titulo="Pontos principais">
             <dl className="grid gap-4 text-sm sm:grid-cols-[140px_minmax(0,1fr)]">
-              {pontos.map(([a, b]) => <div key={a} className="contents"><dt className="font-semibold">{a}</dt><dd className="leading-relaxed text-gray-600">{b}</dd></div>)}
+              {pontos.map(([a, b]) => <div key={a} className="contents"><dt className="font-semibold">{a}</dt><dd className="leading-relaxed text-gray-600">{t(b)}</dd></div>)}
             </dl>
           </Painel>
           <div className="grid content-start gap-5">

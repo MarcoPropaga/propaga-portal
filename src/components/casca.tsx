@@ -6,6 +6,7 @@ import { BotaoVoltar } from "@/components/ui";
 import { NOMES_PAPEIS, clienteAtivo } from "@/content/clientes";
 import { VE_NOVA_SOLICITACAO, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
 import { contarPendencias } from "@/lib/pecas";
+import { aplicarMarca } from "@/lib/tema";
 import { useCalendarios, usePedidos } from "@/lib/usarFila";
 import { contarPendenciasCal } from "@/lib/publicacao";
 
@@ -56,7 +57,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           })}
         </nav>
         <div className="mt-auto flex items-center gap-3 border-t border-white/10 pt-3">
-          <div className="min-w-0"><b className="block truncate text-sm">{nome}</b><span className="text-xs text-[#A9CBD6]">{s.papel ? NOMES_PAPEIS[s.papel] : ""}</span></div>
+          <div className="min-w-0"><b className="block truncate text-sm">{nome}</b><span className="text-xs text-[#A9CBD6]">{s.papel ? aplicarMarca(NOMES_PAPEIS[s.papel], marca) : ""}</span></div>
           <button type="button" onClick={() => s.sair()} className="ml-auto rounded border border-white/20 px-2 py-1 text-xs">Sair</button>
         </div>
       </aside>

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { NOME_STATUS } from "@/lib/fluxo";
 import type { Status } from "@/lib/tipos";
 import type { Peca } from "@/lib/pecas";
+import { useTxt } from "@/components/tema";
 
 export const brData = (iso?: string) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "—");
 export const brDataHora = (v: unknown) => {
@@ -26,7 +27,8 @@ const COR: Partial<Record<Status, string>> = {
 };
 
 export function SeloStatus({ status }: { status: Status }) {
-  return <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${COR[status] ?? "bg-gray-200"}`}>{NOME_STATUS[status] ?? status}</span>;
+  const t = useTxt();
+  return <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${COR[status] ?? "bg-gray-200"}`}>{t(NOME_STATUS[status] ?? status)}</span>;
 }
 
 export function Painel({ titulo, extra, children }: { titulo: string; extra?: ReactNode; children: ReactNode }) {

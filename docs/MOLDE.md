@@ -40,7 +40,7 @@ O portal da B&M Log é o **molde oficial**. Cada cliente novo é uma cópia com 
 
 ## O que isso muda na construção
 1. ✅ Desconto lido do contrato do cliente: campo `desconto` do catálogo (`src/content/catalogos`, só no servidor), usado por `precos.ts`, Jobs Propaga e testes. Os descontos dos outros clientes não vão para o navegador.
-2. Cores, logomarca e nome do portal na configuração do cliente: **feito** (menu e tela de acesso). Falta: ícone/manifest por cliente, cores dos e-mails e ~70 textos fixos "B&M Log" (próxima fatia).
+2. Cores, logomarca e nome do portal na configuração do cliente: **feito** (menu e tela de acesso). Textos: **feito** (telas, lib e servidor usam `{cliente}` / `{equipe}` via `aplicarMarca`; o teste `textos-por-cliente` falha se um nome fixo voltar). Falta: ícone/manifest e título do app por cliente, cores e nome nos e-mails (`emails.ts`), e os nomes das pessoas da equipe (Marcelo, Débora, Kauan, Mariane), que ainda estão fixos nos textos e entram no vínculo de equipe por cliente.
 3. Textos fixos da B&M Log (perfil "Marketing B&M Log", e-mails, ajuda) passam a usar o nome do portal do cliente.
 4. Catálogo por cliente: mesma lista de serviços da Propaga, com pacote e valores próprios (`catalogo(clienteId, versao)` já aceita isso).
 5. Cadastro de cliente no admin (etapa 8 do plano) vira a tela que preenche tudo isso.

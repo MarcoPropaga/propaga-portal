@@ -13,6 +13,7 @@ import type { Firestore } from "./firestore";
 import { ErroUsuario, type Plataforma } from "./plataforma";
 import { lerConfig } from "./servidor";
 import { cancelaCobravel } from "@/lib/pecas";
+import { aplicarMarca } from "@/lib/tema";
 
 interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean; clientes?: string[] }
 interface Pedido {
@@ -89,8 +90,8 @@ export function executarAcao(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       avisar = ["atendimento"];
       break;
     case "devolverDuvida":
-      if (nota.length < 3) throw new ErroUsuario("Escreva a dúvida ou a sugestão para o Marketing B&M Log.");
-      rotulo = `${u.nome} devolveu a solicitação ao Marketing B&M Log com dúvida ou sugestão`;
+      if (nota.length < 3) throw new ErroUsuario(`Escreva a dúvida ou a sugestão para o ${cliente.marca.equipe}.`);
+      rotulo = `${u.nome} devolveu a solicitação ao ${cliente.marca.equipe} com dúvida ou sugestão`;
       avisar = ["solicitante"];
       break;
     case "aceitarPedido": {
@@ -185,7 +186,7 @@ export function avisarPessoas(
     if (!dest.length) return;
     const msg = emailAtualizacao({
       cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
-      autor: autor.nome, etapa: NOME_STATUS[status],
+      autor: autor.nome, etapa: aplicarMarca(NOME_STATUS[status], CLIENTES[clienteId].marca),
       link: `${cfg.portalUrl}${rota}?p=${encodeURIComponent(ped.protocolo)}`,
     });
     for (const x of dest) {

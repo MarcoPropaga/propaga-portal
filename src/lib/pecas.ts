@@ -54,7 +54,7 @@ export function situacaoRelatorio(p: Peca): { chave: "aguardando" | "concluida" 
 /** Situação interna (Marcelo e Mariane). */
 export function situacaoInterna(p: Peca): string {
   if (p.etapa === "criativo") return { refazer: "Criativo refaz", final: "Criativo prepara o arquivo final", ciencia: "Criativo: ciência do cancelamento" }[p.tarefa ?? "refazer"];
-  return { cliente: "Com o Marketing B&M Log", revisao: "Marcelo revisa", concluida: "Concluída", encerrada: "Cancelada · encerrada" }[p.etapa] ?? "";
+  return { cliente: "Com o {equipe}", revisao: "Marcelo revisa", concluida: "Concluída", encerrada: "Cancelada · encerrada" }[p.etapa] ?? "";
 }
 
 /** Prazo da etapa atual (AAAA-MM-DD) — base dos lembretes. */

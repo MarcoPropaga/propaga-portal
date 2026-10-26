@@ -9,12 +9,14 @@ import { Casca } from "@/components/casca";
 import { Aviso, Botao, Campo } from "@/components/ui";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 import { ehVinculado } from "@/lib/vinculos";
+import { useTxt } from "@/components/tema";
 
 interface Usuario { id: string; nome: string; email: string; papel: string; clienteId: string | null; status: string; clientes?: string[] }
 type Acesso = { senha: boolean; doisFatores: boolean; ultimoAcesso: string | null };
 type Estado = { tipo: "ocioso" } | { tipo: "aguardando"; id: string } | { tipo: "ok"; msg: string } | { tipo: "erro"; msg: string };
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   const [lista, setLista] = useState<Usuario[]>([]);
   const [form, setForm] = useState({ nome: "", email: "", papel: "solicitante", clienteId: "bmlog" });
@@ -111,7 +113,7 @@ function Conteudo() {
             <div className="grid gap-1.5">
               <label htmlFor="papel" className="text-sm font-semibold">Perfil</label>
               <select id="papel" value={form.papel} onChange={(e) => setForm({ ...form, papel: e.target.value })} className="min-h-11 rounded border border-[#C9D7DC] bg-white px-3">
-                {Object.entries(NOMES_PAPEIS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                {Object.entries(NOMES_PAPEIS).map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
               </select>
             </div>
             {cliente && (
@@ -145,7 +147,7 @@ function Conteudo() {
                 {profissionais.map((u) => (
                   <tr key={u.id} className="border-t border-gray-200">
                     <td className="px-3 py-2.5"><b>{u.nome}</b><div className="text-gray-600">{u.email}</div></td>
-                    <td className="px-3 py-2.5">{NOMES_PAPEIS[u.papel] ?? u.papel}</td>
+                    <td className="px-3 py-2.5">{t(NOMES_PAPEIS[u.papel] ?? u.papel)}</td>
                     {Object.values(CLIENTES).map((c) => (
                       <td key={c.id} className="px-3 py-2.5">
                         <label className="inline-flex min-h-11 items-center gap-2">
@@ -177,7 +179,7 @@ function Conteudo() {
                 {lista.map((u) => (
                   <tr key={u.id} className="border-t border-gray-200">
                     <td className="px-3 py-2.5"><b>{u.nome}</b><div className="text-gray-600">{u.email}</div></td>
-                    <td className="px-3 py-2.5">{NOMES_PAPEIS[u.papel] ?? u.papel}</td>
+                    <td className="px-3 py-2.5">{t(NOMES_PAPEIS[u.papel] ?? u.papel)}</td>
                     <td className="px-3 py-2.5">{u.clienteId ? CLIENTES[u.clienteId]?.nome : "Propaga"}</td>
                     <td className="px-3 py-2.5">{situacao(acessos?.[u.id], !!acessos)}</td>
                     <td className="px-3 py-2.5">{acesso(acessos?.[u.id], !!acessos, erroAcessos)}</td>

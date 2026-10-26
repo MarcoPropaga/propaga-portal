@@ -18,6 +18,7 @@ import type { Papel } from "@/lib/tipos";
 import { contarPendencias, situacaoInterna, situacaoRelatorio, ultima } from "@/lib/pecas";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
+import { useTxt } from "@/components/tema";
 
 interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?: string; chave?: boolean; acao?: string }
 interface Valores { itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
@@ -28,6 +29,7 @@ const ACOES_PECA = ["publicar", "avaliar", "enviarVersao", "finalizar", "ciente"
 const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   const protocolo = useSearchParams().get("p") ?? "";
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
@@ -74,13 +76,13 @@ function Conteudo() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="font-display text-xl font-semibold">{pedido.protocolo}</span>
           <SeloStatus status={pedido.status} />
-          <span className="text-sm text-gray-600">{pedido.criadoPor ? `Criada por ${pedido.criadoPor.nome} em nome do Marketing B&M Log` : `Enviada por ${pedido.solicitanteNome}`} em {brDataHora(pedido.criadoEm)}</span>
+          <span className="text-sm text-gray-600">{pedido.criadoPor ? t(`Criada por ${pedido.criadoPor.nome} em nome do {equipe}`) : `Enviada por ${pedido.solicitanteNome}`} em {brDataHora(pedido.criadoEm)}</span>
         </div>
 
         {/* Etapas */}
         {(pedido.status === "proposta" || pedido.status === "ajuste") && <Aviso>{pedido.status === "proposta"
-          ? "Solicitação criada pelo Marcelo, aguardando o Marketing B&M Log aprovar, pedir ajuste ou recusar."
-          : "O Marketing B&M Log pediu ajuste. O Marcelo edita e reenvia para aprovação. O pedido de ajuste está no histórico."}</Aviso>}
+          ? t("Solicitação criada pelo Marcelo, aguardando o {equipe} aprovar, pedir ajuste ou recusar.")
+          : t("O {equipe} pediu ajuste. O Marcelo edita e reenvia para aprovação. O pedido de ajuste está no histórico.")}</Aviso>}
         {pedido.status === "cancelada" ? <Aviso>Este pedido foi cancelado{fatorCobranca(pedido) > 0 ? " depois de apresentado e é cobrado em 50% do seu valor, conforme o contrato" : ""}. O motivo está no histórico.</Aviso> : (
           <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Etapas do pedido">
             {ETAPAS.map((e, i) => (
@@ -104,7 +106,7 @@ function Conteudo() {
         {!publicando && !acao && podePublicar && (
           <section className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4" aria-label="Atalhos do administrador">
             <span className="mr-auto text-sm text-gray-600">Atalhos do administrador</span>
-            {podePublicar && <Botao variante="discreto" onClick={() => setPublicando(true)}>Publicar peças direto para o Marketing B&M Log</Botao>}
+            {podePublicar && <Botao variante="discreto" onClick={() => setPublicando(true)}>{t("Publicar peças direto para o {equipe}")}</Botao>}
           </section>
         )}
 
@@ -152,7 +154,7 @@ function Conteudo() {
                   {(pedido.pecas ?? []).map((x) => (
                     <li key={x.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
                       <b>{x.nome}</b><span className="text-gray-600">v{ultima(x).v}</span>
-                      <span className="ml-auto rounded-full bg-[#EAF3F5] px-2.5 py-0.5 text-xs font-semibold">{ehCliente ? situacaoRelatorio(x).rotulo : situacaoInterna(x)}</span>
+                      <span className="ml-auto rounded-full bg-[#EAF3F5] px-2.5 py-0.5 text-xs font-semibold">{ehCliente ? situacaoRelatorio(x).rotulo : t(situacaoInterna(x))}</span>
                     </li>
                   ))}
                 </ul>
