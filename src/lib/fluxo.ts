@@ -24,7 +24,7 @@ export const REGRA_CANCELAMENTO = "Peça ou pedido cancelado depois de apresenta
 
 /** Refação extra (a partir da 3ª, com edições novas): acréscimo sobre o valor da peça. */
 export const ACRESCIMO_REFACAO_EXTRA = 0.3;
-export const REGRA_REFACAO = "Até 2 refações estão incluídas. A partir da 3ª solicitação de refação, é adicionado 30% ao valor da peça. A refação é cobrada quando as edições pedidas pelo marketing da B&M Log forem diferentes das pedidas na 1ª e na 2ª solicitação; ajuste que repete um pedido anterior ou corrige erro da Propaga não é cobrado.";
+export const REGRA_REFACAO = "Até 2 refações estão incluídas. A partir da 3ª solicitação de refação, é adicionado 30% ao valor da peça. A refação é cobrada quando as edições pedidas pelo marketing da {cliente} forem diferentes das pedidas na 1ª e na 2ª solicitação; ajuste que repete um pedido anterior ou corrige erro da Propaga não é cobrado.";
 
 /** Fração do valor do pedido: 1 normal; pedido inteiro cancelado = 0,5 se já havia peças apresentadas, 0 se não.
     Ajustes por peça (−50% cancelada, +30% refação extra) ficam em ajustePecas (src/lib/pecas.ts). */
@@ -53,7 +53,7 @@ export const REGRAS: Record<Acao, Regra> = {
   ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao Marcelo" },
   recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
   // Marcelo, ao analisar o pedido, tem dúvida ou sugestão: devolve à Débora (volta a "Aguardando aprovação da Débora").
-  devolverDuvida: { de: ["enviada"], para: "proposta", papeis: ["atendimento", "admin"], rotulo: "Devolver ao Marketing B&M Log (dúvida ou sugestão)" },
+  devolverDuvida: { de: ["enviada"], para: "proposta", papeis: ["atendimento", "admin"], rotulo: "Devolver ao {equipe} (dúvida ou sugestão)" },
   aceitarPedido: { de: ["enviada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Aceitar e enviar ao criativo" },
   // Troca de criativo: o status não muda (o servidor mantém o atual).
   trocarCriativo: { de: ["producao", "apresentacao", "aprovada"], para: "producao", papeis: ["atendimento", "admin"], rotulo: "Trocar o criativo" },
@@ -75,7 +75,7 @@ export const ETAPAS: { status: Status; rotulo: string }[] = [
 export const NOME_STATUS: Record<Status, string> = {
   ...(Object.fromEntries(ETAPAS.map((e) => [e.status, e.rotulo])) as Record<Status, string>),
   rascunho: "Rascunho", cancelada: "Cancelada",
-  proposta: "Aguardando aprovação do Marketing B&M Log", ajuste: "Ajuste pedido pelo Marketing B&M Log",
+  proposta: "Aguardando aprovação do {equipe}", ajuste: "Ajuste pedido pelo {equipe}",
 };
 
 export function podeExecutar(acao: Acao, status: Status, papel: Papel, ctx: Ctx = {}): boolean {

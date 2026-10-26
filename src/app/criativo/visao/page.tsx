@@ -14,6 +14,7 @@ import { hojeSP } from "@/lib/datas";
 import { prazoEtapa, situacaoInterna, tarefasDoPedido } from "@/lib/pecas";
 import { usePedidos } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
+import { useTxt } from "@/components/tema";
 
 type Equipe = { lista: { uid: string; nome: string }[] };
 const cx = "min-h-11 rounded border border-[#C9D7DC] bg-white px-3";
@@ -23,6 +24,7 @@ const meses = (n = 12) => {
 };
 
 function Conteudo() {
+  const t = useTxt();
   const [equipe, setEquipe] = useState<Equipe["lista"] | null>(null);
   const [uid, setUid] = useState("");
   const [mes, setMes] = useState(() => meses()[0]);
@@ -83,7 +85,7 @@ function Conteudo() {
                 {tarefas.map(({ p, x }) => (
                   <li key={`${p.protocolo}:${x.id}`} className="flex flex-wrap items-baseline gap-x-3 rounded border border-gray-200 bg-white px-3 py-2">
                     <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(p.protocolo)}`} className="font-semibold text-marca-700 underline-offset-2 hover:underline">{p.protocolo}</a>
-                    <b>{x.nome}</b><span>{situacaoInterna(x)}</span>
+                    <b>{x.nome}</b><span>{t(situacaoInterna(x))}</span>
                     {prazoEtapa(x) && <span className="text-gray-600">prazo {brData(prazoEtapa(x)!)}</span>}
                   </li>
                 ))}
@@ -103,7 +105,7 @@ function Conteudo() {
                     {pedidos.map((p) => (
                       <tr key={p.protocolo} className="border-t border-gray-200">
                         <td className="px-3 py-2.5"><a href={`/solicitacoes/pedido/?p=${encodeURIComponent(p.protocolo)}`} className="font-semibold text-marca-700 underline-offset-2 hover:underline">{p.protocolo}</a><div>{p.titulo}</div></td>
-                        <td className="px-3 py-2.5">{NOME_STATUS[p.status]}</td>
+                        <td className="px-3 py-2.5">{t(NOME_STATUS[p.status])}</td>
                         <td className="px-3 py-2.5">{(p.pecas ?? []).filter((x) => x.etapa === "concluida").length} concluída(s) · {(p.pecas ?? []).filter((x) => !["concluida", "encerrada"].includes(x.etapa)).length} em andamento</td>
                         <td className="px-3 py-2.5">{p.prazo.final ? brData(p.prazo.final) : "—"}</td>
                       </tr>
@@ -124,7 +126,7 @@ function Conteudo() {
                   {linhas.map((l) => (
                     <tr key={l.chave} className="border-t border-gray-200 align-top">
                       <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div></td>
-                      <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : "Cancelada pela B&M Log"}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
+                      <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : t("Cancelada pela {cliente}")}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                       <td className="px-3 py-2.5">{rel?.itens?.[l.item] ?? tab?.itens.find((i) => i.id === l.item)?.nome ?? l.item}<div className="text-xs text-gray-600">{NOME_COLUNA[l.coluna]}</div></td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{l.valor == null ? "A informar" : moeda(l.cobrado ?? cobradoDe(l))}{l.situacao === "cancelada" && l.valor != null && <div className="text-xs text-gray-600">50% de {moeda(l.valor)}</div>}</td>
                     </tr>

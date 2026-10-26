@@ -10,6 +10,7 @@ import { Aviso } from "@/components/ui";
 import { brData, moeda } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import { REGRA_REFACAO, VE_VALORES } from "@/lib/fluxo";
+import { useTxt } from "@/components/tema";
 
 interface Cat {
   versao: string; data: string; status: string; desconto?: number; categorias: { id: string; nome: string }[];
@@ -17,6 +18,7 @@ interface Cat {
 }
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
   const cliente = CLIENTES[clienteId];
@@ -86,7 +88,7 @@ function Conteudo() {
           ))}
           {!grupos.length && <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-8 text-center text-gray-600">Nenhum serviço encontrado.</p>}
           <p className="rounded bg-[#EAF3F5] px-4 py-3 text-sm leading-relaxed">Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte. </p>
-          <p className="rounded border-l-4 border-aviso-700 bg-aviso-100 px-4 py-3 text-sm leading-relaxed"><b>Refação:</b> {REGRA_REFACAO}</p>
+          <p className="rounded border-l-4 border-aviso-700 bg-aviso-100 px-4 py-3 text-sm leading-relaxed"><b>Refação:</b> {t(REGRA_REFACAO)}</p>
         </>}
       </div>
     </Casca>

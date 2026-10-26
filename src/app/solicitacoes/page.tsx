@@ -13,10 +13,12 @@ import { Aviso } from "@/components/ui";
 import { brData, brDataHora, SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import type { Status } from "@/lib/tipos";
+import { useTxt } from "@/components/tema";
 
 const ordem = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
   const [lista, setLista] = useState<PedidoDoc[] | null>(null);
@@ -56,7 +58,7 @@ function Conteudo() {
             <select id="etapa" value={etapa} onChange={(e) => setEtapa(e.target.value as typeof etapa)} className="min-h-11 rounded border border-[#C9D7DC] bg-white px-3">
               <option value="abertas">Em andamento</option>
               <option value="todas">Todas</option>
-              {(Object.keys(NOME_STATUS) as Status[]).filter((x) => x !== "rascunho").map((x) => <option key={x} value={x}>{NOME_STATUS[x]}</option>)}
+              {(Object.keys(NOME_STATUS) as Status[]).filter((x) => x !== "rascunho").map((x) => <option key={x} value={x}>{t(NOME_STATUS[x])}</option>)}
             </select>
           </div>
           {podeSolicitar && <a href="/nova-solicitacao/" className="ml-auto inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">+ Nova solicitação</a>}

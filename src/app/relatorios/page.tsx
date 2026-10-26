@@ -15,6 +15,7 @@ import { brData, moeda, SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import { ajustePecas, situacaoRelatorio, ultimaDecisao } from "@/lib/pecas";
 import type { Status } from "@/lib/tipos";
+import { useTxt } from "@/components/tema";
 
 interface Valores { protocolo: string; itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
 type Periodo = "7" | "30" | "ano" | "tudo";
@@ -35,6 +36,7 @@ function Kpi({ rotulo, valor, sub }: { rotulo: string; valor: string; sub: strin
 }
 
 function Conteudo() {
+  const t = useTxt();
   const s = useSessao();
   const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
   const cliente = CLIENTES[clienteId];
@@ -111,11 +113,11 @@ function Conteudo() {
     const n = (v: number | null | undefined) => (v == null ? "" : v.toFixed(2).replace(".", ","));
     const q = (t: string) => `"${String(t ?? "").replace(/"/g, '""')}"`;
     const cab = ["Protocolo", "Título", "Unidade", "Enviada em", "Etapa", "Código", "Serviço", "Modalidade e faixa", "Qtd.", "Unitário (R$)", "Subtotal (R$)", "Cobrado (R$)", "Observação", "Valor cotado", "Realização"];
-    const corpo = linhas.map(({ p, it, v, f }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], it.cod, it.nome,
+    const corpo = linhas.map(({ p, it, v, f }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), t(NOME_STATUS[p.status]), it.cod, it.nome,
       it.varianteRotulo, String(it.qtd), n(v?.unitario), n(v?.subtotal), n(cobrado(v, f)),
       p.status === "cancelada" ? (f > 0 ? "cancelado após apresentação: 50%" : "cancelado antes da apresentação: sem cobrança") : f > 1 ? `${p.refacoesExtrasCobradas} refação(ões) extra: +${Math.round((f - 1) * 100)}%` : "",
       v?.orcado ? "sim" : v?.unitario == null ? "a cotar" : "não", obsRealizado(p)].map(q).join(";"));
-    const corpoPecas = pecasSel.map(({ p, x, u, aj, sit }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), NOME_STATUS[p.status], "peça", x.nome,
+    const corpoPecas = pecasSel.map(({ p, x, u, aj, sit }) => [p.protocolo, p.titulo, p.unidade, brData(isoSP(dataDe(p.criadoEm))), t(NOME_STATUS[p.status]), "peça", x.nome,
       sit.rotulo, "1", n(u), "", n(aj), [x.extras30 ? `${x.extras30} refação(ões) extra: +30%` : "", x.hist.length ? `Última ação: ${x.hist[x.hist.length - 1].txt} (${x.hist[x.hist.length - 1].por}, ${brData(x.hist[x.hist.length - 1].em)})` : ""].filter(Boolean).join(" · "), ""].map(q).join(";"));
     const blob = new Blob(["﻿" + [cab.map(q).join(";"), ...corpo, ...corpoPecas].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
@@ -222,7 +224,7 @@ function Conteudo() {
                 </tbody>
               </table>
             </div>
-            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {REGRA_REFACAO}</p>
+            <p className="text-sm text-gray-600">Faturamento e pagamento aparecem quando registrados pelo Financeiro da Propaga. Peça aprovada entra como concluída. {t(REGRA_REFACAO)}</p>
           </section>
         </>}
       </div>

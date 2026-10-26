@@ -6,6 +6,8 @@
 export interface Marca {
   /** Nome curto do cliente nos textos ("B&M Log"). */
   nomeCurto: string;
+  /** Equipe do cliente que solicita e aprova ('Marketing B&M Log'). */
+  equipe: string;
   /** Rótulo do portal no menu e na tela de acesso. */
   rotuloPortal: string;
   /** Selo/logomarca do menu e da tela de acesso (arquivo em /public/brand). */
@@ -47,6 +49,7 @@ export const CLIENTES: Record<string, Cliente> = {
     // Paleta B&M Log aprovada em 03/10/2026: #003C57 e #55C5D0.
     marca: {
       nomeCurto: "B&M Log",
+      equipe: "Marketing B&M Log",
       rotuloPortal: "Portal MKT B&M Log",
       selo: "/brand/selo-mkt-bmlog.png",
       seloAlt: "mkt B&M Log",
@@ -75,7 +78,7 @@ export const CLIENTES: Record<string, Cliente> = {
 };
 
 export const NOMES_PAPEIS: Record<string, string> = {
-  solicitante: "Marketing B&M Log",
+  solicitante: "{equipe}",
   financeiro_cliente: "Financeiro do cliente",
   atendimento: "Atendimento Propaga",
   financeiro_propaga: "Financeiro Propaga",

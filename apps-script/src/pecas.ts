@@ -14,6 +14,7 @@ import { ErroUsuario, type Plataforma } from "./plataforma";
 import { foraDaTabela, chaveServico } from "@/lib/criativo";
 import { tabelaCriativoAtual } from "./criativo";
 import { lerConfig } from "./servidor";
+import { aplicarMarca } from "@/lib/tema";
 
 export interface Usuario { uid: string; nome: string; papel: string; email: string; clienteId: string | null; propaga?: boolean; clientes?: string[] }
 export interface Pedido {
@@ -38,6 +39,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
   if (!r.success) throw new ErroUsuario(r.error.issues[0]?.message || "Dados inválidos.");
   const d = r.data;
   if (!CLIENTES[clienteId]) throw new ErroUsuario("Cliente não encontrado.");
+  const M = CLIENTES[clienteId].marca;
   if (!atendeCliente(u, clienteId)) throw new ErroUsuario(u.propaga ? MSG_SEM_VINCULO : "Cliente inválido para o seu acesso.");
   if (!PODE[d.acao].includes(u.papel)) throw new ErroUsuario("Esta ação não está disponível para o seu perfil.");
 
@@ -82,7 +84,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         const x: Peca = { id: `p${base + i + 1}`, nome: n.nome, item: n.item, etapa: doCriativo ? "revisao" : "cliente", tarefa: null, orientacao: null, extras30: 0,
           versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null, interna: doCriativo || undefined }], hist: [], desde: agora,
           criativo: autoria ?? ped.criativo ?? null };
-        log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : "v1 enviada ao Marketing B&M Log para aprovação");
+        log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : `v1 enviada ao ${M.equipe} para aprovação`);
         pecas.push(x);
       });
       const lista = d.pecas.map((n) => `- ${n.nome}`).join("\n");
@@ -114,9 +116,9 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       }
       rotuloEvento = `Avaliação enviada: ${ap.length} aprovada(s), ${rf.length} refação(ões)`;
       // Aprovação e refação avisam o Marcelo e a Mariane ao mesmo tempo (decisão de 16/10/2026).
-      if (ap.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Peças aprovadas pelo Marketing B&M Log",
+      if (ap.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: `Peças aprovadas pelo ${M.equipe}`,
         nota: `Aprovadas: ${ap.join(", ")}\n${cri} prepara o arquivo final em 04 Aprovados e os arquivos abertos em 05 Arquivos abertos.` });
-      if (rf.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: "Refação pedida pelo Marketing B&M Log",
+      if (rf.length) avisos.push({ quem: ["atendimento", "criativo"], rotulo: `Refação pedida pelo ${M.equipe}`,
         nota: `${rf.map((t) => `- ${t}`).join("\n")}\nPrazo sugerido: ${br(somarDiasUteis(hojeSP(p.agora()), 2))}` });
       break;
     }
@@ -161,12 +163,12 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         if (x.etapa !== "revisao") throw new ErroUsuario(`"${x.nome}" não está em revisão.`);
         // +30% (decisão do Marcelo ao liberar): só a partir da 3ª refação e em peça que veio de refação da Débora.
         if (d.cobrar30?.includes(id)) {
-          if (rodadas <= MAX_RODADAS || !refacoesDaPeca(x)) throw new ErroUsuario("A cobrança de +30% vale a partir da 3ª refação, em peça que o Marketing B&M Log mandou refazer.");
+          if (rodadas <= MAX_RODADAS || !refacoesDaPeca(x)) throw new ErroUsuario(`A cobrança de +30% vale a partir da 3ª refação, em peça que o ${M.equipe} mandou refazer.`);
           x.extras30 = (x.extras30 || 0) + 1; cobradas.push(x.nome); log(x, "Refação extra com edições novas: +30% no valor");
         }
-        ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo Marcelo e enviada ao Marketing B&M Log`); nomes.push(x.nome);
+        ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo Marcelo e enviada ao ${M.equipe}`); nomes.push(x.nome);
       }
-      rotuloEvento = `Nova versão enviada ao Marketing B&M Log: ${nomes.join(", ")}`;
+      rotuloEvento = `Nova versão enviada ao ${M.equipe}: ${nomes.join(", ")}`;
       avisos.push({ quem: ["solicitante"], rotulo: "Nova versão para sua aprovação", nota: nomes.map((t) => `- ${t}`).join("\n") });
       if (cobradas.length) avisos.push({ quem: ["solicitante"], rotulo: "Refação extra · +30% no valor da peça", nota: cobradas.join(", ") });
       break;
@@ -219,7 +221,7 @@ export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: 
       (quem.includes("midia_social") && x.papel === "midia_social" && atendeCliente(x, clienteId))));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
-      autor: autor.nome, etapa: NOME_STATUS[status], link: `${cfg.portalUrl}/aprovacoes/?p=${encodeURIComponent(ped.protocolo)}` });
+      autor: autor.nome, etapa: aplicarMarca(NOME_STATUS[status], CLIENTES[clienteId].marca), link: `${cfg.portalUrl}/aprovacoes/?p=${encodeURIComponent(ped.protocolo)}` });
     for (const x of dest) {
       try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); }
       catch (e) { p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
@@ -256,7 +258,7 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
       if (!atendeCliente(u, c)) continue;
       const itens = itensDe(fs.listar(`clientes/${c}/calendarios`).map((x) => x.dados as unknown as { mes: string; itens: CalItem[] }));
       for (const it of itens) if (pendentePub(u.papel, it, arteDe(it, pedidos.filter((q) => q.c === c))))
-        linhas.push({ protocolo: `Calendário ${it.mes}`, titulo: it.titulo, peca: NOME_CAL[it.etapa], etapa: it.etapa, prazo: prazoPub(it), atrasada: atrasadaPub(it, hoje) });
+        linhas.push({ protocolo: `Calendário ${it.mes}`, titulo: it.titulo, peca: aplicarMarca(NOME_CAL[it.etapa], CLIENTES[c].marca), etapa: it.etapa, prazo: prazoPub(it), atrasada: atrasadaPub(it, hoje) });
     }
     if (!linhas.length) continue;
     const msg = emailResumo({ nome: u.nome.split(" ")[0], linhas, link: `${cfg.portalUrl}/aprovacoes/` });

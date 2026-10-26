@@ -9,6 +9,7 @@ import { hojeSP } from "@/lib/datas";
 import { ANTECEDENCIA_DIAS, NOME_CAL, NOME_MES, arteDe, atrasadaPub, erroItem, itensDe, semanaDe, urgenteCal, type CalEntrada, type CalItem, type Calendario } from "@/lib/publicacao";
 import { ultima } from "@/lib/pecas";
 import type { Papel } from "@/lib/tipos";
+import { useTxt } from "@/components/tema";
 
 type Arte = ReturnType<typeof arteDe>;
 export type AbaPub = { k: string; rotulo: string; cal: (it: CalItem, arte: Arte) => boolean };
@@ -47,6 +48,7 @@ const ref = (i: CalItem) => ({ mes: i.mes, id: i.id });
 const campo = "min-h-11 rounded border border-[#C9D7DC] bg-white px-3 font-normal";
 
 export function PainelPublicacao({ aba, cals, ctx }: { aba: AbaPub; cals: Calendario[]; ctx: Ctx }) {
+  const t = useTxt();
   const hoje = hojeSP();
   const itens = itensDe(cals).map((i) => ({ i, arte: arteDe(i, ctx.pedidos) })).filter((x) => aba.cal(x.i, x.arte));
   const meses = [...new Set(itens.map((x) => x.i.mes))];
@@ -57,16 +59,16 @@ export function PainelPublicacao({ aba, cals, ctx }: { aba: AbaPub; cals: Calend
       ? await ctx.enviar("publicacao", { acao: "avaliarCalendario", decisoes: lista.map((i) => ({ ...ref(i), tipo: "aprovada" })) })
       : await ctx.enviar("publicacao", { acao, itens: lista.map(ref) });
     setOcupado(false);
-    ctx.onMsg(r.ok ? "ok" : "erro", r.ok ? (acao === "aprovar" ? "Calendário aprovado. Marcelo e Kauan foram avisados." : "Calendário enviado ao Marketing B&M Log.") : r.msg);
+    ctx.onMsg(r.ok ? "ok" : "erro", r.ok ? (acao === "aprovar" ? "Calendário aprovado. Marcelo e Kauan foram avisados." : t("Calendário enviado ao {equipe}.")) : r.msg);
   };
   const emLote = aba.k === "pub:analisar" ? "enviarADebora" : aba.k === "pub:aprovar" ? "aprovar" : null;
   return (
     <div className="grid gap-4">
       {aba.k === "pub:calendario" && <FormCalendario cals={cals} ctx={ctx} hoje={hoje} />}
-      {aba.k === "pub:aguardando" && <p className="text-sm text-gray-600">O calendário está aprovado. Falta a Mariane criar a arte, o Marketing B&M Log aprovar e o arquivo final ficar pronto; você será avisado.</p>}
+      {aba.k === "pub:aguardando" && <p className="text-sm text-gray-600">{t("O calendário está aprovado. Falta a Mariane criar a arte, o {equipe} aprovar e o arquivo final ficar pronto; você será avisado.")}</p>}
       {aba.k === "pub:publicar" && <p className="text-sm text-gray-600">Arte aprovada e arquivo final pronto. Agende no mLabs (fora do portal) e registre aqui. Se o arquivo estiver incorreto, devolva ao Marcelo com o motivo.</p>}
       {emLote && itens.length > 1 && (
-        <div><Botao carregando={ocupado} onClick={() => lote(emLote, itens.map((x) => x.i))}>{emLote === "aprovar" ? `Aprovar todos (${itens.length})` : `Enviar todos ao Marketing B&M Log (${itens.length})`}</Botao></div>
+        <div><Botao carregando={ocupado} onClick={() => lote(emLote, itens.map((x) => x.i))}>{emLote === "aprovar" ? `Aprovar todos (${itens.length})` : t(`Enviar todos ao {equipe} (${itens.length})`)}</Botao></div>
       )}
       {!itens.length && aba.k !== "pub:calendario" && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nada por aqui.</p>}
       {meses.map((mes) => (
@@ -82,6 +84,7 @@ export function PainelPublicacao({ aba, cals, ctx }: { aba: AbaPub; cals: Calend
 }
 
 function Resumo({ it, arte, hoje, ctx }: { it: CalItem; arte: Arte; hoje: string; ctx: Ctx }) {
+  const t = useTxt();
   const x = it.peca ? ctx.pedidos.find((p) => p.protocolo === it.peca!.protocolo)?.pecas?.find((q) => q.id === it.peca!.id) : null;
   const link = arte.pronta && x ? ultima(x)?.link : null;
   return (
@@ -89,20 +92,21 @@ function Resumo({ it, arte, hoje, ctx }: { it: CalItem; arte: Arte; hoje: string
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <b>{it.titulo}</b>
         {it.avulso && <span className="rounded-full bg-[#E8EEF7] px-2.5 py-0.5 text-xs font-semibold text-[#24456B]">Fora do calendário aprovado</span>}
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${atrasadaPub(it, hoje) ? "bg-alerta-100 text-alerta-700" : "bg-aviso-100 text-aviso-700"}`}>{NOME_CAL[it.etapa]}{atrasadaPub(it, hoje) ? " · atrasado" : ""}</span>
+        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${atrasadaPub(it, hoje) ? "bg-alerta-100 text-alerta-700" : "bg-aviso-100 text-aviso-700"}`}>{t(NOME_CAL[it.etapa])}{atrasadaPub(it, hoje) ? " · atrasado" : ""}</span>
         {link && <a href={link} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-4">Abrir arquivo final<span className="sr-only"> (nova aba)</span></a>}
       </div>
       <p className="text-gray-600">{it.canais.join(", ")} · {brData(it.data)} às {it.hora}{urgenteCal(it, hoje) && it.urgente ? ` · urgente: ${it.urgente}` : ""}</p>
       <p className="max-w-[75ch] whitespace-pre-wrap rounded bg-paper px-3 py-2">{it.legenda}</p>
       {it.peca && <p className="text-gray-600">Peça: <a className="underline" href={`/solicitacoes/pedido/?p=${encodeURIComponent(it.peca.protocolo)}`}>{it.peca.nome} ({it.peca.protocolo})</a>{x ? ` · ${arte.pronta ? "arquivo final pronto" : "em andamento"}` : ""}</p>}
       {!it.peca && it.etapa === "aprovado" && <p className="text-gray-600">Aguardando o Marcelo vincular a peça da Mariane.</p>}
-      {it.ajuste && ["ajuste", "analise", "devolvida"].includes(it.etapa) && <p className="rounded bg-alerta-100 px-3 py-2 text-alerta-700"><b>{{ marcelo: "Marcelo", debora: "Marketing B&M Log", kauan: "Kauan" }[it.ajuste.de]}</b> pediu ajuste: {it.ajuste.motivo}</p>}
+      {it.ajuste && ["ajuste", "analise", "devolvida"].includes(it.etapa) && <p className="rounded bg-alerta-100 px-3 py-2 text-alerta-700"><b>{{ marcelo: "Marcelo", debora: t("{equipe}"), kauan: "Kauan" }[it.ajuste.de]}</b> pediu ajuste: {it.ajuste.motivo}</p>}
       {it.publicada && <p className="text-gray-600">Publicada em {brData(it.publicada.data)}{it.publicada.link ? <> · <a href={it.publicada.link} target="_blank" rel="noopener noreferrer" className="underline">ver publicação<span className="sr-only"> (nova aba)</span></a></> : ` · sem link: ${it.publicada.semLink}`}</p>}
     </div>
   );
 }
 
 function LinhaCal({ it, arte, aba, ctx, hoje }: { it: CalItem; arte: Arte; aba: string; ctx: Ctx; hoje: string }) {
+  const t = useTxt();
   const [ocupado, setOcupado] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [modo, setModo] = useState<"" | "devolver" | "ajuste" | "arte" | "publicar">("");
@@ -144,7 +148,7 @@ function LinhaCal({ it, arte, aba, ctx, hoje }: { it: CalItem; arte: Arte; aba: 
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       <div className="flex flex-wrap items-end gap-3">
         {aba === "pub:analisar" && marcelo && modo !== "devolver" && <>
-          {btn("Enviar ao Marketing B&M Log", { acao: "enviarADebora", itens: [r] }, "Enviado ao Marketing B&M Log.")}
+          {btn(t("Enviar ao {equipe}"), { acao: "enviarADebora", itens: [r] }, t("Enviado ao {equipe}."))}
           <Botao variante="linha" onClick={() => setModo("devolver")}>Devolver ao Kauan</Botao>
         </>}
         {aba === "pub:aprovar" && debora && modo !== "ajuste" && <>
@@ -200,6 +204,7 @@ type Rascunho = { chave: string; mes?: string; id?: string; motivo?: string } & 
 const vazio = (): Rascunho => ({ chave: Math.random().toString(36).slice(2), titulo: "", canais: [], data: "", hora: "", legenda: "", urgente: "" });
 
 function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoje: string }) {
+  const t = useTxt();
   const canais = Object.values(CLIENTES)[0].canaisSociais;
   const devolvidos = itensDe(cals).filter((i) => i.etapa === "ajuste");
   const [edits, setEdits] = useState<Record<string, Rascunho>>({});
@@ -220,7 +225,7 @@ function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoj
   }
   return (
     <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); void enviar(); }} noValidate>
-      <p className="max-w-[75ch] text-sm text-gray-600">Monte o calendário do mês: tema, canais, data, horário e legenda de cada post. Envie com pelo menos {ANTECEDENCIA_DIAS} dias de antecedência. O Marcelo analisa e o Marketing B&M Log aprova; o agendamento no mLabs é feito por você, fora do portal.</p>
+      <p className="max-w-[75ch] text-sm text-gray-600">Monte o calendário do mês: tema, canais, data, horário e legenda de cada post. Envie com pelo menos {ANTECEDENCIA_DIAS} dias de antecedência. {t("O Marcelo analisa e o {equipe} aprova;")} o agendamento no mLabs é feito por você, fora do portal.</p>
       {corrigidos.length > 0 && <h2 className="text-lg">Posts devolvidos para ajuste</h2>}
       {corrigidos.map((r) => <LinhaRascunho key={r.chave} r={r} canais={canais} hoje={hoje} onChange={trocar} />)}
       <h2 className="text-lg">Novos posts</h2>
@@ -235,6 +240,7 @@ function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoj
 }
 
 function LinhaRascunho({ r, canais, hoje, onChange, onRemover }: { r: Rascunho; canais: string[]; hoje: string; onChange: (r: Rascunho) => void; onRemover?: () => void }) {
+  const t = useTxt();
   const id = `r-${r.chave}`;
   const urgente = !!r.data && urgenteCal(r, hoje);
   return (
@@ -243,7 +249,7 @@ function LinhaRascunho({ r, canais, hoje, onChange, onRemover }: { r: Rascunho; 
       {r.motivo && <p className="rounded bg-alerta-100 px-3 py-2 text-sm text-alerta-700">Ajuste pedido: {r.motivo}</p>}
       <label className="grid gap-1 text-sm font-semibold" htmlFor={`${id}-t`}>Tema ou orientação do post<input id={`${id}-t`} value={r.titulo} maxLength={300} onChange={(e) => onChange({ ...r, titulo: e.target.value })} className={campo} /></label>
       <label className="inline-flex min-h-10 items-center gap-2 text-sm">
-        <input type="checkbox" checked={!!r.avulso} onChange={(e) => onChange({ ...r, avulso: e.target.checked })} />Fora do calendário aprovado (pedido avulso do Marketing B&M Log)
+        <input type="checkbox" checked={!!r.avulso} onChange={(e) => onChange({ ...r, avulso: e.target.checked })} />{t("Fora do calendário aprovado (pedido avulso do {equipe})")}
       </label>
       <div className="flex flex-wrap gap-3" role="group" aria-label="Canais">
         {canais.map((c) => (

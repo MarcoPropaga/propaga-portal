@@ -13,6 +13,7 @@ import { hojeSP } from "@/lib/datas";
 import { useFila, usePedidos } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
 import type { Papel } from "@/lib/tipos";
+import { useTxt } from "@/components/tema";
 
 const ultimosMeses = (n = 12) => {
   const [a, m] = hojeSP().slice(0, 7).split("-").map(Number);
@@ -21,6 +22,7 @@ const ultimosMeses = (n = 12) => {
 const cx = "min-h-10 w-full rounded border border-[#C9D7DC] bg-white px-2 text-sm";
 
 function Conteudo() {
+  const t = useTxt();
   const meses = useMemo(() => ultimosMeses(), []);
   const [mes, setMes] = useState(() => (typeof window !== "undefined" && new URLSearchParams(location.search).get("mes")) || meses[0]);
   const { tab, erro: erroTab } = useTabelaCriativo();
@@ -77,7 +79,7 @@ function Conteudo() {
   return (
     <Casca titulo="Meu relatório do mês">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600">Peças que você criou e que foram concluídas ou canceladas pela B&M Log no mês, com os valores da sua tabela. Confira cada linha e envie para a Marisa (Financeiro Propaga).</p>
+        <p className="max-w-[75ch] text-gray-600">{t("Peças que você criou e que foram concluídas ou canceladas pela {cliente} no mês, com os valores da sua tabela. Confira cada linha e envie para a Marisa (Financeiro Propaga).")}</p>
         <div className="flex flex-wrap items-end gap-3 print:hidden">
           <div className="grid gap-1.5">
             <label htmlFor="mes" className="text-sm font-semibold">Mês</label>
@@ -112,7 +114,7 @@ function Conteudo() {
                   return (
                     <tr key={l.chave} className="border-t border-gray-200 align-top">
                       <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div><div className="text-xs text-gray-600">Pedido do Marcelo: {l.servico}</div></td>
-                      <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : "Cancelada pela B&M Log"}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
+                      <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : t("Cancelada pela {cliente}")}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                       <td className="px-3 py-2.5">{enviado ? nomeItem(l.item) : (
                         <select aria-label={`Item da tabela para ${l.peca}`} className={cx} value={l.item} onChange={(e) => mudar(l, { item: e.target.value })}>
                           {tab.itens.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
@@ -135,7 +137,7 @@ function Conteudo() {
               {vis.length > 0 && <tfoot><tr className="border-t-2 border-ink-900 font-semibold"><td className="px-3 py-2.5" colSpan={4}>Total de {nomeMes(mes)} · {vis.length} peça(s){refs ? ` · ${refs} refação(ões) sem valor extra` : ""}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(total)}</td></tr></tfoot>}
             </table>
           </div>
-          <p className="text-sm text-gray-600">{REGRA_CANCELADA_CRIATIVO} {REGRA_COMPLEXO_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
+          <p className="text-sm text-gray-600">{t(REGRA_CANCELADA_CRIATIVO)} {REGRA_COMPLEXO_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
           <div className="flex flex-wrap gap-3 print:hidden">
             {!rel && vis.length > 0 && <Botao onClick={enviarMarisa} carregando={ocupado}>Enviar para a Marisa</Botao>}
             {rel?.status === "enviado" && !corrigir && <Botao variante="linha" onClick={() => setCorrigir(true)}>Corrigir e reenviar</Botao>}

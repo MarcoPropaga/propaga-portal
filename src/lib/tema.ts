@@ -43,3 +43,8 @@ export function validarMarca(m: Marca): string[] {
   exigir("Texto cinza sobre o papel", c.cinza, c.papel);
   return erros;
 }
+
+/** Troca os marcadores de texto pelos nomes do cliente: {cliente} = "B&M Log", {equipe} = "Marketing B&M Log". */
+export function aplicarMarca(texto: string, m: Pick<Marca, "nomeCurto" | "equipe">): string {
+  return texto.replaceAll("{cliente}", m.nomeCurto).replaceAll("{equipe}", m.equipe);
+}

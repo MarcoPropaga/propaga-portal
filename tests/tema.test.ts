@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CLIENTES, clienteAtivo, CLIENTE_PADRAO } from "@/content/clientes";
-import { contraste, validarMarca, variaveisCss } from "@/lib/tema";
+import { aplicarMarca, contraste, validarMarca, variaveisCss } from "@/lib/tema";
 
 describe("tema por cliente", () => {
   it("a marca de todo cliente cadastrado passa no contraste AA", () => {
@@ -21,5 +21,14 @@ describe("tema por cliente", () => {
   it("sem cliente usa o padrão", () => {
     expect(clienteAtivo(null).id).toBe(CLIENTE_PADRAO);
     expect(clienteAtivo("inexistente").id).toBe(CLIENTE_PADRAO);
+  });
+  it("aplica o nome do cliente nos marcadores", () => {
+    const m = { nomeCurto: "DalPet", equipe: "Comercial DalPet" };
+    expect(aplicarMarca("Aguardando {equipe}. Cancelada pela {cliente}.", m)).toBe("Aguardando Comercial DalPet. Cancelada pela DalPet.");
+    expect(aplicarMarca("{cliente} e {cliente}", m)).toBe("DalPet e DalPet");
+    expect(aplicarMarca("sem marcador", m)).toBe("sem marcador");
+  });
+  it("a marca da B&M Log mantém os textos atuais", () => {
+    expect(aplicarMarca("{equipe}", CLIENTES[CLIENTE_PADRAO].marca)).toBe("Marketing B&M Log");
   });
 });
