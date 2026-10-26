@@ -3,6 +3,7 @@ import { paraValor, deValor } from "../apps-script/src/firestore";
 import { configurarProjeto, convidar as convidarBase, definirVinculos, processarFila } from "../apps-script/src/servidor";
 import { resumoDiario } from "../apps-script/src/pecas";
 import { Firestore } from "../apps-script/src/firestore";
+import { comTrava, emailPermitido } from "../apps-script/src/trava";
 import { CLIENTES } from "@/content/clientes";
 import { situacaoRelatorio } from "@/lib/pecas";
 import type { Plataforma, RespostaHttp } from "../apps-script/src/plataforma";
@@ -103,6 +104,43 @@ describe("servidor Apps Script", () => {
     expect(f.doc(`usuarios/${r.uid}`).status).toBe("convidado");
     expect(f.emails[0].html).toContain("https://portal.propaga.com/primeiro-acesso/?oobCode=ABC%2B123");
     expect(f.emails[0].assunto).toContain("Portal B&M Log");
+  });
+
+  describe("trava de e-mails do período de teste (EMAILS_PERMITIDOS)", () => {
+    const com = (lista: string | null): Plataforma => ({ ...f.p, propriedade: (k) => (k === "EMAILS_PERMITIDOS" ? lista : f.p.propriedade(k)) });
+
+    it("sem a propriedade, a trava está desligada", () => {
+      expect(emailPermitido(com(null), "qualquer@cliente.com")).toBe(true);
+      expect(emailPermitido(com("  , "), "qualquer@cliente.com")).toBe(true);
+    });
+    it("aceita domínio ou endereço exato, sem diferenciar maiúsculas", () => {
+      const p = com("propaga.com, @bmlog-teste.com, Marco.Teste@gmail.com");
+      expect(emailPermitido(p, "Marcelo@Propaga.com")).toBe(true);
+      expect(emailPermitido(p, "glauco@bmlog-teste.com")).toBe(true);
+      expect(emailPermitido(p, "marco.teste@gmail.com")).toBe(true);
+      expect(emailPermitido(p, "glauco@bmlog.com.br")).toBe(false);
+      expect(emailPermitido(p, "outro@gmail.com")).toBe(false);
+      expect(emailPermitido(p, "x@evilpropaga.com")).toBe(false);
+      expect(emailPermitido(p, "x@propaga.com.evil.com")).toBe(false);
+    });
+    it("convite fora da lista falha antes de criar conta ou enviar e-mail", () => {
+      expect(() => convidar(com("propaga.com"), { nome: "Glauco", email: "glauco@bmlog.com.br", papel: "solicitante", clienteId: "bmlog" }, { uid: "adm", nome: "Marco" })).toThrow(/lista permitida/);
+      expect(f.usuarios.size).toBe(0);
+      expect(f.emails).toHaveLength(0);
+    });
+    it("convite da lista segue normal", () => {
+      const r = convidar(com("propaga.com"), { nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }, { uid: "adm", nome: "Marco" });
+      expect(f.usuarios.has(r.uid)).toBe(true);
+      expect(f.emails).toHaveLength(1);
+    });
+    it("comTrava descarta o envio fora da lista e deixa passar o da lista", () => {
+      const p = comTrava(com("propaga.com"));
+      const msg = { assunto: "Aviso", html: "<p>x</p>", texto: "x", nomeRemetente: "Portal" };
+      p.enviarEmail({ ...msg, para: "glauco@bmlog.com.br" });
+      expect(f.emails).toHaveLength(0);
+      p.enviarEmail({ ...msg, para: "marisa@propaga.com" });
+      expect(f.emails).toHaveLength(1);
+    });
   });
 
   it("equipe Propaga recebe claim propaga, sem cliente", () => {

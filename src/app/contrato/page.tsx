@@ -51,7 +51,7 @@ function Conteudo() {
   const assinado = !!c.contrato.assinadoEm;
   const testes = !assinado && !!c.contrato.consideradoAssinadoParaTestes;
   const pontos: [string, string][] = [
-    ["Valores", "Preço de referência aprovado com desconto de parceria de 15%, arredondado por unidade. O portal mostra só o preço final, subtotais e total."],
+    ["Valores", "Preço de referência aprovado com o desconto do contrato, arredondado por unidade. O portal mostra só o preço final, subtotais e total."],
     ["Autorização", "Com o contrato assinado, os valores do catálogo já estão aprovados. A produção começa quando a Propaga aceita o pedido e confirma o cronograma. Itens “a cotar” recebem o valor da Propaga, conforme o contrato, nesse momento."],
     ["Inclusões", "Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte."],
     ["Prazo", `${PRAZO_PADRAO_DIAS_UTEIS} dias úteis para a 1ª apresentação em serviços simples, contados do aceite do pedido com briefing completo e materiais acessíveis. Pedidos complexos ou urgentes recebem cronograma individual.`],

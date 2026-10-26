@@ -26,6 +26,8 @@ export interface Catalogo {
   versao: string;
   data: string;
   status: "vigente" | "em_validacao" | "arquivado";
+  /** Desconto do contrato do cliente, em fração (0,15 = 15%). Muda só o preço que o cliente vê. */
+  desconto: number;
   categorias: { id: string; nome: string }[];
   servicos: Servico[];
 }

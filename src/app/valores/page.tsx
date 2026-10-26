@@ -12,7 +12,7 @@ import { CLIENTES } from "@/content/clientes";
 import { REGRA_REFACAO, VE_VALORES } from "@/lib/fluxo";
 
 interface Cat {
-  versao: string; data: string; status: string; categorias: { id: string; nome: string }[];
+  versao: string; data: string; status: string; desconto?: number; categorias: { id: string; nome: string }[];
   servicos: { cod: string; categoria: string; nome: string; descricao: string; escopo: string; nota?: string; variantes: { rotulo: string; modalidade: string; preco: number | null }[] }[];
 }
 
@@ -46,7 +46,7 @@ function Conteudo() {
   return (
     <Casca titulo="Jobs Propaga">
       <div className="grid max-w-5xl gap-5">
-        <p className="max-w-[75ch] text-gray-600">Preços finais por unidade, com o desconto de parceria de 15% já aplicado. “A cotar” significa que a Propaga define o valor conforme o contrato ao aceitar o pedido.</p>
+        <p className="max-w-[75ch] text-gray-600">Preços finais por unidade, com o desconto do seu contrato{cat?.desconto != null ? ` (${Math.round(cat.desconto * 100)}%)` : ""} já aplicado. “A cotar” significa que a Propaga define o valor conforme o contrato ao aceitar o pedido.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!cat && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {cat && <>

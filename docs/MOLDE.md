@@ -17,7 +17,7 @@ O portal da B&M Log é o **molde oficial**. Cada cliente novo é uma cópia com 
 | Marca: cores, logomarca, ícone, nome do portal | `src/content/clientes.ts` + tokens de cor (hoje fixos da B&M Log) |
 | Prefixo do protocolo | `clientes.ts` (`prefixo`) |
 | Pacote contratado: peças, entregas e valores do contrato | catálogo por cliente (`src/content/catalogos`) |
-| **Desconto do cliente** | hoje constante global (`DESCONTO_PARCERIA`, 15%); **passa a campo do contrato de cada cliente** |
+| **Desconto do cliente** | campo `desconto` do catálogo do cliente (B&M Log: 0,15) |
 | Regras comerciais: refações incluídas, cobrança extra, cancelamento | contrato do cliente |
 | Unidades, públicos-alvo, canais de vídeo e de redes sociais | `clientes.ts` |
 | Equipe do cliente: atendimento, criativos, mídia social, imprensa | vínculos feitos pelo admin (etapa 3a) |
@@ -39,11 +39,11 @@ O portal da B&M Log é o **molde oficial**. Cada cliente novo é uma cópia com 
 | Rede de farmácias (fictícia) | 5% |
 
 ## O que isso muda na construção
-1. Trocar `DESCONTO_PARCERIA` por desconto lido do contrato do cliente (`precos.ts`, relatórios, Jobs Propaga e testes).
+1. ✅ Desconto lido do contrato do cliente: campo `desconto` do catálogo (`src/content/catalogos`, só no servidor), usado por `precos.ts`, Jobs Propaga e testes. Os descontos dos outros clientes não vão para o navegador.
 2. Mover cores, logomarca e ícone para a configuração do cliente (hoje fixos da B&M Log).
 3. Textos fixos da B&M Log (perfil "Marketing B&M Log", e-mails, ajuda) passam a usar o nome do portal do cliente.
 4. Catálogo por cliente: mesma lista de serviços da Propaga, com pacote e valores próprios (`catalogo(clienteId, versao)` já aceita isso).
 5. Cadastro de cliente no admin (etapa 8 do plano) vira a tela que preenche tudo isso.
 
 ## Trava de teste
-Durante o período de teste ninguém de fora da Propaga entra no portal (decisão de 26/10/2026). Todos os clientes da simulação usam só e-mails da Propaga. Antes do uso real, ligar a lista de e-mails permitidos no servidor e desligá-la só quando o piloto for liberado.
+Durante o período de teste ninguém de fora da Propaga entra no portal (decisão de 26/10/2026). Todos os clientes da simulação usam só e-mails da Propaga. A trava é a propriedade `EMAILS_PERMITIDOS` do Apps Script (`apps-script/src/trava.ts`): com a lista preenchida, convite e envio de e-mail fora dela são bloqueados (convite dá erro claro; aviso é descartado e vai para o log). Apague a propriedade só quando o piloto for liberado.

@@ -18,6 +18,7 @@ import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo
 import { arquivarRodada } from "./arquivo";
 import { Firestore, type Doc } from "./firestore";
 import { Identidade } from "./identidade";
+import { exigirPermitido } from "./trava";
 import { ErroUsuario, type Plataforma } from "./plataforma";
 
 export interface Config { projeto: string; portalUrl: string; remetente: string }
@@ -59,6 +60,7 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
   const propaga = ehPropaga(d.papel);
   const clienteId = propaga ? null : d.clienteId!;
   if (clienteId && !CLIENTES[clienteId]) throw new ErroUsuario("Cliente não encontrado.");
+  exigirPermitido(p, d.email);
 
   const cfg = lerConfig(p);
   const id = new Identidade(p, cfg.projeto);

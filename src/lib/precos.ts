@@ -1,17 +1,17 @@
 /* Regras de preço (cláusula 4 do contrato).
-   - Preço B&M = referência × 0,85, arredondado em centavos por unidade.
+   - Preço do cliente = referência × (1 − desconto do contrato), arredondado em centavos por unidade.
+     O desconto é campo do contrato de cada cliente (Catalogo.desconto); B&M Log = 15%.
    - Subtotal = quantidade × preço unitário. Total = soma dos itens com preço.
    - Item sem preço (a cotar) é pendência, nunca R$ 0.
    Executar no servidor: a referência não deve chegar ao navegador do cliente. */
 import type { Catalogo, ItemSolicitacao, ValoresSolicitacao } from "./tipos";
 
-export const DESCONTO_PARCERIA = 0.15;
-
 const centavos = (v: number) => Math.round(v * 100) / 100;
 
-export function precoCliente(referencia: number | null): number | null {
+export function precoCliente(referencia: number | null, desconto: number): number | null {
+  if (!Number.isFinite(desconto) || desconto < 0 || desconto >= 1) throw new Error(`Desconto do contrato inválido: ${desconto}.`);
   if (referencia == null) return null;
-  return Math.round(referencia * (1 - DESCONTO_PARCERIA) * 100) / 100;
+  return Math.round(referencia * (1 - desconto) * 100) / 100;
 }
 
 export function variante(cat: Catalogo, item: ItemSolicitacao) {
@@ -36,7 +36,7 @@ export function calcularValores(
   let total = 0;
   let pendencias = 0;
   const linhas = itens.map((it, i) => {
-    const base = precoCliente(variante(cat, it).variante.referencia);
+    const base = precoCliente(variante(cat, it).variante.referencia, cat.desconto);
     const orcado = base == null && orcados[i] != null;
     const unitario = base ?? (orcado ? centavos(orcados[i]) : null);
     if (unitario == null) {
@@ -59,7 +59,7 @@ export function catalogoPublico(cat: Catalogo) {
       variantes: s.variantes.map(({ rotulo, modalidade, referencia }) => ({
         rotulo,
         modalidade,
-        preco: precoCliente(referencia),
+        preco: precoCliente(referencia, cat.desconto),
       })),
     })),
   };
