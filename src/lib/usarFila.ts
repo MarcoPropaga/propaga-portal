@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { addDoc, collection, doc, onSnapshot, query, serverTimestamp, where } from "firebase/firestore";
 import { avisarServidor, db } from "@/lib/firebase";
 import { useSessao } from "@/components/auth/sessao";
-import { CLIENTES } from "@/content/clientes";
 import type { PedidoDoc } from "@/components/pedido";
 import type { Calendario } from "@/lib/publicacao";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 export type Resposta = { ok: true; resultado?: Record<string, unknown> } | { ok: false; msg: string };
 
 export function useFila() {
   const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   return async function enviar(tipo: "peca" | "publicacao" | "acao" | "relatorioCriativo" | "pagarCriativo" | "tabelaCriativo" | "arquivarRodada", dados: unknown): Promise<Resposta> {
     try {
       // Firestore não aceita undefined: remove campos vazios antes de gravar.
@@ -40,9 +40,11 @@ export function pedidosDoUsuario(clienteId: string, papel: string | null | undef
   return base;
 }
 
-export function usePedidos(ativo = true) {
+/** `clienteFixo`: telas que valem para um cliente só (relatório do criativo, por enquanto só a B&M Log). */
+export function usePedidos(ativo = true, clienteFixo?: string) {
   const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId: ativoId } = useClienteAtivo();
+  const clienteId = clienteFixo ?? ativoId;
   const [lista, setLista] = useState<PedidoDoc[] | null>(null);
   const [erro, setErro] = useState("");
   const uid = s.usuario?.uid;
@@ -60,7 +62,7 @@ export function usePedidos(ativo = true) {
 /** Calendário de publicações (Kauan, Marcelo, Débora e admin), em tempo real. */
 export function useCalendarios(ativo = true) {
   const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const [cals, setCals] = useState<Calendario[]>([]);
   const ve = !!s.papel && ["solicitante", "atendimento", "midia_social", "admin"].includes(s.papel);
   useEffect(() => {

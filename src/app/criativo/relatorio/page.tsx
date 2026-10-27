@@ -14,6 +14,7 @@ import { useFila, usePedidos } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
 import type { Papel } from "@/lib/tipos";
 import { useTxt } from "@/components/tema";
+import { CLIENTE_PADRAO } from "@/content/clientes";
 
 const ultimosMeses = (n = 12) => {
   const [a, m] = hojeSP().slice(0, 7).split("-").map(Number);
@@ -26,7 +27,7 @@ function Conteudo() {
   const meses = useMemo(() => ultimosMeses(), []);
   const [mes, setMes] = useState(() => (typeof window !== "undefined" && new URLSearchParams(location.search).get("mes")) || meses[0]);
   const { tab, erro: erroTab } = useTabelaCriativo();
-  const { lista, erro } = usePedidos();
+  const { lista, erro } = usePedidos(true, CLIENTE_PADRAO);
   const enviar = useFila();
   const uid = useSessao().usuario?.uid ?? "";
   const [rel, setRel] = useState<RelatorioCriativo | null | undefined>(undefined);

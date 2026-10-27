@@ -13,12 +13,12 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora, moeda, Painel, SeloStatus, type PedidoDoc } from "@/components/pedido";
-import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
 import { contarPendencias, situacaoInterna, situacaoRelatorio, ultima } from "@/lib/pecas";
 import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?: string; chave?: boolean; acao?: string }
 interface Valores { itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
@@ -32,7 +32,7 @@ function Conteudo() {
   const t = useTxt();
   const s = useSessao();
   const protocolo = useSearchParams().get("p") ?? "";
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const [pedido, setPedido] = useState<PedidoDoc | null | undefined>(undefined);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [valores, setValores] = useState<Valores | null>(null);

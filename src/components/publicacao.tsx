@@ -4,12 +4,12 @@
 import { useState } from "react";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, type PedidoDoc } from "@/components/pedido";
-import { CLIENTES } from "@/content/clientes";
 import { hojeSP } from "@/lib/datas";
 import { ANTECEDENCIA_DIAS, NOME_CAL, NOME_MES, arteDe, atrasadaPub, erroItem, itensDe, semanaDe, urgenteCal, type CalEntrada, type CalItem, type Calendario } from "@/lib/publicacao";
 import { ultima } from "@/lib/pecas";
 import type { Papel } from "@/lib/tipos";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 type Arte = ReturnType<typeof arteDe>;
 export type AbaPub = { k: string; rotulo: string; cal: (it: CalItem, arte: Arte) => boolean };
@@ -205,7 +205,7 @@ const vazio = (): Rascunho => ({ chave: Math.random().toString(36).slice(2), tit
 
 function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoje: string }) {
   const t = useTxt();
-  const canais = Object.values(CLIENTES)[0].canaisSociais;
+  const canais = useClienteAtivo().cliente.canaisSociais;
   const devolvidos = itensDe(cals).filter((i) => i.etapa === "ajuste");
   const [edits, setEdits] = useState<Record<string, Rascunho>>({});
   const [novos, setNovos] = useState<Rascunho[]>([vazio()]);

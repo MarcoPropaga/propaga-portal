@@ -1144,3 +1144,79 @@ describe("vínculo profissional × cliente (etapa 3a)", () => {
     expect(usr(m2).clientes).toEqual([]); // quem já tinha o campo não muda
   });
 });
+
+describe("dois clientes: protocolo, desconto e isolamento (Pet Teste × Varejo Teste)", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, pet: string, varejo: string, atPet: string, atVar: string;
+  let seq = 0;
+  const pedidoDe = (id: "pet" | "varejo") => ({
+    titulo: "Post de teste", unidade: CLIENTES[id].unidades[0], email: "m@teste.com", objetivo: "Reforçar", publico: CLIENTES[id].publicos[0].valor,
+    itens: [{ cod: "01", variante: 0, qtd: 1, opcao: "4:5" }],
+    drive: { link: "https://drive.google.com/drive/folders/abc123", conferido: true },
+    obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true,
+  });
+  const enfileirar = (uid: string, dados: unknown, clienteId: string) => {
+    const id = `d${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo: "enviar", uid, clienteId, status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    return id;
+  };
+  beforeEach(() => {
+    f = fake();
+    adm = convidarBase(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    pet = convidarBase(f.p, { nome: "Paula Pet", email: "paula@pet-teste.com", papel: "solicitante", clienteId: "pet" }, { uid: adm, nome: "Marco" }).uid;
+    varejo = convidarBase(f.p, { nome: "Vera Varejo", email: "vera@varejo-teste.com", papel: "solicitante", clienteId: "varejo" }, { uid: adm, nome: "Marco" }).uid;
+    atPet = convidarBase(f.p, { nome: "Ana Pet", email: "ana@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    atVar = convidarBase(f.p, { nome: "Beto Varejo", email: "beto@propaga.com", papel: "atendimento" }, { uid: adm, nome: "Marco" }).uid;
+    definirVinculos(new Firestore(f.p, "propaga-portal"), { uid: atPet, clientes: ["pet"] });
+    definirVinculos(new Firestore(f.p, "propaga-portal"), { uid: atVar, clientes: ["varejo"] });
+    f.emails.length = 0;
+  });
+
+  it("cada cliente grava no próprio caminho, com protocolo e desconto próprios", () => {
+    const a = enfileirar(pet, pedidoDe("pet"), "pet");
+    const b = enfileirar(varejo, pedidoDe("varejo"), "varejo");
+    expect(processarFila(f.p)).toEqual({ ok: 2, erro: 0 });
+    expect(f.doc(`fila/${a}`).resultado).toEqual({ protocolo: "PET-2026-0001" });
+    expect(f.doc(`fila/${b}`).resultado).toEqual({ protocolo: "VAR-2026-0001" });
+    expect(f.doc("clientes/pet/solicitacoes/PET-2026-0001").solicitanteUid).toBe(pet);
+    expect(f.doc("clientes/varejo/solicitacoes/VAR-2026-0001").solicitanteUid).toBe(varejo);
+    expect(f.docs.has("clientes/varejo/solicitacoes/PET-2026-0001")).toBe(false);
+    expect(f.docs.has("clientes/pet/solicitacoes/VAR-2026-0001")).toBe(false);
+    // serviço 01 (referência 200): Pet 10% → 180; Varejo 5% → 190 (B&M Log 15% daria 170)
+    expect(f.doc("clientes/pet/valores/PET-2026-0001").total).toBe(180);
+    expect(f.doc("clientes/varejo/valores/VAR-2026-0001").total).toBe(190);
+  });
+
+  it("os avisos de um pedido só chegam a quem é do cliente dele", () => {
+    enfileirar(pet, pedidoDe("pet"), "pet");
+    processarFila(f.p);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["ana@propaga.com", "marco@propaga.com", "paula@pet-teste.com"]);
+    f.emails.length = 0;
+    enfileirar(varejo, pedidoDe("varejo"), "varejo");
+    processarFila(f.p);
+    expect(f.emails.map((e) => e.para).sort()).toEqual(["beto@propaga.com", "marco@propaga.com", "vera@varejo-teste.com"]);
+  });
+
+  it("quem é de um cliente não age no outro (solicitante e atendimento sem vínculo)", () => {
+    const a = enfileirar(pet, pedidoDe("varejo"), "varejo");   // solicitante do Pet no Varejo
+    const b = enfileirar(atPet, pedidoDe("varejo"), "varejo"); // atendimento só do Pet no Varejo
+    const c = enfileirar(atPet, pedidoDe("pet"), "pet");        // o mesmo atendimento no Pet: pode
+    processarFila(f.p);
+    expect(f.doc(`fila/${a}`).status).toBe("erro");
+    expect(f.doc(`fila/${a}`).mensagem).toMatch(/Cliente inválido/);
+    expect(f.doc(`fila/${b}`).status).toBe("erro");
+    expect(f.doc(`fila/${b}`).mensagem).toMatch(/não está vinculado/);
+    expect(f.doc(`fila/${c}`).status).toBe("ok");
+    expect([...f.docs.keys()].some((k) => k.startsWith("clientes/varejo/solicitacoes/"))).toBe(false);
+  });
+
+  it("o catálogo publicado de cada cliente traz o preço com o desconto dele e nunca a referência", () => {
+    configurarProjeto(f.p);
+    const preco = (c: string) => f.doc(`clientes/${c}/catalogo/1.0`).servicos[0].variantes[0].preco;
+    expect([preco("bmlog"), preco("pet"), preco("varejo")]).toEqual([170, 180, 190]);
+    expect(f.doc("clientes/pet/catalogo/1.0").desconto).toBe(0.1);
+    expect(f.doc("clientes/varejo/catalogo/1.0").desconto).toBe(0.05);
+    expect(JSON.stringify(f.doc("clientes/pet/catalogo/1.0"))).not.toContain("referencia");
+    expect(f.doc("interno/catalogos/versoes/pet-1.0").servicos[0].variantes[0].referencia).toBe(200);
+  });
+});

@@ -11,16 +11,16 @@ import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Aviso } from "@/components/ui";
 import { brData, brDataHora, SeloStatus, type PedidoDoc } from "@/components/pedido";
-import { CLIENTES } from "@/content/clientes";
 import type { Status } from "@/lib/tipos";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 const ordem = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
 function Conteudo() {
   const t = useTxt();
   const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const [lista, setLista] = useState<PedidoDoc[] | null>(null);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");

@@ -4,10 +4,10 @@ import { Protegido } from "@/components/auth/protegido";
 import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { brData, Painel } from "@/components/pedido";
-import { CLIENTES } from "@/content/clientes";
 import { REGRA_REFACAO, VE_CONTRATO } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 /* Contrato da Mariane (Criativo Propaga): só ela vê esta versão da página (Marco, 15/10/2026). */
 function ContratoCriativo() {
@@ -49,8 +49,8 @@ function ContratoCriativo() {
 function Conteudo() {
   const t = useTxt();
   const s = useSessao();
+  const { cliente: c } = useClienteAtivo();
   if (s.papel === "criativo") return <ContratoCriativo />;
-  const c = CLIENTES[s.clienteId ?? Object.keys(CLIENTES)[0]];
   const assinado = !!c.contrato.assinadoEm;
   const testes = !assinado && !!c.contrato.consideradoAssinadoParaTestes;
   const pontos: [string, string][] = [

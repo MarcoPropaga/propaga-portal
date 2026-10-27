@@ -11,12 +11,13 @@ import { Aviso } from "@/components/ui";
 import { SeloStatus, type PedidoDoc } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import { VE_ARQUIVOS } from "@/lib/fluxo";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v as { toMillis: () => number }).toMillis() : 0);
 
 function Conteudo() {
   const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const [lista, setLista] = useState<PedidoDoc[] | null>(null);
   const [erro, setErro] = useState("");
 
