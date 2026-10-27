@@ -1197,6 +1197,23 @@ describe("dois clientes: protocolo, desconto e isolamento (Pet Teste × Varejo T
     expect(f.emails.map((e) => e.para).sort()).toEqual(["beto@propaga.com", "marco@propaga.com", "vera@varejo-teste.com"]);
   });
 
+  it("os e-mails do pedido saem na identidade do cliente dele (nome e cores), sem rastro da B&M Log", () => {
+    enfileirar(pet, pedidoDe("pet"), "pet");
+    processarFila(f.p);
+    for (const e of f.emails) {
+      expect(e.html).toContain("Portal MKT Pet Teste");
+      expect(e.html).toContain(`background:${CLIENTES.pet.marca.cores.escura}`);
+      expect(e.html).not.toMatch(/B&amp;M|#003C57|#55C5D0/);
+    }
+    f.emails.length = 0;
+    enfileirar(varejo, pedidoDe("varejo"), "varejo");
+    processarFila(f.p);
+    for (const e of f.emails) {
+      expect(e.html).toContain("Portal MKT Varejo Teste");
+      expect(e.html).not.toContain("Pet Teste");
+    }
+  });
+
   it("quem é de um cliente não age no outro (solicitante e atendimento sem vínculo)", () => {
     const a = enfileirar(pet, pedidoDe("varejo"), "varejo");   // solicitante do Pet no Varejo
     const b = enfileirar(atPet, pedidoDe("varejo"), "varejo"); // atendimento só do Pet no Varejo

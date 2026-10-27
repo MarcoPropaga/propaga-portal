@@ -187,7 +187,7 @@ export function avisarPessoas(
     const msg = emailAtualizacao({
       cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
       autor: autor.nome, etapa: aplicarMarca(NOME_STATUS[status], CLIENTES[clienteId].marca),
-      link: `${cfg.portalUrl}${rota}?p=${encodeURIComponent(ped.protocolo)}`,
+      link: `${cfg.portalUrl}${rota}?p=${encodeURIComponent(ped.protocolo)}`, marca: CLIENTES[clienteId].marca,
     });
     for (const x of dest) {
       try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); }

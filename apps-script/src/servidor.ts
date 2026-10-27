@@ -10,7 +10,7 @@ import { hojeSP } from "@/lib/datas";
 import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput, type SolicitacaoInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
 import { atendeCliente, ehVinculado, MSG_SEM_VINCULO } from "@/lib/vinculos";
-import { emailAtualizacao, emailConvite, emailNovaSolicitacao } from "./emails";
+import { emailAtualizacao, emailConvite, emailNovaSolicitacao, MARCA_PROPAGA } from "./emails";
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
 import { executarPublicacao } from "./publicacao";
@@ -72,7 +72,7 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
   const oob = id.codigoDefinirSenha(d.email);
   const link = `${cfg.portalUrl}/primeiro-acesso/?oobCode=${encodeURIComponent(oob)}`;
   const nomePortal = clienteId ? CLIENTES[clienteId].nomePortal : "Portal Propaga";
-  const msg = emailConvite({ nome: d.nome.split(" ")[0], link, cliente: nomePortal, convidadoPor: convidadoPor.nome });
+  const msg = emailConvite({ nome: d.nome.split(" ")[0], link, cliente: nomePortal, convidadoPor: convidadoPor.nome, marca: clienteId ? CLIENTES[clienteId].marca : MARCA_PROPAGA });
   p.enviarEmail({ para: d.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente });
 
   const fsU = new Firestore(p, cfg.projeto);
@@ -340,7 +340,7 @@ export function enviarSolicitacao(
       cliente: cliente.nomePortal, protocolo, titulo: d.titulo, solicitante: u.nome, unidade: d.unidade, publico: d.publico,
       objetivo: d.objetivo, desejada: d.prazo.desejada, urgente: d.prazo.urgente,
       itens: itens.map((i) => ({ qtd: i.qtd, nome: i.nome, detalhe: descreverItem(cat.servicos.find((s) => s.cod === i.cod)!, i), sobOrcamento: i.sobOrcamento })),
-      link: `${cfg.portalUrl}/solicitacoes/pedido/?p=${encodeURIComponent(protocolo)}`,
+      link: `${cfg.portalUrl}/solicitacoes/pedido/?p=${encodeURIComponent(protocolo)}`, marca: cliente.marca,
     });
     const avisados: string[] = [], falhas: string[] = [];
     for (const x of destinatarios) {
@@ -351,7 +351,7 @@ export function enviarSolicitacao(
     if (autor?.email) {
       const r = emailAtualizacao({ cliente: cliente.nomePortal, protocolo, titulo: d.titulo, rotulo: "Recebemos sua solicitação",
         nota: "O atendimento da Propaga vai conferir o briefing e confirmar o cronograma. Você recebe um aviso quando houver peças para aprovar.",
-        autor: u.nome, etapa: "Enviada", link: `${cfg.portalUrl}/solicitacoes/pedido/?p=${encodeURIComponent(protocolo)}` });
+        autor: u.nome, etapa: "Enviada", link: `${cfg.portalUrl}/solicitacoes/pedido/?p=${encodeURIComponent(protocolo)}`, marca: cliente.marca });
       try { p.enviarEmail({ para: autor.email, assunto: r.assunto, html: r.html, texto: r.texto, nomeRemetente: cfg.remetente }); } catch (e) { p.log(`Recibo falhou: ${(e as Error).message}`); }
     }
     const quando = p.agora();
