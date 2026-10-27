@@ -423,7 +423,7 @@ function editarSolicitacao(
   }
   const ped = { protocolo: d.editar!, titulo: d.titulo, solicitanteUid: ant.solicitanteUid } as Parameters<typeof avisarPessoas>[4];
   avisarPessoas(p, fs, { ...u, propaga: true }, clienteId, ped, ["solicitante"],
-    reenvio ? "Solicitação ajustada para sua aprovação" : itensMudaram ? "Serviços alterados: confirme para seguir" : "O Marcelo ajustou a solicitação", nota, novo as never,
+    reenvio ? "Solicitação ajustada para sua aprovação" : itensMudaram ? "Serviços alterados: confirme para seguir" : `O ${CLIENTES[clienteId].marca.atendimento} ajustou a solicitação`, nota, novo as never,
     devolve ? "/aprovacoes/" : "/solicitacoes/pedido/");
   return { protocolo: d.editar, editado: true, status: novo };
 }

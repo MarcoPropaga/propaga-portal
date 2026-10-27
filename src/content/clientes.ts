@@ -8,6 +8,8 @@ export interface Marca {
   nomeCurto: string;
   /** Equipe do cliente que solicita e aprova ('Marketing B&M Log'). */
   equipe: string;
+  /** Primeiro nome do atendente da Propaga que cuida deste cliente (texto "{atendimento}"). Igual ao de Cliente.atendimento. */
+  atendimento: string;
   /** Rótulo do portal no menu e na tela de acesso. */
   rotuloPortal: string;
   /** Selo/logomarca do menu e da tela de acesso (arquivo em /public/brand). */
@@ -50,6 +52,7 @@ export const CLIENTES: Record<string, Cliente> = {
     marca: {
       nomeCurto: "B&M Log",
       equipe: "Marketing B&M Log",
+      atendimento: "Marcelo",
       rotuloPortal: "Portal MKT B&M Log",
       selo: "/brand/selo-mkt-bmlog.png",
       seloAlt: "mkt B&M Log",
@@ -83,6 +86,7 @@ export const CLIENTES: Record<string, Cliente> = {
     marca: {
       nomeCurto: "Pet Teste",
       equipe: "Marketing Pet Teste",
+      atendimento: "Marcelo",
       rotuloPortal: "Portal MKT Pet Teste",
       selo: "/brand/selo-mkt-pet-teste.svg",
       seloAlt: "mkt Pet Teste",
@@ -111,6 +115,7 @@ export const CLIENTES: Record<string, Cliente> = {
     marca: {
       nomeCurto: "Varejo Teste",
       equipe: "Comercial Varejo Teste",
+      atendimento: "Marcelo",
       rotuloPortal: "Portal MKT Varejo Teste",
       selo: "/brand/selo-mkt-varejo-teste.svg",
       seloAlt: "mkt Varejo Teste",

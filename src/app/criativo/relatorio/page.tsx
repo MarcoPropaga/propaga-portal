@@ -114,7 +114,7 @@ function Conteudo() {
                   const it = tab.itens.find((x) => x.id === l.item);
                   return (
                     <tr key={l.chave} className="border-t border-gray-200 align-top">
-                      <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div><div className="text-xs text-gray-600">Pedido do Marcelo: {l.servico}</div></td>
+                      <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div><div className="text-xs text-gray-600">{t("Pedido do {atendimento}")}: {l.servico}</div></td>
                       <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : t("Cancelada pela {cliente}")}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                       <td className="px-3 py-2.5">{enviado ? nomeItem(l.item) : (
                         <select aria-label={`Item da tabela para ${l.peca}`} className={cx} value={l.item} onChange={(e) => mudar(l, { item: e.target.value })}>
@@ -138,7 +138,7 @@ function Conteudo() {
               {vis.length > 0 && <tfoot><tr className="border-t-2 border-ink-900 font-semibold"><td className="px-3 py-2.5" colSpan={4}>Total de {nomeMes(mes)} · {vis.length} peça(s){refs ? ` · ${refs} refação(ões) sem valor extra` : ""}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(total)}</td></tr></tfoot>}
             </table>
           </div>
-          <p className="text-sm text-gray-600">{t(REGRA_CANCELADA_CRIATIVO)} {REGRA_COMPLEXO_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
+          <p className="text-sm text-gray-600">{t(REGRA_CANCELADA_CRIATIVO)} {t(REGRA_COMPLEXO_CRIATIVO)} {t("O item foi sugerido pelo serviço que o {atendimento} escolheu; ajuste quando não corresponder.")}</p>
           <div className="flex flex-wrap gap-3 print:hidden">
             {!rel && vis.length > 0 && <Botao onClick={enviarMarisa} carregando={ocupado}>Enviar para a Marisa</Botao>}
             {rel?.status === "enviado" && !corrigir && <Botao variante="linha" onClick={() => setCorrigir(true)}>Corrigir e reenviar</Botao>}

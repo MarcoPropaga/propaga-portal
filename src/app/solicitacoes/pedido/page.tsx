@@ -50,7 +50,7 @@ function Conteudo() {
   }, [protocolo, clienteId, veValores]);
 
   if (pedido === undefined) return <Casca titulo="Solicitação"><p className="text-gray-600" aria-busy="true">Carregando…</p></Casca>;
-  if (pedido && s.papel === "criativo" && ["proposta", "ajuste", "enviada"].includes(pedido.status)) return <Casca titulo="Solicitação"><Aviso>Este pedido ainda está com o Atendimento. Ele aparece para você quando o Marcelo aceitar.</Aviso></Casca>;
+  if (pedido && s.papel === "criativo" && ["proposta", "ajuste", "enviada"].includes(pedido.status)) return <Casca titulo="Solicitação"><Aviso>{t("Este pedido ainda está com o Atendimento. Ele aparece para você quando o {atendimento} aceitar.")}</Aviso></Casca>;
   if (pedido === null) return <Casca titulo="Solicitação"><Aviso tipo="erro">Pedido não encontrado ou sem acesso para o seu perfil.</Aviso><a href="/solicitacoes/" className="mt-4 inline-block underline">Voltar para Solicitações</a></Casca>;
 
   // Consulta: ações ficam em Minhas tarefas. Aqui só o admin tem atalhos (cancelar o pedido / publicar em emergência).
@@ -81,8 +81,8 @@ function Conteudo() {
 
         {/* Etapas */}
         {(pedido.status === "proposta" || pedido.status === "ajuste") && <Aviso>{pedido.status === "proposta"
-          ? t("Solicitação criada pelo Marcelo, aguardando o {equipe} aprovar, pedir ajuste ou recusar.")
-          : t("O {equipe} pediu ajuste. O Marcelo edita e reenvia para aprovação. O pedido de ajuste está no histórico.")}</Aviso>}
+          ? t("Solicitação criada pelo {atendimento}, aguardando o {equipe} aprovar, pedir ajuste ou recusar.")
+          : t("O {equipe} pediu ajuste. O {atendimento} edita e reenvia para aprovação. O pedido de ajuste está no histórico.")}</Aviso>}
         {pedido.status === "cancelada" ? <Aviso>Este pedido foi cancelado{fatorCobranca(pedido) > 0 ? " depois de apresentado e é cobrado em 50% do seu valor, conforme o contrato" : ""}. O motivo está no histórico.</Aviso> : (
           <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" aria-label="Etapas do pedido">
             {ETAPAS.map((e, i) => (

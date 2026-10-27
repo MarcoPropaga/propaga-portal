@@ -84,11 +84,11 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
         const x: Peca = { id: `p${base + i + 1}`, nome: n.nome, item: n.item, etapa: doCriativo ? "revisao" : "cliente", tarefa: null, orientacao: null, extras30: 0,
           versoes: [{ v: 1, link: n.link, em: agora, por: u.nome, decisao: null, interna: doCriativo || undefined }], hist: [], desde: agora,
           criativo: autoria ?? ped.criativo ?? null };
-        log(x, doCriativo ? "v1 criada e enviada ao Marcelo para revisão" : `v1 enviada ao ${M.equipe} para aprovação`);
+        log(x, doCriativo ? `v1 criada e enviada ao ${M.atendimento} para revisão` : `v1 enviada ao ${M.equipe} para aprovação`);
         pecas.push(x);
       });
       const lista = d.pecas.map((n) => `- ${n.nome}`).join("\n");
-      rotuloEvento = doCriativo ? `${d.pecas.length} peça(s) criada(s) por ${u.nome} · revisão do Marcelo` : `${d.pecas.length} peça(s) enviada(s) para aprovação`;
+      rotuloEvento = doCriativo ? `${d.pecas.length} peça(s) criada(s) por ${u.nome} · revisão do ${M.atendimento}` : `${d.pecas.length} peça(s) enviada(s) para aprovação`;
       avisos.push(doCriativo ? { quem: ["atendimento"], rotulo: "Peças criadas para revisar", nota: lista } : { quem: ["solicitante"], rotulo: "Peças para sua aprovação", nota: lista });
       break;
     }
@@ -134,7 +134,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       if (ul.interna) x.versoes[x.versoes.length - 1] = nova; else x.versoes.push(nova);
       if (autoria) x.criativo = autoria;
       mover(x, "revisao");
-      log(x, `v${v} enviada ao Marcelo para revisão (${d.feitos} de ${n} ajustes)`);
+      log(x, `v${v} enviada ao ${M.atendimento} para revisão (${d.feitos} de ${n} ajustes)`);
       rotuloEvento = `${x.nome}: v${v} para revisão`;
       avisos.push({ quem: ["atendimento"], rotulo: `Nova versão para revisar · ${x.nome}`, nota: d.nota || "" });
       break;
@@ -166,7 +166,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
           if (rodadas <= MAX_RODADAS || !refacoesDaPeca(x)) throw new ErroUsuario(`A cobrança de +30% vale a partir da 3ª refação, em peça que o ${M.equipe} mandou refazer.`);
           x.extras30 = (x.extras30 || 0) + 1; cobradas.push(x.nome); log(x, "Refação extra com edições novas: +30% no valor");
         }
-        ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo Marcelo e enviada ao ${M.equipe}`); nomes.push(x.nome);
+        ultima(x).interna = false; mover(x, "cliente"); log(x, `v${ultima(x).v} aprovada pelo ${M.atendimento} e enviada ao ${M.equipe}`); nomes.push(x.nome);
       }
       rotuloEvento = `Nova versão enviada ao ${M.equipe}: ${nomes.join(", ")}`;
       avisos.push({ quem: ["solicitante"], rotulo: "Nova versão para sua aprovação", nota: nomes.map((t) => `- ${t}`).join("\n") });
@@ -178,7 +178,7 @@ export function executarPeca(p: Plataforma, fs: Firestore, u: Usuario, clienteId
       if (x.etapa !== "revisao") throw new ErroUsuario("Esta peça não está em revisão.");
       ultima(x).devolvida = true;
       x.orientacao = { itens: d.itens, prazo: x.orientacao?.prazo ?? hojeSP(p.agora()), por: u.nome, em: agora };
-      mover(x, "criativo", "refazer"); log(x, `Devolvida a ${cri} pelo Marcelo (ajuste interno, não conta refação)`);
+      mover(x, "criativo", "refazer"); log(x, `Devolvida a ${cri} pelo ${M.atendimento} (ajuste interno, não conta refação)`);
       rotuloEvento = `${x.nome}: devolvida ao criativo`;
       avisos.push({ quem: ["criativo"], rotulo: `Ajuste interno · ${x.nome}`, nota: d.itens.map((t) => `- ${t}`).join("\n") });
       break;

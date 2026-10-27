@@ -14,7 +14,7 @@ function ContratoCriativo() {
   const t = useTxt();
   const pontos: [string, string][] = [
     ["Partes", "Prestação de serviços de criação para a Propaga, nos jobs do Portal MKT {cliente}."],
-    ["Como chega o trabalho", "O Marcelo (Atendimento Propaga) envia a solicitação pelo portal, sem valores. Você cria as peças, envia ao Marcelo e acompanha a aprovação, refação ou cancelamento pelo marketing da {cliente}."],
+    ["Como chega o trabalho", "O {atendimento} (Atendimento Propaga) envia a solicitação pelo portal, sem valores. Você cria as peças, envia ao {atendimento} e acompanha a aprovação, refação ou cancelamento pelo marketing da {cliente}."],
     ["Valores", "Os da sua tabela de valores (Minha tabela), por peça/serviço. Projetos complexos são avaliados individualmente e o valor é informado por você no relatório."],
     ["O que entra no mês", "Cada peça entra no relatório do mês em que foi concluída (arquivo final em 04 Aprovados). Refações são registradas como observação, sem valor extra."],
     ["Relatório e pagamento", "No fim do mês você confere o relatório e envia à Marisa (Financeiro Propaga), que confere e registra o pagamento. Você é avisada por e-mail."],

@@ -59,14 +59,14 @@ export function PainelPublicacao({ aba, cals, ctx }: { aba: AbaPub; cals: Calend
       ? await ctx.enviar("publicacao", { acao: "avaliarCalendario", decisoes: lista.map((i) => ({ ...ref(i), tipo: "aprovada" })) })
       : await ctx.enviar("publicacao", { acao, itens: lista.map(ref) });
     setOcupado(false);
-    ctx.onMsg(r.ok ? "ok" : "erro", r.ok ? (acao === "aprovar" ? "Calendário aprovado. Marcelo e Kauan foram avisados." : t("Calendário enviado ao {equipe}.")) : r.msg);
+    ctx.onMsg(r.ok ? "ok" : "erro", r.ok ? (acao === "aprovar" ? t("Calendário aprovado. {atendimento} e Kauan foram avisados.") : t("Calendário enviado ao {equipe}.")) : r.msg);
   };
   const emLote = aba.k === "pub:analisar" ? "enviarADebora" : aba.k === "pub:aprovar" ? "aprovar" : null;
   return (
     <div className="grid gap-4">
       {aba.k === "pub:calendario" && <FormCalendario cals={cals} ctx={ctx} hoje={hoje} />}
       {aba.k === "pub:aguardando" && <p className="text-sm text-gray-600">{t("O calendário está aprovado. Falta a Mariane criar a arte, o {equipe} aprovar e o arquivo final ficar pronto; você será avisado.")}</p>}
-      {aba.k === "pub:publicar" && <p className="text-sm text-gray-600">Arte aprovada e arquivo final pronto. Agende no mLabs (fora do portal) e registre aqui. Se o arquivo estiver incorreto, devolva ao Marcelo com o motivo.</p>}
+      {aba.k === "pub:publicar" && <p className="text-sm text-gray-600">{t("Arte aprovada e arquivo final pronto. Agende no mLabs (fora do portal) e registre aqui. Se o arquivo estiver incorreto, devolva ao {atendimento} com o motivo.")}</p>}
       {emLote && itens.length > 1 && (
         <div><Botao carregando={ocupado} onClick={() => lote(emLote, itens.map((x) => x.i))}>{emLote === "aprovar" ? `Aprovar todos (${itens.length})` : t(`Enviar todos ao {equipe} (${itens.length})`)}</Botao></div>
       )}
@@ -98,8 +98,8 @@ function Resumo({ it, arte, hoje, ctx }: { it: CalItem; arte: Arte; hoje: string
       <p className="text-gray-600">{it.canais.join(", ")} · {brData(it.data)} às {it.hora}{urgenteCal(it, hoje) && it.urgente ? ` · urgente: ${it.urgente}` : ""}</p>
       <p className="max-w-[75ch] whitespace-pre-wrap rounded bg-paper px-3 py-2">{it.legenda}</p>
       {it.peca && <p className="text-gray-600">Peça: <a className="underline" href={`/solicitacoes/pedido/?p=${encodeURIComponent(it.peca.protocolo)}`}>{it.peca.nome} ({it.peca.protocolo})</a>{x ? ` · ${arte.pronta ? "arquivo final pronto" : "em andamento"}` : ""}</p>}
-      {!it.peca && it.etapa === "aprovado" && <p className="text-gray-600">Aguardando o Marcelo vincular a peça da Mariane.</p>}
-      {it.ajuste && ["ajuste", "analise", "devolvida"].includes(it.etapa) && <p className="rounded bg-alerta-100 px-3 py-2 text-alerta-700"><b>{{ marcelo: "Marcelo", debora: t("{equipe}"), kauan: "Kauan" }[it.ajuste.de]}</b> pediu ajuste: {it.ajuste.motivo}</p>}
+      {!it.peca && it.etapa === "aprovado" && <p className="text-gray-600">{t("Aguardando o {atendimento} vincular a peça da Mariane.")}</p>}
+      {it.ajuste && ["ajuste", "analise", "devolvida"].includes(it.etapa) && <p className="rounded bg-alerta-100 px-3 py-2 text-alerta-700"><b>{{ marcelo: t("{atendimento}"), debora: t("{equipe}"), kauan: "Kauan" }[it.ajuste.de]}</b> pediu ajuste: {it.ajuste.motivo}</p>}
       {it.publicada && <p className="text-gray-600">Publicada em {brData(it.publicada.data)}{it.publicada.link ? <> · <a href={it.publicada.link} target="_blank" rel="noopener noreferrer" className="underline">ver publicação<span className="sr-only"> (nova aba)</span></a></> : ` · sem link: ${it.publicada.semLink}`}</p>}
     </div>
   );
@@ -152,7 +152,7 @@ function LinhaCal({ it, arte, aba, ctx, hoje }: { it: CalItem; arte: Arte; aba: 
           <Botao variante="linha" onClick={() => setModo("devolver")}>Devolver ao Kauan</Botao>
         </>}
         {aba === "pub:aprovar" && debora && modo !== "ajuste" && <>
-          {btn("Aprovar", { acao: "avaliarCalendario", decisoes: [{ ...r, tipo: "aprovada" }] }, "Aprovado. Marcelo e Kauan foram avisados.")}
+          {btn("Aprovar", { acao: "avaliarCalendario", decisoes: [{ ...r, tipo: "aprovada" }] }, t("Aprovado. {atendimento} e Kauan foram avisados."))}
           <Botao variante="linha" onClick={() => setModo("ajuste")}>Pedir ajuste</Botao>
         </>}
         {aba === "pub:vincular" && marcelo && <>
@@ -167,18 +167,18 @@ function LinhaCal({ it, arte, aba, ctx, hoje }: { it: CalItem; arte: Arte; aba: 
         </>}
         {aba === "pub:publicar" && kauan && modo !== "arte" && <>
           {btn("Registrar como agendada no mLabs", { acao: "agendar", itens: [r] }, "Agendamento registrado.")}
-          <Botao variante="linha" onClick={() => setModo("arte")}>Devolver arte ao Marcelo</Botao>
+          <Botao variante="linha" onClick={() => setModo("arte")}>{t("Devolver arte ao {atendimento}")}</Botao>
         </>}
         {aba === "pub:agendadas" && kauan && modo !== "publicar" && <Botao onClick={() => setModo("publicar")}>Registrar publicação</Botao>}
       </div>
       {modo === "devolver" && comMotivo("devolverCalendario", "O que o Kauan precisa ajustar?", { itens: [r] }, "Devolvido ao Kauan.", `m-${id}`)}
-      {modo === "arte" && comMotivo("devolverArte", "Por que a arte volta ao Marcelo? (arquivo incorreto ou informação faltando)", r, "Arte devolvida ao Marcelo.", `m-${id}`)}
+      {modo === "arte" && comMotivo("devolverArte", t("Por que a arte volta ao {atendimento}? (arquivo incorreto ou informação faltando)"), r, t("Arte devolvida ao {atendimento}."), `m-${id}`)}
       {modo === "ajuste" && (
         <div className="grid max-w-xl gap-2">
           <label className="text-sm font-semibold" htmlFor={`m-${id}`}>O que ajustar neste post?</label>
           <textarea id={`m-${id}`} value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} className="rounded border border-[#C9D7DC] bg-white p-3" />
           <div className="flex gap-3">
-            <Botao carregando={ocupado} disabled={motivo.trim().length < 3} onClick={() => rodar({ acao: "avaliarCalendario", decisoes: [{ ...r, tipo: "ajuste", nota: motivo.trim() }] }, "Ajuste enviado ao Marcelo.")}>Enviar ajuste</Botao>
+            <Botao carregando={ocupado} disabled={motivo.trim().length < 3} onClick={() => rodar({ acao: "avaliarCalendario", decisoes: [{ ...r, tipo: "ajuste", nota: motivo.trim() }] }, t("Ajuste enviado ao {atendimento}."))}>Enviar ajuste</Botao>
             <Botao variante="discreto" onClick={() => { setModo(""); setErro(""); }}>Cancelar</Botao>
           </div>
         </div>
@@ -221,11 +221,11 @@ function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoj
     const itens = lista.map((r) => ({ mes: r.mes, id: r.id, avulso: r.avulso || undefined, titulo: r.titulo, canais: r.canais, data: r.data, hora: r.hora, legenda: r.legenda, urgente: urgenteCal(r, hoje) ? r.urgente : undefined }));
     const res = await ctx.enviar("publicacao", { acao: "enviarCalendario", itens });
     setOcupado(false);
-    if (res.ok) { setEdits({}); setNovos([vazio()]); ctx.onMsg("ok", "Calendário enviado ao Marcelo."); } else setErro(res.msg);
+    if (res.ok) { setEdits({}); setNovos([vazio()]); ctx.onMsg("ok", t("Calendário enviado ao {atendimento}.")); } else setErro(res.msg);
   }
   return (
     <form className="grid gap-4" onSubmit={(e) => { e.preventDefault(); void enviar(); }} noValidate>
-      <p className="max-w-[75ch] text-sm text-gray-600">Monte o calendário do mês: tema, canais, data, horário e legenda de cada post. Envie com pelo menos {ANTECEDENCIA_DIAS} dias de antecedência. {t("O Marcelo analisa e o {equipe} aprova;")} o agendamento no mLabs é feito por você, fora do portal.</p>
+      <p className="max-w-[75ch] text-sm text-gray-600">Monte o calendário do mês: tema, canais, data, horário e legenda de cada post. Envie com pelo menos {ANTECEDENCIA_DIAS} dias de antecedência. {t("O {atendimento} analisa e o {equipe} aprova;")} o agendamento no mLabs é feito por você, fora do portal.</p>
       {corrigidos.length > 0 && <h2 className="text-lg">Posts devolvidos para ajuste</h2>}
       {corrigidos.map((r) => <LinhaRascunho key={r.chave} r={r} canais={canais} hoje={hoje} onChange={trocar} />)}
       <h2 className="text-lg">Novos posts</h2>
@@ -233,7 +233,7 @@ function FormCalendario({ cals, ctx, hoje }: { cals: Calendario[]; ctx: Ctx; hoj
       {erro && <Aviso tipo="erro">{erro}</Aviso>}
       <div className="flex flex-wrap gap-3">
         <Botao type="button" variante="linha" onClick={() => setNovos((n) => [...n, vazio()])}>Adicionar post</Botao>
-        <Botao type="submit" carregando={ocupado}>Enviar calendário ao Marcelo</Botao>
+        <Botao type="submit" carregando={ocupado}>{t("Enviar calendário ao {atendimento}")}</Botao>
       </div>
     </form>
   );

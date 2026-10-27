@@ -50,4 +50,8 @@ describe("cliente ativo", () => {
     expect(escolherCliente([], "varejo", "bmlog")).toBe("bmlog");      // sem permitidos: padrão
     expect(escolherCliente(["pet", "varejo"], null, "bmlog")).toBe("pet");
   });
+
+  it("o atendente de cada marca é o primeiro nome do contato de atendimento do cliente", () => {
+    for (const c of Object.values(CLIENTES)) expect(c.marca.atendimento).toBe(c.atendimento.nome.split(" ")[0]);
+  });
 });

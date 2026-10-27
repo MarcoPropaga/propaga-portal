@@ -55,7 +55,7 @@ const ABAS: Record<string, Aba[]> = {
     { k: "criar", rotulo: "Criar peças", f: nenhuma, t: "criar" },
     { k: "refazer", rotulo: "Refazer", f: (p) => p.etapa === "criativo" && p.tarefa === "refazer" },
     { k: "final", rotulo: "Finalizar aprovadas", f: (p) => p.etapa === "criativo" && p.tarefa === "final" },
-    { k: "enviadas", rotulo: "Enviadas ao Marcelo", f: (p) => p.etapa === "revisao" },
+    { k: "enviadas", rotulo: "Enviadas ao {atendimento}", f: (p) => p.etapa === "revisao" },
     { k: "feitas", rotulo: "Concluídas", f: (p) => p.etapa === "concluida" },
   ],
   financeiro_propaga: FIN,
@@ -237,7 +237,7 @@ function Conteudo() {
   const abrir = (pd: PedidoDoc, pecas: Peca[], id: string) => setVis({ prot: pd.protocolo, ids: pecas.map((x) => x.id), i: Math.max(0, pecas.findIndex((x) => x.id === id)) });
 
   const texto = ({
-    solicitante: pendentes ? `${pendentes} ${pendentes > 1 ? "itens aguardam" : "item aguarda"} você: solicitações criadas pelo Marcelo para aprovar e peças para avaliar.` : "Nada aguardando você agora.",
+    solicitante: pendentes ? `${pendentes} ${pendentes > 1 ? "itens aguardam" : "item aguarda"} você: solicitações criadas pelo {atendimento} para aprovar e peças para avaliar.` : "Nada aguardando você agora.",
     criativo: pendentes ? `${pendentes} ${pendentes > 1 ? "tarefas" : "tarefa"} para você: criar peças, refazer e preparar arquivos finais.` : "Nenhuma tarefa pendente.",
     midia_social: pendentes ? `${pendentes} ${pendentes > 1 ? "publicações aguardam" : "publicação aguarda"} você: receber artes, montar o calendário e registrar agendamentos e publicações.` : "Nenhuma tarefa pendente.",
     financeiro_propaga: pendentes ? `${pendentes} ${pendentes > 1 ? "pedidos aguardam" : "pedido aguarda"} faturamento ou registro de pagamento.` : "Nenhuma tarefa pendente.",
@@ -246,9 +246,9 @@ function Conteudo() {
   return (
     <Casca titulo="Minhas tarefas">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600">{texto}</p>
+        <p className="max-w-[75ch] text-gray-600">{t(texto)}</p>
         {papel !== "midia_social" && <ol className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600" aria-label="Fluxo de cada peça">
-          {[t("{equipe} solicita (ou aprova a do Marcelo)"), "Marcelo confere e envia ao criativo", "Criativo cria", "Marcelo revisa", t("{equipe} aprova ou pede refação"), "Marcelo encaminha para veiculação/impressão"].map((t, k) => (
+          {[t("{equipe} solicita (ou aprova a do {atendimento})"), t("{atendimento} confere e envia ao criativo"), "Criativo cria", t("{atendimento} revisa"), t("{equipe} aprova ou pede refação"), t("{atendimento} encaminha para veiculação/impressão")].map((t, k) => (
             <li key={t} className="flex items-center gap-1.5">{k > 0 && <span aria-hidden="true">→</span>}<span className="rounded-full border border-[#C9D7DC] bg-white px-2.5 py-1">{k + 1} · {t}</span></li>
           ))}
         </ol>}
@@ -293,7 +293,7 @@ function Conteudo() {
               : abaAtual.t === "proposta" ? (
                 <div className="flex flex-wrap gap-3">
                   <Botao onClick={() => { setAcaoAberta("aprovarProposta"); setAbrindo(pd.protocolo); }}>Aprovar solicitação</Botao>
-                  <Botao variante="linha" onClick={() => { setAcaoAberta("ajustarProposta"); setAbrindo(pd.protocolo); }}>Pedir ajuste ao Marcelo</Botao>
+                  <Botao variante="linha" onClick={() => { setAcaoAberta("ajustarProposta"); setAbrindo(pd.protocolo); }}>{t("Pedir ajuste ao {atendimento}")}</Botao>
                   {!recusaBloqueada(pd) && <Botao variante="linha" className="!border-alerta-700 !text-alerta-700" onClick={() => { setAcaoAberta("recusarProposta"); setAbrindo(pd.protocolo); }}>Recusar</Botao>}
                   <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Ver solicitação completa</a>
                 </div>
@@ -305,7 +305,7 @@ function Conteudo() {
                 <div className="flex flex-wrap gap-3">
                   {papel === "criativo" && abaAtual.t === "criar"
                     ? <BotaoEnviarCriadas pd={pd} onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }} />
-                    : <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: "Enviar peças criadas ao Marcelo", entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>}
+                    : <Botao onClick={() => { setAcaoAberta(null); setAbrindo(pd.protocolo); }}>{({ aceitar: "Aceitar e enviar ao criativo", criar: t("Enviar peças criadas ao {atendimento}"), entregar: "Encaminhar para veiculação/impressão", faturar: "Registrar faturamento", receber: "Registrar pagamento" } as Record<string, string>)[abaAtual.t!]}</Botao>}
                   {abaAtual.t === "aceitar" && <Botao variante="linha" onClick={() => { setAcaoAberta("devolverDuvida"); setAbrindo(pd.protocolo); }}>{t("Devolver ao {equipe} (dúvida ou sugestão)")}</Botao>}
                   {abaAtual.t === "aceitar" && <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Editar solicitação</a>}
                   {abaAtual.t !== "faturar" && abaAtual.t !== "receber" && <a href={papel === "solicitante" ? pd.drive.link : pastaEquipe(pd)} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded border border-[#C9D7DC] px-4 text-sm font-semibold">Abrir pasta do pedido<span className="sr-only"> (nova aba)</span></a>}
@@ -406,7 +406,7 @@ function Bloco({ pd, pecas, aba, papel, rasc, abrir, acao, executar, ocupado }: 
         {x.tarefa === "refazer" && <>
           {!!d?.itens?.length && <Nota cor="alerta"><b>{d.por.split(" ")[0]} pediu:</b><Lista itens={d.itens} /></Nota>}
           {x.orientacao && x.orientacao.por !== d?.por && <Nota><b>Ajuste do {x.orientacao.por.split(" ")[0]}:</b><Lista itens={x.orientacao.itens} /></Nota>}
-          <Botao className="w-fit" onClick={() => acao("enviarVersao", x.id)}>Enviar nova versão ao Marcelo</Botao>
+          <Botao className="w-fit" onClick={() => acao("enviarVersao", x.id)}>{t("Enviar nova versão ao {atendimento}")}</Botao>
         </>}
         {x.tarefa === "final" && <>
           <p className="text-sm text-gray-600">Aprovada. Exporte o arquivo final para <b>04 Aprovados</b> e salve os arquivos abertos (com fontes e imagens) em <b>05 Arquivos abertos</b>.</p>
@@ -450,7 +450,7 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
       <p><b>{pd.protocolo}</b> · {pd.titulo}</p>
       {ap.length > 0 && <div><b className="text-[#1E7047]">Aprovadas ({ap.length}) · entram no relatório como concluídas</b><ul className="list-disc pl-5">{ap.map((x) => <li key={x.id}>{x.nome}</li>)}</ul></div>}
       {rf.length > 0 && <div><b className="text-alerta-700">Refação ({rf.length}){(pd.rodadas || 0) >= MAX_RODADAS ? " · sujeita a +30%" : ""}</b><ul className="list-disc pl-5">{rf.map((x) => <li key={x.id}>{x.nome}: {rasc[x.id].itens?.join("; ")}</li>)}</ul></div>}
-      <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">O relatório é atualizado na hora. Aprovadas e refações seguem direto para o Marcelo e a Mariane, que são avisados.</p>
+      <p className="rounded bg-[#EAF3F5] px-3 py-2 text-sm">{t("O relatório é atualizado na hora. Aprovadas e refações seguem direto para o {atendimento} e a Mariane, que são avisados.")}</p>
       {rodape("Enviar avaliação", async () => {
         const ok = await executar({ acao: "avaliar", protocolo: pd.protocolo, decisoes: naVez.map((x) => ({ id: x.id, tipo: rasc[x.id].tipo, itens: rasc[x.id].itens, nota: rasc[x.id].nota })) }, "Avaliação enviada.");
         if (ok === true) limpar(naVez.map((x) => x.id)); else if (typeof ok === "string") setErro(ok);
@@ -460,18 +460,18 @@ function Janela({ modal, pd, rasc, executar, ocupado, limpar, onFechar }: {
 
   if (modal.tipo === "enviarVersao" && peca) {
     const itens = peca.orientacao?.itens ?? [];
-    return <Modal titulo={`Enviar v${ultima(peca).interna ? ultima(peca).v : ultima(peca).v + 1} ao Marcelo`} onFechar={onFechar}>
+    return <Modal titulo={t(`Enviar v${ultima(peca).interna ? ultima(peca).v : ultima(peca).v + 1} ao {atendimento}`)} onFechar={onFechar}>
       <p><b>{peca.nome}</b> · {pd.protocolo}</p>
       <fieldset className="grid gap-1.5"><legend className="mb-1 text-sm font-semibold">Confira cada ajuste</legend>
         {itens.map((t, k) => <label key={k} className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 accent-marca-700" checked={feitos[k] ?? false} onChange={(e) => { const f = [...feitos]; f[k] = e.target.checked; setFeitos(f); }} /><span>{t}</span></label>)}
       </fieldset>
       <div className="grid gap-1.5"><label htmlFor="lk" className="text-sm font-semibold">Link do arquivo na pasta 03 Provas</label><input id="lk" type="url" className={cx} placeholder="https://drive.google.com/file/d/…" value={link} onChange={(e) => setLink(e.target.value)} /></div>
       <div className="grid gap-1.5"><label htmlFor="nt" className="text-sm font-semibold">Observação {feitos.every(Boolean) ? "(opcional)" : "(obrigatória: o que ficou pendente e por quê)"}</label><textarea id="nt" rows={3} className={cx} value={nota} onChange={(e) => setNota(e.target.value)} /></div>
-      {rodape("Enviar ao Marcelo", async () => {
+      {rodape(t("Enviar ao {atendimento}"), async () => {
         if (!/^https:\/\/drive\.google\.com\//.test(link.trim())) { setErro("Cole o link do arquivo no Google Drive."); return; }
         const n = feitos.filter(Boolean).length;
         if (n < itens.length && nota.trim().length < 3) { setErro("Marque todos os ajustes ou explique o que ficou pendente."); return; }
-        const r = await executar({ acao: "enviarVersao", protocolo: pd.protocolo, id: peca.id, link: link.trim(), feitos: n, nota: nota.trim() || undefined }, "Nova versão enviada ao Marcelo."); if (typeof r === "string") setErro(r);
+        const r = await executar({ acao: "enviarVersao", protocolo: pd.protocolo, id: peca.id, link: link.trim(), feitos: n, nota: nota.trim() || undefined }, t("Nova versão enviada ao {atendimento}.")); if (typeof r === "string") setErro(r);
       })}
     </Modal>;
   }

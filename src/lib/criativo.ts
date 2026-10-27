@@ -108,7 +108,7 @@ export function aplicarAjustes(tab: TabelaCriativo, linhas: LinhaCriativo[], aju
 /** Peça cancelada pela B&M Log: a Mariane recebe esta fração do valor da tabela dela. */
 export const FATOR_CANCELADA_CRIATIVO = 0.5;
 export const REGRA_CANCELADA_CRIATIVO = "Peça cancelada pela {cliente} entra com 50% do valor da sua tabela. Refações aparecem como observação, sem valor extra. O pagamento é sempre de todos os serviços realizados no mês.";
-export const REGRA_COMPLEXO_CRIATIVO = "Projeto complexo (sob consulta): registre o valor definido; o Marcelo é avisado do valor ao enviar o relatório.";
+export const REGRA_COMPLEXO_CRIATIVO = "Projeto complexo (sob consulta): registre o valor definido; o {atendimento} é avisado do valor ao enviar o relatório.";
 export const cobradoDe = (l: { situacao: string; valor: number | null }) =>
   l.valor == null ? null : Math.round(l.valor * (l.situacao === "cancelada" ? FATOR_CANCELADA_CRIATIVO : 1) * 100) / 100;
 export const totalLinhas = (ls: LinhaCriativo[]) => Math.round(ls.reduce((t, l) => t + (cobradoDe(l) ?? 0), 0) * 100) / 100;

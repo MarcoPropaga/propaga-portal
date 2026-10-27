@@ -12,10 +12,10 @@ import { brData, type PedidoDoc } from "@/components/pedido";
 import { useTxt } from "@/components/tema";
 
 const AJUDA: Partial<Record<Acao, string>> = {
-  aprovarProposta: "A solicitação segue para o Marcelo conferir, definir o cronograma e enviar ao criativo criar as peças.",
-  ajustarProposta: "Escreva o que precisa mudar. A solicitação volta para o Marcelo ajustar e reenviar para sua aprovação.",
+  aprovarProposta: "A solicitação segue para o {atendimento} conferir, definir o cronograma e enviar ao criativo criar as peças.",
+  ajustarProposta: "Escreva o que precisa mudar. A solicitação volta para o {atendimento} ajustar e reenviar para sua aprovação.",
   devolverDuvida: "A solicitação volta para o {equipe} com a sua dúvida ou sugestão. Ele responde na aprovação (ou pede ajuste) e o pedido volta para você.",
-  recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o Marcelo.",
+  recusarProposta: "A solicitação é encerrada sem cobrança. Informe o motivo para o {atendimento}.",
   trocarCriativo: "O pedido passa para o criativo escolhido, que recebe um e-mail. As peças já concluídas continuam no relatório de quem as concluiu.",
   aceitarPedido: "Confira a solicitação, o cronograma e o valor dos itens a cotar, conforme o contrato. O pedido entra em produção, o {equipe} é avisado e o criativo escolhido recebe o job para criar as peças.",
   entregar: "Todas as peças aprovadas estão com arquivo final em 04 Aprovados. Ao registrar o envio para veiculação ou impressão, o pedido fica como Realizado no relatório e o {equipe} e o Financeiro da Propaga são avisados.",

@@ -3,7 +3,7 @@ import { CLIENTE_PADRAO, CLIENTES, type Marca } from "@/content/clientes";
 
 /** Marca neutra da Propaga: convites da equipe e resumos que misturam clientes. */
 export const MARCA_PROPAGA: Marca = {
-  nomeCurto: "Propaga", equipe: "Propaga", rotuloPortal: "Portal Propaga", selo: "", seloAlt: "Propaga",
+  nomeCurto: "Propaga", equipe: "Propaga", atendimento: "Atendimento", rotuloPortal: "Portal Propaga", selo: "", seloAlt: "Propaga",
   cores: { escura: "#141414", texto: "#C81500", destaque: "#FF1B00", claro: "#FFE3DE", papel: "#F7F5F2", borda: "#E9E9E9", cinza: "#5F5A56" },
 };
 const MARCA_PADRAO: Marca = CLIENTES[CLIENTE_PADRAO].marca;

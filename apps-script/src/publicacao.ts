@@ -89,7 +89,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
           const mes = mesDe(entrada.data); const c = calendario(mes); c.mexeu = true;
           const n = c.itens.reduce((m, x) => Math.max(m, parseInt(x.id.slice(1), 10) || 0), 0) + 1;
           const it: CalItem = { id: `p${n}`, mes, ...entrada, etapa: "analise", desde: agora, ajuste: null, peca: null, publicada: null,
-            hist: [{ em: agora, por: u.nome, txt: `Enviado ao Marcelo: ${entrada.canais.join(", ")} · ${br(entrada.data)} ${entrada.hora}${entrada.urgente ? ` · urgente: ${entrada.urgente}` : ""}` }] };
+            hist: [{ em: agora, por: u.nome, txt: `Enviado ao ${cli.marca.atendimento}: ${entrada.canais.join(", ")} · ${br(entrada.data)} ${entrada.hora}${entrada.urgente ? ` · urgente: ${entrada.urgente}` : ""}` }] };
           c.itens.push(it);
           avisa(["atendimento"], "Calendário de publicações para analisar", it);
         }
@@ -99,7 +99,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
     case "enviarADebora": {
       for (const ref of d.itens) {
         const it = item(ref); exigir(it, ["analise"], "este post não está em análise.");
-        mover(it, "debora", `Analisado pelo Marcelo e enviado ao ${cli.marca.equipe}`);
+        mover(it, "debora", `Analisado pelo ${cli.marca.atendimento} e enviado ao ${cli.marca.equipe}`);
         avisa(["solicitante"], "Calendário de publicações para sua aprovação", it);
       }
       break;
@@ -150,7 +150,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
       const it = item(d); exigir(it, ["aprovado"], "só post com arte vinculada pode ser devolvido.");
       if (!arteDe(it, [...todosPedidos()]).pronta) throw new ErroUsuario(`"${it.titulo}": a arte ainda não está pronta.`);
       it.ajuste = { de: "kauan", motivo: d.motivo, por: u.nome, em: agora };
-      mover(it, "devolvida", `Arte devolvida ao Marcelo: ${d.motivo}`);
+      mover(it, "devolvida", `Arte devolvida ao ${cli.marca.atendimento}: ${d.motivo}`);
       avisa(["atendimento"], `Arte devolvida pelo Kauan · ${d.motivo}`, it);
       break;
     }
@@ -166,7 +166,7 @@ export function executarPublicacao(p: Plataforma, fs: Firestore, u: Usuario, cli
       const peds = todosPedidos();
       for (const ref of d.itens) {
         const it = item(ref); exigir(it, ["aprovado"], "só post com o calendário aprovado pode ser agendado.");
-        if (!it.peca) throw new ErroUsuario(`"${it.titulo}": o Marcelo ainda não vinculou a peça deste post.`);
+        if (!it.peca) throw new ErroUsuario(`"${it.titulo}": o ${cli.marca.atendimento} ainda não vinculou a peça deste post.`);
         if (!arteDe(it, peds).pronta) throw new ErroUsuario(`"${it.titulo}": a arte ainda não foi aprovada pelo ${cli.marca.equipe} com arquivo final.`);
         it.agendadaEm = agora;
         mover(it, "agendada", `Agendada no mLabs: ${it.canais.join(", ")} · ${br(it.data)} ${it.hora}`);

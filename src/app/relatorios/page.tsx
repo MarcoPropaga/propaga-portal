@@ -131,7 +131,7 @@ function Conteudo() {
   return (
     <Casca titulo="Relatórios">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600 print:hidden">{soMeus ? "Seus pedidos e os criados pelo Marcelo com a sua aprovação. " : ""}Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor; refação extra cobrada soma 30% ao valor.</p>
+        <p className="max-w-[75ch] text-gray-600 print:hidden">{soMeus ? t("Seus pedidos e os criados pelo {atendimento} com a sua aprovação. ") : ""}Somente preços finais {cliente.nome}. Cada etapa é somada separadamente. Pedido cancelado antes da apresentação não entra nos totais; cancelado depois de apresentado entra com 50% do valor; refação extra cobrada soma 30% ao valor.</p>
         <p className="hidden text-sm print:block">{cliente.nome} · emitido em {brData(hojeSP())} · {protocolo || { "7": "últimos 7 dias", "30": "últimos 30 dias", ano: "ano corrente", tudo: "todo o período" }[periodo]}{unidade !== "todas" && !protocolo ? ` · ${unidade}` : ""}</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
 

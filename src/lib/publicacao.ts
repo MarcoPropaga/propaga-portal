@@ -34,8 +34,8 @@ export interface Calendario { mes: string; itens: CalItem[] }
 export type RefCal = { mes: string; id: string };
 
 export const NOME_CAL: Record<EtapaCal, string> = {
-  ajuste: "Ajuste pedido · Kauan corrige", analise: "Em análise (Marcelo)", debora: "Aguardando o {equipe}",
-  aprovado: "Calendário aprovado", devolvida: "Arte devolvida ao Marcelo", agendada: "Agendada no mLabs", publicada: "Publicada",
+  ajuste: "Ajuste pedido · Kauan corrige", analise: "Em análise ({atendimento})", debora: "Aguardando o {equipe}",
+  aprovado: "Calendário aprovado", devolvida: "Arte devolvida ao {atendimento}", agendada: "Agendada no mLabs", publicada: "Publicada",
 };
 
 /** Antecedência do calendário (decisão de 18/10: 1 semana). Meta com alerta: menos que isso exige justificativa. */

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Aviso, Botao } from "@/components/ui";
 import type { PedidoDoc } from "@/components/pedido";
 import { chaveServico, foraDaTabela, NOME_COLUNA, REGRA_FORA_TABELA, type Coluna } from "@/lib/criativo";
+import { useTxt } from "@/components/tema";
 import { useFila } from "@/lib/usarFila";
 import { moeda, useAdicionais, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
 
@@ -20,8 +21,9 @@ export function useServicosForaTabela(pd: PedidoDoc): string[] {
 
 /** Botão de enviar as peças criadas: fica desativado enquanto houver serviço do pedido sem valor aprovado. */
 export function BotaoEnviarCriadas({ pd, onClick }: { pd: PedidoDoc; onClick: () => void }) {
+  const t = useTxt();
   const fora = useServicosForaTabela(pd);
-  return <Botao onClick={onClick} disabled={fora.length > 0} title={fora.length ? "Aguarde a aprovação do valor do serviço fora da tabela." : undefined}>Enviar peças criadas ao Marcelo</Botao>;
+  return <Botao onClick={onClick} disabled={fora.length > 0} title={fora.length ? "Aguarde a aprovação do valor do serviço fora da tabela." : undefined}>{t("Enviar peças criadas ao {atendimento}")}</Botao>;
 }
 
 export function ServicosForaTabela({ pd }: { pd: PedidoDoc }) {

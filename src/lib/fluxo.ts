@@ -50,7 +50,7 @@ interface Regra { de: Status[]; para: Status; papeis: Papel[]; rotulo: string }
 
 export const REGRAS: Record<Acao, Regra> = {
   aprovarProposta: { de: ["proposta"], para: "enviada", papeis: ["solicitante", "admin"], rotulo: "Aprovar solicitação" },
-  ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao Marcelo" },
+  ajustarProposta: { de: ["proposta"], para: "ajuste", papeis: ["solicitante", "admin"], rotulo: "Pedir ajuste ao {atendimento}" },
   recusarProposta: { de: ["proposta"], para: "cancelada", papeis: ["solicitante", "admin"], rotulo: "Recusar solicitação" },
   // Marcelo, ao analisar o pedido, tem dúvida ou sugestão: devolve à Débora (volta a "Aguardando aprovação da Débora").
   devolverDuvida: { de: ["enviada"], para: "proposta", papeis: ["atendimento", "admin"], rotulo: "Devolver ao {equipe} (dúvida ou sugestão)" },
