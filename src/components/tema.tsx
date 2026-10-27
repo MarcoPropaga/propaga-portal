@@ -11,6 +11,8 @@ export function TemaCliente() {
     const raiz = document.documentElement;
     for (const [k, v] of Object.entries(variaveisCss(m))) raiz.style.setProperty(k, v);
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", m.cores.escura);
+    // Nome ao adicionar à tela inicial (iOS lê esta meta no momento de adicionar).
+    document.querySelector('meta[name="apple-mobile-web-app-title"]')?.setAttribute("content", m.nomeCurto);
   }, [cliente]);
   return null;
 }

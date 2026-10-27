@@ -212,7 +212,7 @@ function avisarCalendario(p: Plataforma, fs: Firestore, autor: Usuario, clienteI
       (quem.includes("midia_social") && x.papel === "midia_social" && atendeCliente(x, clienteId))));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: `Calendário ${mes}`, titulo: `Publicações de ${NOME_MES(mes)}`, rotulo, nota,
-      autor: autor.nome, etapa: "Redes sociais", link: `${cfg.portalUrl}/aprovacoes/` });
+      autor: autor.nome, etapa: "Redes sociais", link: `${cfg.portalUrl}/aprovacoes/`, marca: CLIENTES[clienteId].marca });
     for (const x of dest) {
       try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); }
       catch (e) { p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }

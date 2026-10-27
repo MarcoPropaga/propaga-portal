@@ -8,7 +8,7 @@ import { aguardaCriacao, atrasada, pendentePara, prazoEtapa, prontoParaEntrega, 
 import { pecaAcaoSchema } from "@/lib/schemas";
 import { NOME_CAL, arteDe, atrasadaPub, itensDe, pendentePub, prazoPub, type CalItem } from "@/lib/publicacao";
 import type { Status } from "@/lib/tipos";
-import { emailAtualizacao, emailResumo } from "./emails";
+import { emailAtualizacao, emailResumo, MARCA_PROPAGA } from "./emails";
 import type { Firestore } from "./firestore";
 import { ErroUsuario, type Plataforma } from "./plataforma";
 import { foraDaTabela, chaveServico } from "@/lib/criativo";
@@ -221,7 +221,7 @@ export function avisar(p: Plataforma, fs: Firestore, autor: Usuario, clienteId: 
       (quem.includes("midia_social") && x.papel === "midia_social" && atendeCliente(x, clienteId))));
     if (!dest.length) return;
     const msg = emailAtualizacao({ cliente: CLIENTES[clienteId].nomePortal, protocolo: ped.protocolo, titulo: ped.titulo, rotulo, nota,
-      autor: autor.nome, etapa: aplicarMarca(NOME_STATUS[status], CLIENTES[clienteId].marca), link: `${cfg.portalUrl}/aprovacoes/?p=${encodeURIComponent(ped.protocolo)}` });
+      autor: autor.nome, etapa: aplicarMarca(NOME_STATUS[status], CLIENTES[clienteId].marca), link: `${cfg.portalUrl}/aprovacoes/?p=${encodeURIComponent(ped.protocolo)}`, marca: CLIENTES[clienteId].marca });
     for (const x of dest) {
       try { p.enviarEmail({ para: x.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); }
       catch (e) { p.log(`E-mail para ${x.email} falhou: ${(e as Error).message}`); }
@@ -244,8 +244,10 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
   for (const u of usuarios(fs)) {
     if ((u as { status?: string }).status === "desativado") continue;
     const linhas: { protocolo: string; titulo: string; peca: string; etapa: string; prazo: string | null; atrasada: boolean }[] = [];
+    const clientesComLinha = new Set<string>();
     for (const ped of pedidos) {
       if (!atendeCliente(u, ped.c)) continue;
+      const antes = linhas.length;
       if (u.papel === "criativo" && ped.criativo && ped.criativo.uid !== u.uid) continue;
       if (u.papel === "criativo" && aguardaCriacao(ped)) {
         const z = (ped as unknown as { prazo?: { primeira?: string } }).prazo?.primeira ?? null;
@@ -253,15 +255,20 @@ export function resumoDiario(p: Plataforma, fs: Firestore) {
       }
       for (const x of ped.pecas ?? []) if (pendentePara(u.papel, x))
         linhas.push({ protocolo: ped.protocolo, titulo: ped.titulo, peca: x.nome, etapa: x.etapa, prazo: prazoEtapa(x), atrasada: atrasada(x, hoje) });
+      if (linhas.length > antes) clientesComLinha.add(ped.c);
     }
     if (u.propaga || u.clienteId) for (const c of Object.keys(CLIENTES)) {
       if (!atendeCliente(u, c)) continue;
       const itens = itensDe(fs.listar(`clientes/${c}/calendarios`).map((x) => x.dados as unknown as { mes: string; itens: CalItem[] }));
-      for (const it of itens) if (pendentePub(u.papel, it, arteDe(it, pedidos.filter((q) => q.c === c))))
+      for (const it of itens) if (pendentePub(u.papel, it, arteDe(it, pedidos.filter((q) => q.c === c)))) {
         linhas.push({ protocolo: `Calendário ${it.mes}`, titulo: it.titulo, peca: aplicarMarca(NOME_CAL[it.etapa], CLIENTES[c].marca), etapa: it.etapa, prazo: prazoPub(it), atrasada: atrasadaPub(it, hoje) });
+        clientesComLinha.add(c);
+      }
     }
     if (!linhas.length) continue;
-    const msg = emailResumo({ nome: u.nome.split(" ")[0], linhas, link: `${cfg.portalUrl}/aprovacoes/` });
+    // Um só cliente nas pendências: e-mail na marca dele. Vários clientes: marca neutra da Propaga.
+    const unico = clientesComLinha.size === 1 ? [...clientesComLinha][0] : null;
+    const msg = emailResumo({ nome: u.nome.split(" ")[0], linhas, link: `${cfg.portalUrl}/aprovacoes/`, marca: unico ? CLIENTES[unico].marca : MARCA_PROPAGA });
     try { p.enviarEmail({ para: u.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente }); enviados++; }
     catch (e) { p.log(`Resumo para ${u.email} falhou: ${(e as Error).message}`); }
   }
