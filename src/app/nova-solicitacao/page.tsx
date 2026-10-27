@@ -16,6 +16,7 @@ import { CLIENTES, type Cliente } from "@/content/clientes";
 import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
 import type { PedidoDoc } from "@/components/pedido";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 /* ---------- tipos ---------- */
 interface ServicoPublico extends ServicoBase { descricao: string; escopo: string; nota?: string; variantes: { rotulo: string; modalidade: string; preco: number | null }[] }
@@ -158,7 +159,7 @@ function Conteudo() {
   const t = useTxt();
   const s = useSessao();
   const uid = s.usuario!.uid;
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const cliente = CLIENTES[clienteId];
   const [cat, setCat] = useState<CatalogoPublico | null>(null);
   const [falhaCarga, setFalhaCarga] = useState("");

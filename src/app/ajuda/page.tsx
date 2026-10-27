@@ -1,13 +1,12 @@
 "use client";
 /* Ajuda: dúvidas frequentes e contato do atendimento. */
 import { Protegido } from "@/components/auth/protegido";
-import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Painel } from "@/components/pedido";
-import { CLIENTES } from "@/content/clientes";
 import { MAX_RODADAS } from "@/lib/fluxo";
 import { PRAZO_PADRAO_DIAS_UTEIS } from "@/lib/datas";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 const FAQ: [string, string][] = [
   ["Como faço uma solicitação?", "Em Nova solicitação, preencha os dados, escolha os serviços, informe a pasta do Drive e a data desejada. O que você preenche fica salvo como rascunho até o envio."],
@@ -25,8 +24,7 @@ const FAQ: [string, string][] = [
 
 function Conteudo() {
   const t = useTxt();
-  const s = useSessao();
-  const c = CLIENTES[s.clienteId ?? Object.keys(CLIENTES)[0]];
+  const { cliente: c } = useClienteAtivo();
   return (
     <Casca titulo="Ajuda">
       <div className="grid max-w-3xl gap-5">

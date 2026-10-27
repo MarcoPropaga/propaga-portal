@@ -144,12 +144,17 @@ export function definirVinculos(fs: Firestore, bruto: unknown) {
 
 /** Migração da etapa 3a (idempotente): profissionais sem o campo `clientes` ficam vinculados a todos os clientes atuais,
     e os pedidos com criativo ganham `criativoUid` (usado pelas regras). */
+/** Clientes que existiam quando o vínculo profissional × cliente foi criado (24/10/2026). */
+const CLIENTES_ANTERIORES_AO_VINCULO = ["bmlog"];
+
 export function migrarVinculos(p: Plataforma, fs: Firestore) {
   const todos = Object.keys(CLIENTES);
   let vinculados = 0, pedidos = 0;
+  // Profissionais anteriores ao vínculo ficam só nos clientes que já existiam (B&M Log). Clientes novos, inclusive os fictícios de
+  // teste, são vinculados pelo administrador na tela Usuários: ninguém entra em cliente novo por migração.
   for (const x of fs.listar("usuarios")) {
     const o = x.dados as { papel: string; clientes?: string[] };
-    if (ehVinculado(o.papel) && !o.clientes) { fs.gravar([{ caminho: x.caminho, mesclar: true, dados: { clientes: todos } }]); vinculados++; }
+    if (ehVinculado(o.papel) && !o.clientes) { fs.gravar([{ caminho: x.caminho, mesclar: true, dados: { clientes: CLIENTES_ANTERIORES_AO_VINCULO } }]); vinculados++; }
   }
   for (const c of todos) for (const x of fs.listar(`clientes/${c}/solicitacoes`)) {
     const o = x.dados as { criativo?: { uid: string } | null; criativoUid?: string };

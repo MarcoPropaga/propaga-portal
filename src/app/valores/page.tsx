@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Protegido } from "@/components/auth/protegido";
-import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { Aviso } from "@/components/ui";
 import { brData, moeda } from "@/components/pedido";
 import { CLIENTES } from "@/content/clientes";
 import { REGRA_REFACAO, VE_VALORES } from "@/lib/fluxo";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 interface Cat {
   versao: string; data: string; status: string; desconto?: number; categorias: { id: string; nome: string }[];
@@ -19,8 +19,7 @@ interface Cat {
 
 function Conteudo() {
   const t = useTxt();
-  const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const cliente = CLIENTES[clienteId];
   const [cat, setCat] = useState<Cat | null>(null);
   const [erro, setErro] = useState("");

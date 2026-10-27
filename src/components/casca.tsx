@@ -1,9 +1,10 @@
 "use client";
 import type { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 import { useSessao } from "@/components/auth/sessao";
 import { BotaoVoltar } from "@/components/ui";
-import { NOMES_PAPEIS, clienteAtivo } from "@/content/clientes";
+import { NOMES_PAPEIS } from "@/content/clientes";
 import { VE_NOVA_SOLICITACAO, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_TAREFAS, VE_VALORES } from "@/lib/fluxo";
 import { contarPendencias } from "@/lib/pecas";
 import { aplicarMarca } from "@/lib/tema";
@@ -33,7 +34,9 @@ const ITENS = [
 export function Casca({ titulo, children }: { titulo: string; children: ReactNode }) {
   const s = useSessao();
   const caminho = usePathname();
-  const marca = clienteAtivo(s.clienteId).marca;
+  const router = useRouter();
+  const ativo = useClienteAtivo();
+  const marca = ativo.cliente.marca;
   const nomePortal = marca.rotuloPortal;
   const veAprov = !!s.papel && (VE_TAREFAS as string[]).includes(s.papel);
   const { lista } = usePedidos(veAprov);
@@ -47,6 +50,16 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={marca.selo} alt={marca.seloAlt} width={88} height={88} className="size-[88px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
           <span className="mt-2 block text-sm text-[#A9CBD6]">{nomePortal}</span>
+          {ativo.opcoes.length > 1 && (
+            <div className="mt-3 grid gap-1">
+              <label htmlFor="cliente-ativo" className="text-xs text-[#A9CBD6]">Cliente em atendimento</label>
+              <select id="cliente-ativo" value={ativo.clienteId}
+                onChange={(e) => { ativo.escolher(e.target.value); router.push("/inicio/"); }}
+                className="min-h-10 w-full rounded border border-white/30 bg-white/10 px-2 text-sm text-paper">
+                {ativo.opcoes.map((c) => <option key={c.id} value={c.id} className="text-ink-900">{c.nome}</option>)}
+              </select>
+            </div>
+          )}
         </div>
         <nav className="flex flex-wrap gap-1 md:grid">
           {ITENS.filter((i) => !(i as { fora?: string[] }).fora?.includes(s.papel ?? "") && (!i.papeis || (s.papel && i.papeis.includes(s.papel)))).map((i) => {

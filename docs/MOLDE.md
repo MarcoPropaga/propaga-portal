@@ -47,3 +47,13 @@ O portal da B&M Log é o **molde oficial**. Cada cliente novo é uma cópia com 
 
 ## Trava de teste
 Durante o período de teste ninguém de fora da Propaga entra no portal (decisão de 26/10/2026). Todos os clientes da simulação usam só e-mails da Propaga. A trava é a propriedade `EMAILS_PERMITIDOS` do Apps Script (`apps-script/src/trava.ts`): com a lista preenchida, convite e envio de e-mail fora dela são bloqueados (convite dá erro claro; aviso é descartado e vai para o log). Apague a propriedade só quando o piloto for liberado.
+
+## Clientes de teste (fictícios) e cliente ativo (26/10/2026)
+
+- Decisão de Marco: cadastro **no código, um arquivo por cliente** (revisado por PR). Tela de admin gravando no banco fica para depois, se fizer falta.
+- Dois clientes **fictícios** provam o molde sem usar cliente real: **Pet Teste** (`pet`, protocolo PET, desconto 10%) e **Varejo Teste** (`varejo`, protocolo VAR, desconto 5%). Têm marca, selo e catálogo próprios (mesmos serviços do molde; o desconto é o do contrato de cada um). Nomes neutros de propósito, para não se confundir com cliente real.
+- Para criar um cliente novo: acrescentar em `src/content/clientes.ts`, criar `src/content/catalogos/<id>-v1.0.ts`, registrar em `catalogos/index.ts`, colocar o selo em `public/brand` e rodar `configurarProjeto` no Apps Script. Os testes `clientes.test.ts` e `tema.test.ts` conferem prefixo único, catálogo, selo e contraste AA.
+- **Cliente ativo:** quem é do cliente trabalha sempre no próprio. A equipe Propaga escolhe no menu ("Cliente em atendimento"): admin e Financeiro Propaga veem todos; atendimento, criativo e mídia social só os vinculados (tela Usuários). A marca e as cores acompanham o cliente escolhido. O acesso de verdade continua nas regras do banco e no servidor.
+- A migração de vínculos antigos põe os profissionais só na B&M Log; clientes novos são vinculados pelo admin.
+- **Pendência:** relatório e pagamento do criativo valem só para a B&M Log (um documento por criativo e mês, sem cliente no id). Fazer por cliente é etapa futura.
+- **Pendência:** `configurarProjeto` precisa rodar uma vez no Apps Script para publicar os dois clientes e catálogos no banco; depois, vincular a equipe aos clientes de teste em Usuários e convidar usuários de teste (a trava `EMAILS_PERMITIDOS` continua valendo).

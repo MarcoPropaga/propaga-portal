@@ -16,6 +16,7 @@ import { CLIENTES } from "@/content/clientes";
 import { ajustePecas, situacaoRelatorio, ultimaDecisao } from "@/lib/pecas";
 import type { Status } from "@/lib/tipos";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 interface Valores { protocolo: string; itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
 type Periodo = "7" | "30" | "ano" | "tudo";
@@ -38,7 +39,7 @@ function Kpi({ rotulo, valor, sub }: { rotulo: string; valor: string; sub: strin
 function Conteudo() {
   const t = useTxt();
   const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const cliente = CLIENTES[clienteId];
   const [pedidos, setPedidos] = useState<PedidoDoc[] | null>(null);
   const [valores, setValores] = useState<Record<string, Valores>>({});

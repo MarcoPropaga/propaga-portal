@@ -75,6 +75,62 @@ export const CLIENTES: Record<string, Cliente> = {
     contrato: { assinadoEm: null, pdfUrl: null, minuta: "2026-10-01", consideradoAssinadoParaTestes: true },
     atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
   },
+  // CLIENTE FICTÍCIO DE TESTE (nunca é cliente real): serve para provar marca, desconto e isolamento do molde.
+  pet: {
+    id: "pet",
+    nome: "Pet Teste",
+    nomePortal: "Portal Pet Teste",
+    marca: {
+      nomeCurto: "Pet Teste",
+      equipe: "Marketing Pet Teste",
+      rotuloPortal: "Portal MKT Pet Teste",
+      selo: "/brand/selo-mkt-pet-teste.svg",
+      seloAlt: "mkt Pet Teste",
+      cores: { escura: "#1F4D3A", texto: "#2C7A52", destaque: "#F2B134", claro: "#E6F0E9", papel: "#F6F8F4", borda: "#E1E8E2", cinza: "#4F5F55" },
+    },
+    prefixo: "PET",
+    catalogoVersao: "1.0",
+    unidades: ["Matriz · Cidade Teste/SC", "Filial · Cidade Teste/SP", "Todas as unidades"],
+    publicos: [
+      { valor: "Clientes finais", rotulo: "Principal · Clientes finais" },
+      { valor: "Colaboradores", rotulo: "Secundário · Colaboradores" },
+      { valor: "Ambos os públicos", rotulo: "Ambos os públicos" },
+    ],
+    canaisVideo: ["TVs internas Pet Teste", "Redes sociais da Pet Teste (solicitação expressa)"],
+    canaisSociais: ["Instagram", "Facebook"],
+    audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela Pet Teste", "Locução (cotada à parte)"],
+    sobreposicoes: [["48", "52"], ["37", "39"]],
+    contrato: { assinadoEm: null, pdfUrl: null, minuta: "2026-10-01", consideradoAssinadoParaTestes: true },
+    atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
+  },
+  // CLIENTE FICTÍCIO DE TESTE (nunca é cliente real): serve para provar marca, desconto e isolamento do molde.
+  varejo: {
+    id: "varejo",
+    nome: "Varejo Teste",
+    nomePortal: "Portal Varejo Teste",
+    marca: {
+      nomeCurto: "Varejo Teste",
+      equipe: "Comercial Varejo Teste",
+      rotuloPortal: "Portal MKT Varejo Teste",
+      selo: "/brand/selo-mkt-varejo-teste.svg",
+      seloAlt: "mkt Varejo Teste",
+      cores: { escura: "#3B2A5C", texto: "#7A3F9E", destaque: "#F08FB0", claro: "#EEE6F5", papel: "#F8F6FA", borda: "#E7E2EC", cinza: "#5A5064" },
+    },
+    prefixo: "VAR",
+    catalogoVersao: "1.0",
+    unidades: ["Matriz · Cidade Teste/SC", "Filial · Cidade Teste/SP", "Todas as unidades"],
+    publicos: [
+      { valor: "Clientes finais", rotulo: "Principal · Clientes finais" },
+      { valor: "Colaboradores", rotulo: "Secundário · Colaboradores" },
+      { valor: "Ambos os públicos", rotulo: "Ambos os públicos" },
+    ],
+    canaisVideo: ["TVs internas Varejo Teste", "Redes sociais da Varejo Teste (solicitação expressa)"],
+    canaisSociais: ["Instagram", "TikTok", "YouTube"],
+    audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela Varejo Teste", "Locução (cotada à parte)"],
+    sobreposicoes: [["48", "52"], ["37", "39"]],
+    contrato: { assinadoEm: null, pdfUrl: null, minuta: "2026-10-01", consideradoAssinadoParaTestes: true },
+    atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
+  },
 };
 
 export const NOMES_PAPEIS: Record<string, string> = {

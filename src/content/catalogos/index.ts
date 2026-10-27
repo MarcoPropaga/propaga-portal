@@ -3,9 +3,13 @@
 import type { Catalogo } from "@/lib/tipos";
 import { CLIENTES } from "@/content/clientes";
 import { catalogoBmlogV1 } from "./bmlog-v1.0";
+import { catalogoPetV1 } from "./pet-v1.0";
+import { catalogoVarejoV1 } from "./varejo-v1.0";
 
 export const CATALOGOS: Record<string, Catalogo> = {
   "bmlog-1.0": catalogoBmlogV1,
+  "pet-1.0": catalogoPetV1,
+  "varejo-1.0": catalogoVarejoV1,
 };
 
 export function catalogo(clienteId: string, versao: string): Catalogo {

@@ -1,6 +1,7 @@
 /* Relatório mensal da Mariane (Criativo Propaga) e pagamento pela Marisa (Financeiro Propaga).
    A tabela vem do código do servidor (fonte da verdade); o navegador só sugere. Tudo é recalculado aqui. */
 import { catalogoVigente } from "@/content/catalogos";
+import { CLIENTES, CLIENTE_PADRAO } from "@/content/clientes";
 import { montarTabelaMariane } from "@/content/criativo/tabela-mariane";
 import { aplicarAjustes, chaveServico, foraDaTabela, idRelatorio, mesclarAdicionais, nomeMes, NOME_COLUNA, pecasDoMes, totalLinhas, type AdicionaisCriativo, type Ajuste, type Coluna, type PropostaItem } from "@/lib/criativo";
 import { hojeSP } from "@/lib/datas";
@@ -15,7 +16,13 @@ const moeda = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curr
 const ADICIONAIS = "criativo/adicionais";
 const lerAdicionais = (fs: Firestore) => (fs.ler(ADICIONAIS)?.dados ?? null) as Partial<AdicionaisCriativo> | null;
 /** Tabela-base (código) + serviços acordados pelo portal (criativo/adicionais). */
-export const tabelaCriativoAtual = (fs?: Firestore) => mesclarAdicionais(montarTabelaMariane(catalogoVigente("bmlog")), fs ? lerAdicionais(fs) : null);
+/* O criativo trabalha com o catálogo-base de serviços, igual em todos os clientes (molde); o desconto do cliente não entra na tabela dele.
+   Relatório e pagamento do criativo valem por enquanto só para o cliente padrão (B&M Log): o documento é um por criativo e mês, sem cliente no id.
+   Fazer por cliente é etapa futura (docs/MOLDE.md). */
+export const tabelaCriativoAtual = (fs?: Firestore) => mesclarAdicionais(montarTabelaMariane(catalogoVigente(CLIENTE_PADRAO)), fs ? lerAdicionais(fs) : null);
+
+/** Cliente de um protocolo pelo prefixo (BML-2026-0001 → bmlog), para achar o pedido sem saber o cliente. */
+const clienteDoProtocolo = (protocolo: string) => Object.values(CLIENTES).find((c) => protocolo.startsWith(`${c.prefixo}-`))?.id;
 
 /** Publica a tabela em criativo/tabela (lida só pelos criativos e pelo admin, ver firestore.rules). */
 export function publicarTabelaCriativo(fs: Firestore, agora: Date) {
@@ -44,7 +51,7 @@ export function tabelaCriativoFila(p: Plataforma, fs: Firestore, u: Usuario, bru
 
   if (d.acao === "propor") {
     if (u.papel !== "criativo") throw new ErroUsuario("Só o criativo propõe valores para a tabela dele.");
-    const ped = fs.ler(`clientes/bmlog/solicitacoes/${String(d.protocolo ?? "")}`)?.dados as { protocolo: string; itens: { cod: string; variante: number; nome: string; varianteRotulo?: string }[]; criativo?: { uid: string } | null } | undefined;
+    const ped = fs.ler(`clientes/${clienteDoProtocolo(String(d.protocolo ?? "")) ?? CLIENTE_PADRAO}/solicitacoes/${String(d.protocolo ?? "")}`)?.dados as { protocolo: string; itens: { cod: string; variante: number; nome: string; varianteRotulo?: string }[]; criativo?: { uid: string } | null } | undefined;
     if (!ped) throw new ErroUsuario("Pedido não encontrado.");
     if (ped.criativo && ped.criativo.uid !== u.uid) throw new ErroUsuario("Este pedido está com outro criativo.");
     const it = ped.itens[Number(d.item)];
@@ -112,7 +119,7 @@ export function enviarRelatorioCriativo(p: Plataforma, fs: Firestore, u: Usuario
   if ((atual?.dados as { status?: string } | undefined)?.status === "pago") throw new ErroUsuario("Este mês já foi pago pela Propaga e não pode ser reenviado.");
 
   const tab = tabelaCriativoAtual(fs);
-  const pedidos = fs.listar("clientes/bmlog/solicitacoes").map((x) => x.dados as never);
+  const pedidos = fs.listar(`clientes/${CLIENTE_PADRAO}/solicitacoes`).map((x) => x.dados as never);
   const base = pecasDoMes(pedidos, d.mes, tab, u.uid);
   if (!base.length) throw new ErroUsuario(`Nenhuma peça concluída ou cancelada em ${nomeMes(d.mes)}.`);
   const linhas = aplicarAjustes(tab, base, ajustes);

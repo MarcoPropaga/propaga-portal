@@ -15,6 +15,7 @@ import { prazoEtapa, situacaoInterna, tarefasDoPedido } from "@/lib/pecas";
 import { usePedidos } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
 import { useTxt } from "@/components/tema";
+import { CLIENTE_PADRAO } from "@/content/clientes";
 
 type Equipe = { lista: { uid: string; nome: string }[] };
 const cx = "min-h-11 rounded border border-[#C9D7DC] bg-white px-3";
@@ -28,7 +29,7 @@ function Conteudo() {
   const [equipe, setEquipe] = useState<Equipe["lista"] | null>(null);
   const [uid, setUid] = useState("");
   const [mes, setMes] = useState(() => meses()[0]);
-  const { lista, erro } = usePedidos();
+  const { lista, erro } = usePedidos(true, CLIENTE_PADRAO);
   const { tab } = useTabelaCriativo();
   const [rel, setRel] = useState<RelatorioCriativo | null | undefined>(undefined);
 

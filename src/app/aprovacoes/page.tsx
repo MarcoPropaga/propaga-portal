@@ -20,9 +20,9 @@ import { FormAcao } from "@/components/formAcao";
 import { BotaoEnviarCriadas, ServicosForaTabela } from "@/components/foraTabela";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CLIENTES } from "@/content/clientes";
 import type { Papel } from "@/lib/tipos";
 import { useTxt } from "@/components/tema";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 
 /* Abas de "Minhas tarefas": `t` = tarefa do pedido (aceitar, criar, entregar, faturar, receber); `f` = filtro de peças. */
 type Aba = { k: string; rotulo: string; f: (p: Peca) => boolean; t?: TarefaPedido; cal?: AbaPub["cal"] };
@@ -494,8 +494,7 @@ export default function Aprovacoes() {
 
 /** Último recado entre Débora e Marcelo no pedido: ajuste pedido pela Débora ou dúvida/sugestão do Marcelo. */
 function AjustePedido({ protocolo, acao }: { protocolo: string; acao: "ajustarProposta" | "devolverDuvida" }) {
-  const s = useSessao();
-  const clienteId = s.clienteId ?? Object.keys(CLIENTES)[0];
+  const { clienteId } = useClienteAtivo();
   const [txt, setTxt] = useState<{ nota: string; nome: string; acao: string } | null>(null);
   useEffect(() => {
     getDocs(query(collection(db(), "clientes", clienteId, "solicitacoes", protocolo, "eventos"), where("acao", "in", ["ajustarProposta", "devolverDuvida", "editar"])))
