@@ -11,6 +11,14 @@ describe("tema por cliente", () => {
     expect(validarMarca({ ...m, cores: { ...m.cores, destaque: "azul" } })[0]).toMatch(/inválida/);
     expect(validarMarca({ ...m, cores: { ...m.cores, destaque: "#003C58" } }).join()).toMatch(/contraste/);
   });
+  it("DalPet: botão vermelho com texto branco passa; o vermelho do logo e o bege do site com marrom não passam", () => {
+    const m = CLIENTES.dalpet.marca;
+    expect(variaveisCss(m)["--color-on-marca"]).toBe("#FFFFFF");
+    expect(variaveisCss(CLIENTES[CLIENTE_PADRAO].marca)["--color-on-marca"]).toBe("#003C57");
+    expect(validarMarca({ ...m, cores: { ...m.cores, destaque: "#EC1C24" } }).join()).toMatch(/contraste/);
+    expect(validarMarca({ ...m, cores: { ...m.cores, claro: "#E9E4D7", escura: "#756959" } }).join()).toBe("");  // claro não entra na validação
+    expect(validarMarca({ ...m, cores: { ...m.cores, sobreDestaque: undefined } }).join()).toMatch(/Texto do botão primário/);
+  });
   it("contraste conhecido: preto sobre branco = 21", () => {
     expect(Math.round(contraste("#000000", "#ffffff"))).toBe(21);
   });

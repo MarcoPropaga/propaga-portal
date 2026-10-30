@@ -65,7 +65,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           {ITENS.filter((i) => !(i as { fora?: string[] }).fora?.includes(s.papel ?? "") && (!i.papeis || (s.papel && i.papeis.includes(s.papel)))).map((i) => {
             const atual = caminho === i.href || (i.href === "/solicitacoes/" && caminho.startsWith("/solicitacoes/"));
             return <a key={i.href} href={i.href} aria-current={atual ? "page" : undefined}
-              className={`flex items-center gap-2 rounded px-3 py-2.5 font-medium ${atual ? "bg-marca-500 text-ink-900" : "hover:bg-white/10"}`}>{i.rotulo}
+              className={`flex items-center gap-2 rounded px-3 py-2.5 font-medium ${atual ? "bg-marca-500 text-on-marca" : "hover:bg-white/10"}`}>{i.rotulo}
               {i.href === "/aprovacoes/" && pend > 0 && <span className="ml-auto inline-grid h-[22px] min-w-[22px] place-items-center rounded-full bg-alerta-700 px-1.5 text-xs font-semibold tabular-nums text-white" aria-label={`${pend} pendentes`}>{pend}</span>}</a>;
           })}
         </nav>

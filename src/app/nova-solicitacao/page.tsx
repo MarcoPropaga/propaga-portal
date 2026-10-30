@@ -323,7 +323,7 @@ function Conteudo() {
           </section>
           <div className="flex flex-wrap gap-3">
           <a href={`/solicitacoes/pedido/?p=${encodeURIComponent(envio.protocolo)}`} className="inline-flex min-h-11 items-center rounded border border-ink-900 bg-white px-5 font-semibold">Acompanhar este pedido</a>
-          {editar ? <a href="/aprovacoes/" className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900">Ir para Minhas tarefas</a>
+          {editar ? <a href="/aprovacoes/" className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-on-marca">Ir para Minhas tarefas</a>
             : <Botao onClick={() => { setR(vazio(s.usuario?.email ?? "")); setErros({}); setEnvio({ tipo: "ocioso" }); }}>Nova solicitação</Botao>}
           </div>
         </div>

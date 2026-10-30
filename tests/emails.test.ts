@@ -47,9 +47,9 @@ describe("e-mails na identidade do cliente", () => {
 
   it("botão e cabeçalho legíveis (AA) em todas as marcas", () => {
     for (const m of [...Object.values(CLIENTES).map((c) => c.marca), MARCA_PROPAGA]) {
-      expect(contraste(m.cores.escura, m.cores.destaque)).toBeGreaterThanOrEqual(4.5);
+      expect(contraste(m.cores.sobreDestaque ?? m.cores.escura, m.cores.destaque)).toBeGreaterThanOrEqual(4.5);
       expect(contraste("#FFFFFF", m.cores.escura)).toBeGreaterThanOrEqual(4.5);
-      expect(contraste(m.cores.destaque, m.cores.escura)).toBeGreaterThanOrEqual(4.5);
+      expect(contraste(m.cores.destaque, m.cores.sobreDestaque ?? m.cores.escura)).toBeGreaterThanOrEqual(4.5);
     }
   });
 });

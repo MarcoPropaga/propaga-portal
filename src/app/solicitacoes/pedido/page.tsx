@@ -98,7 +98,7 @@ function Conteudo() {
         {minhas && (
           <section className="flex flex-wrap items-center gap-3 rounded border border-marca-500 bg-marca-100 p-4" aria-label="Sua tarefa">
             <span className="mr-auto text-sm font-semibold">Há uma tarefa sua neste pedido.</span>
-            <a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900">Abrir em Minhas tarefas</a>
+            <a href={`/aprovacoes/?p=${encodeURIComponent(pedido.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-on-marca">Abrir em Minhas tarefas</a>
           </section>
         )}
         {publicando && <FormPublicar pedido={pedido} onFechar={() => setPublicando(false)} />}

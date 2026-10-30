@@ -85,7 +85,7 @@ function Conteudo() {
             <Painel titulo="Versões">
               <ol className="grid gap-3 text-sm">
                 <li><b>Versão assinada</b><div className="text-gray-600">{assinado ? brData(c.contrato.assinadoEm!) : testes ? "Considerada assinada nos testes finais" : "Data a registrar"} · vigente</div></li>
-                <li><b>Minuta v1.0</b><div className="text-gray-600">Propaga · {brData(c.contrato.minuta)} · base da versão assinada</div></li>
+                <li><b>Minuta v1.0</b><div className="text-gray-600">{c.contrato.minuta ? `Propaga · ${brData(c.contrato.minuta)} · base da versão assinada` : "Contrato ainda não redigido"}</div></li>
               </ol>
             </Painel>
             <Painel titulo="Catálogo anexo">

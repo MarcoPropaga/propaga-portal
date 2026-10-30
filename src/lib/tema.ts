@@ -9,6 +9,7 @@ export function variaveisCss(m: Marca): Record<string, string> {
     "--color-ink-900": c.escura,
     "--color-marca-700": c.texto,
     "--color-marca-500": c.destaque,
+    "--color-on-marca": c.sobreDestaque ?? c.escura,
     "--color-marca-100": c.claro,
     "--color-paper": c.papel,
     "--color-gray-200": c.borda,
@@ -33,10 +34,10 @@ export function contraste(a: string, b: string): number {
 /** Problemas da marca para AA (texto normal 4,5:1). Lista vazia = pode usar. */
 export function validarMarca(m: Marca): string[] {
   const c = m.cores, erros: string[] = [];
-  for (const [k, v] of Object.entries(c)) if (!HEX.test(v)) erros.push(`Cor "${k}" inválida: ${v}.`);
+  for (const [k, v] of Object.entries(c)) if (v !== undefined && !HEX.test(v)) erros.push(`Cor "${k}" inválida: ${v}.`);
   if (erros.length) return erros;
   const exigir = (rotulo: string, a: string, b: string) => { const r = contraste(a, b); if (r < 4.5) erros.push(`${rotulo}: contraste ${r.toFixed(2)}:1 (mínimo 4,5:1).`); };
-  exigir("Texto escuro sobre o destaque (botão primário)", c.escura, c.destaque);
+  exigir("Texto do botão primário sobre o destaque", c.sobreDestaque ?? c.escura, c.destaque);
   exigir("Texto do menu (papel) sobre a cor escura", c.papel, c.escura);
   exigir("Texto de destaque sobre o papel", c.texto, c.papel);
   exigir("Texto escuro sobre o papel", c.escura, c.papel);

@@ -6,6 +6,7 @@
   --color-marca-900: #003C57;   /* azul petróleo: menu, títulos, texto forte */
   --color-marca-700: #00708A;   /* texto/link de destaque (AA em fundo claro) */
   --color-marca-500: #55C5D0;   /* aqua: botão primário, item ativo */
+  --color-on-marca: #003C57;    /* texto sobre o destaque (botão primário, item ativo) */
   --color-marca-100: #DDF3F5;   /* fundos de destaque */
   --color-ink-900: #003C57;
   --color-paper: #F4F8F9;
