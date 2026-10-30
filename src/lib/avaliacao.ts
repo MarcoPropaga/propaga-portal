@@ -1,5 +1,7 @@
 /* Avaliação de 48 horas de um prospect (decisões de 29 e 30/10/2026). Mesmo módulo no navegador e no servidor.
-   - O relógio só começa quando o admin clica em "Iniciar teste" (grava clientes/{id}/avaliacao/estado).
+   - "Iniciar teste" (admin) grava clientes/{id}/avaliacao/estado com o início e o fim previsto (expiraEm).
+   - Sem relógio na tela e sem bloqueio automático (30/10/2026): ao passar do fim previsto, o admin recebe um aviso por e-mail
+     e decide (proposta ou encerrar). Enquanto não houver decisão, o teste segue "ativo"; o limite de 3 pedidos é o teto.
    - Até 3 pedidos, de 1 post cada, só dos Jobs Propaga liberados no teste; usa-se o pedido mesmo sem aprovar.
    - Sem valores durante o teste; os preços aparecem só quando a Propaga propõe o pacote, depois das 48 h.
    - Depois de expirar, o download dos posts continua liberado por `diasDownload` dias (a trava do Baixar é a etapa 3b). */
@@ -16,23 +18,20 @@ export interface AvaliacaoConfig {
 export interface EstadoAvaliacao { iniciadoEm: string; expiraEm: string; decisao?: "aceita" | "recusada" }
 
 /** contratado = sem restrição de teste (cliente normal ou prospect que aceitou). */
-export type FaseAvaliacao = "contratado" | "nao_iniciada" | "ativa" | "expirada" | "recusada";
+export type FaseAvaliacao = "contratado" | "nao_iniciada" | "ativa" | "recusada";
 
-export function faseAvaliacao(cfg: AvaliacaoConfig | undefined, estado: EstadoAvaliacao | null | undefined, agora: Date): FaseAvaliacao {
+export function faseAvaliacao(cfg: AvaliacaoConfig | undefined, estado: EstadoAvaliacao | null | undefined): FaseAvaliacao {
   if (!cfg) return "contratado";
   if (estado?.decisao === "aceita") return "contratado";
   if (!estado) return "nao_iniciada";
   if (estado.decisao === "recusada") return "recusada";
-  return agora.getTime() < new Date(estado.expiraEm).getTime() ? "ativa" : "expirada";
+  return "ativa";
 }
+
+/** O fim previsto já passou e o admin ainda não decidiu: hora de avisar o admin. */
+export const fimPrevistoPassou = (estado: EstadoAvaliacao, agora: Date) => !estado.decisao && agora.getTime() >= new Date(estado.expiraEm).getTime();
 
 export const expiraEmDe = (inicio: Date, horas: number) => new Date(inicio.getTime() + horas * 3_600_000);
-
-/** Horas e minutos que faltam (0 quando já passou). */
-export function restante(expiraEm: string, agora: Date): { horas: number; minutos: number } {
-  const ms = Math.max(0, new Date(expiraEm).getTime() - agora.getTime());
-  return { horas: Math.floor(ms / 3_600_000), minutos: Math.floor((ms % 3_600_000) / 60_000) };
-}
 
 /** Último instante em que o download dos posts segue liberado depois de expirar. */
 export const downloadAte = (expiraEm: string, dias: number) => new Date(new Date(expiraEm).getTime() + dias * 86_400_000);
@@ -41,7 +40,6 @@ export const MSG_AVALIACAO: Record<FaseAvaliacao, string> = {
   contratado: "",
   ativa: "",
   nao_iniciada: "O teste de 48 horas ainda não começou. A Propaga avisa quando o acesso for liberado.",
-  expirada: "O teste de 48 horas terminou. A Propaga entra em contato com a proposta.",
   recusada: "O teste de 48 horas foi encerrado.",
 };
 

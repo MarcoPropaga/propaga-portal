@@ -1286,12 +1286,21 @@ describe("avaliação de 48 h da DalPet (prospect): relógio, 3 pedidos de 1 pos
     f.emails.length = 0;
   });
 
-  it("antes de 'Iniciar teste' e depois das 48 h não aceita pedido", () => {
+  it("antes de 'Iniciar teste' não aceita pedido; depois do fim previsto segue aceitando e avisa só o admin, uma vez", () => {
     expect(enviar(pedido()).mensagem).toMatch(/ainda não começou/);
-    estado({ iniciadoEm: "2026-09-30T12:00:00Z", expiraEm: "2026-10-02T11:59:00Z" });
-    expect(enviar(pedido()).mensagem).toMatch(/terminou/);
+    estado({ iniciadoEm: "2026-09-30T12:00:00Z", expiraEm: "2026-10-02T11:59:00Z" }); // fim previsto já passou
+    expect(enviar(pedido()).status).toBe("ok");
+    const avisos = () => f.emails.filter((e) => e.assunto.startsWith("Fim do teste de 48 horas"));
+    expect(avisos().map((e) => e.para)).toEqual(["marco@propaga.com"]);
+    expect(f.doc("clientes/dalpet/avaliacao/estado").avisadoEm).toBeTruthy();
+    processarFila(f.p);
+    expect(avisos()).toHaveLength(1); // não repete
+  });
+
+  it("teste encerrado pelo admin (decisão recusada) não aceita pedido", () => {
     estado({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z", decisao: "recusada" });
     expect(enviar(pedido()).mensagem).toMatch(/encerrado/);
+    expect(f.emails.filter((e) => e.assunto.startsWith("Fim do teste"))).toHaveLength(0); // decidido: sem aviso
   });
 
   it("durante o teste: pedido marcado como avaliação, sem documento de valores", () => {
