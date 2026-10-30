@@ -70,6 +70,12 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Estado do teste de 48 h (início, fim, decisão): gravado só pelo servidor; quem é do cliente lê para ver o relógio.
+      match /avaliacao/{doc} {
+        allow read: if membro(c);
+        allow write: if false;
+      }
+
       match /rascunhos/{uid} {
         allow read, delete: if membro(c) && request.auth.uid == uid;
         allow create, update: if membro(c) && request.auth.uid == uid && request.resource.size() < 200000;

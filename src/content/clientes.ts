@@ -19,6 +19,8 @@ export interface Marca {
     sobreDestaque?: string };
 }
 
+import type { AvaliacaoConfig } from "@/lib/avaliacao";
+
 export interface Cliente {
   id: string;
   nome: string;
@@ -39,6 +41,8 @@ export interface Cliente {
   sobreposicoes: [string, string][];
   /** Contrato assinado: data e link do PDF (Drive, acesso restrito). null = pendente. */
   contrato: { assinadoEm: string | null; pdfUrl: string | null; minuta: string | null; consideradoAssinadoParaTestes?: boolean };
+  /** Prospect em teste: regras da avaliação de 48 h (ver src/lib/avaliacao.ts). Ausente = cliente contratado. */
+  avaliacao?: AvaliacaoConfig;
   /** Contato do atendimento Propaga mostrado em Ajuda. */
   atendimento: { nome: string; email: string };
 }
@@ -163,6 +167,8 @@ export const CLIENTES: Record<string, Cliente> = {
     sobreposicoes: [["48", "52"], ["37", "39"]],
     // Contrato novo, um por cliente conforme o pacote; ainda não existe (minuta null = ainda não redigida). O de 2021–2024 não vale.
     contrato: { assinadoEm: null, pdfUrl: null, minuta: null },
+    // Teste: 48 h, 3 pedidos de 1 post (post estático 01 e carrossel 02), download por 7 dias depois (decisões de 29 e 30/10/2026).
+    avaliacao: { horas: 48, maxPedidos: 3, servicos: ["01", "02"], diasDownload: 7 },
     atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
   },
 };

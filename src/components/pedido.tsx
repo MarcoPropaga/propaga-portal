@@ -47,6 +47,8 @@ export interface PedidoDoc {
   drive: { link: string; conferido: boolean; verificado: boolean; propaga?: string }; obs: string;
   prazo: { desejada: string; urgente: boolean; inicio?: string; primeira?: string; final?: string; entrega?: string };
   rodadas: number; versao: number; catalogoVersao: string; recebidoPeloCliente?: boolean;
+  /** Pedido feito na avaliação de 48 h de um prospect: sem valores. */
+  avaliacao?: boolean;
   refacaoExtraPendente?: boolean; refacoesExtrasCobradas?: number;
   temPecas?: boolean; pecas?: Peca[];
   /** Solicitação criada pelo Marcelo em nome da Débora. */

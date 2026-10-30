@@ -50,8 +50,17 @@ export function calcularValores(
   return { protocolo, catalogoVersao: cat.versao, itens: linhas, total, pendencias };
 }
 
-/** Versão do catálogo para o cliente: sem referência interna, só preço final. */
-export function catalogoPublico(cat: Catalogo) {
+/** Versão do catálogo para o cliente: sem referência interna, só preço final.
+    `teste`: prospect em avaliação de 48 h. Só os Jobs liberados no teste, sem nenhum preço (`semValores`). */
+export function catalogoPublico(cat: Catalogo, teste?: { servicos: string[] }) {
+  if (teste) {
+    const servicos = cat.servicos.filter((s) => teste.servicos.includes(s.cod));
+    return {
+      ...cat, desconto: 0, semValores: true as const,
+      categorias: cat.categorias.filter((c) => servicos.some((s) => s.categoria === c.id)),
+      servicos: servicos.map((s) => ({ ...s, variantes: s.variantes.map(({ rotulo, modalidade }) => ({ rotulo, modalidade, preco: null })) })),
+    };
+  }
   return {
     ...cat,
     servicos: cat.servicos.map((s) => ({
