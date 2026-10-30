@@ -6,6 +6,7 @@
 import { CLIENTES, NOMES_PAPEIS, clienteAtivo } from "@/content/clientes";
 import { catalogoVigente } from "@/content/catalogos";
 import { calcularValores, catalogoPublico, exigeOrcamento } from "@/lib/precos";
+import { faseAvaliacao, MSG_AVALIACAO, validarPedidoAvaliacao, type EstadoAvaliacao, type FaseAvaliacao } from "@/lib/avaliacao";
 import { hojeSP } from "@/lib/datas";
 import { conviteSchema, solicitacaoSchema, PAPEIS_PROPAGA, type ConviteInput, type SolicitacaoInput } from "@/lib/schemas";
 import { descreverItem, normalizarItem, validarItens } from "@/lib/solicitacao";
@@ -30,6 +31,13 @@ export function lerConfig(p: Plataforma): Config {
   return { projeto, portalUrl, remetente: p.propriedade("REMETENTE_NOME") || "Portal Propaga" };
 }
 
+/** Estado do teste de 48 h do cliente (null se nunca iniciou). */
+export const estadoAvaliacao = (fs: Firestore, clienteId: string) =>
+  (fs.ler(`clientes/${clienteId}/avaliacao/estado`)?.dados ?? null) as EstadoAvaliacao | null;
+/** Fase da avaliação do cliente agora. Cliente sem teste (ou que aceitou) = "contratado". */
+export const faseDoCliente = (fs: Firestore, clienteId: string, agora: Date): FaseAvaliacao =>
+  faseAvaliacao(CLIENTES[clienteId]?.avaliacao, estadoAvaliacao(fs, clienteId), agora);
+
 /** Executar uma vez: segurança do login + cadastro dos clientes e catálogos. */
 export function configurarProjeto(p: Plataforma) {
   const cfg = lerConfig(p);
@@ -38,9 +46,10 @@ export function configurarProjeto(p: Plataforma) {
   const agora = p.agora();
   const ops = Object.values(CLIENTES).flatMap((c) => {
     const cat = catalogoVigente(c.id);
+    const emTeste = !!c.avaliacao && faseDoCliente(fs, c.id, agora) !== "contratado";
     return [
       { caminho: `clientes/${c.id}`, dados: { nome: c.nome, nomePortal: c.nomePortal, unidades: c.unidades, publicos: c.publicos, catalogoVigente: cat.versao, atualizadoEm: agora } },
-      { caminho: `clientes/${c.id}/catalogo/${cat.versao}`, dados: { ...catalogoPublico(cat), publicadoEm: agora } as unknown as Record<string, unknown> },
+      { caminho: `clientes/${c.id}/catalogo/${cat.versao}`, dados: { ...catalogoPublico(cat, emTeste ? c.avaliacao : undefined), publicadoEm: agora } as unknown as Record<string, unknown> },
       { caminho: `interno/catalogos/versoes/${c.id}-${cat.versao}`, dados: { ...cat, publicadoEm: agora } as unknown as Record<string, unknown> },
     ];
   });
@@ -261,6 +270,15 @@ export function enviarSolicitacao(
   const cat = catalogoVigente(clienteId);
   const errosItens = Object.values(validarItens(cat.servicos, d.itens, cliente));
   if (errosItens.length) throw new ErroUsuario(errosItens[0]);
+  // Prospect em teste de 48 h: relógio, 3 pedidos de 1 post, só os Jobs liberados. Edição de pedido existente não conta como novo.
+  const fase = faseDoCliente(fs, clienteId, p.agora());
+  const teste = fase === "contratado" ? undefined : cliente.avaliacao;
+  if (teste) {
+    if (fase !== "ativa") throw new ErroUsuario(MSG_AVALIACAO[fase]);
+    const usados = d.editar ? 0 : fs.listar(`clientes/${clienteId}/solicitacoes`).filter((x) => (x.dados as { avaliacao?: boolean }).avaliacao).length;
+    const erro = validarPedidoAvaliacao(teste, d.itens, usados);
+    if (erro) throw new ErroUsuario(erro);
+  }
   if (d.prazo.desejada < hojeSP(p.agora())) throw new ErroUsuario("A data desejada já passou. Escolha outra data.");
 
   const itens = d.itens.map((it) => {
@@ -309,10 +327,12 @@ export function enviarSolicitacao(
             drive: { link: d.drive.link, conferido: true, verificado: false }, obs: d.obs,
             prazo: { desejada: d.prazo.desejada, urgente: d.prazo.urgente },
             status: proposta ? "proposta" : "enviada", rodadas: 0, versao: 0, catalogoVersao: cat.versao,
+            ...(teste ? { avaliacao: true } : {}),
             criadoEm: agora, atualizadoEm: agora,
           },
         },
-        { caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
+        // Sem valores durante o teste: só a proposta de pacote depois das 48 h os mostra.
+        ...(teste ? [] : [{ caminho: `${base}/valores/${protocolo}`, dados: { ...calcularValores(protocolo, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> }]),
         proposta
           ? ev("proposta", { em: agora, uid: u.uid, nome: u.nome, rotulo: `Solicitação criada por ${u.nome} em nome do ${CLIENTES[clienteId].marca.equipe}; aguardando aprovação`, chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." })
           : ev("enviada", { em: agora, uid: u.uid, nome: u.nome, rotulo: "Solicitação enviada", chave: true, nota: "Conferido pelo remetente: briefing, arquivos e permissões." }),
@@ -415,7 +435,7 @@ function editarSolicitacao(
         editadoPor: { uid: u.uid, nome: u.nome, em: agora },
         ...(itensMudaram && !reenvio ? { edicaoPendente: true } : {}),
       } },
-      { caminho: `clientes/${clienteId}/valores/${d.editar}`, dados: { ...calcularValores(d.editar!, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> },
+      ...(ant.avaliacao ? [] : [{ caminho: `clientes/${clienteId}/valores/${d.editar}`, dados: { ...calcularValores(d.editar!, cat, d.itens), clienteId, criadoEm: agora } as unknown as Record<string, unknown> }]),
       { caminho: `${caminho}/eventos/${agora.getTime()}-edicao`, dados: { em: agora, uid: u.uid, nome: u.nome, rotulo, nota, chave: devolve, acao: "editar" } },
     ]);
   } catch {

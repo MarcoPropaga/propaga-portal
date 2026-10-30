@@ -7,6 +7,7 @@ import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
 import { VE_TAREFAS, VE_ARQUIVOS, VE_CONTRATO, VE_RELATORIOS, VE_VALORES } from "@/lib/fluxo";
 import { useTxt } from "@/components/tema";
+import { FaixaAvaliacao } from "@/components/avaliacao";
 
 const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] }[] = [
   { href: "/aprovacoes/", rotulo: "Minhas tarefas", texto: "Tudo o que está com você, num só lugar.", papeis: VE_TAREFAS },
@@ -40,6 +41,7 @@ function Conteudo() {
           </dl>
           <button type="button" onClick={() => s.sair()} className="mt-2 inline-flex min-h-11 w-fit items-center rounded border border-ink-900 px-5 font-semibold hover:bg-ink-900 hover:text-paper">Sair</button>
         </section>
+        <FaixaAvaliacao />
         {podeSolicitar && (
           <section className="grid gap-3 rounded border border-gray-200 bg-white p-5">
             <h2 className="text-lg">Precisa de uma peça ou campanha?</h2>
