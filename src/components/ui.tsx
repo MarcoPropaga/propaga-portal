@@ -13,7 +13,7 @@ type Variante = "primario" | "linha" | "discreto";
 export function Botao({ variante = "primario", className = "", carregando, children, ...p }:
   ButtonHTMLAttributes<HTMLButtonElement> & { variante?: Variante; carregando?: boolean }) {
   const v = {
-    primario: "bg-marca-500 text-ink-900 hover:brightness-105 disabled:bg-gray-200 disabled:text-gray-600",
+    primario: "bg-marca-500 text-on-marca hover:brightness-105 disabled:bg-gray-200 disabled:text-gray-600",
     linha: "bg-white border border-ink-900 text-ink-900 hover:bg-paper",
     discreto: "bg-transparent border border-[#C9D7DC] text-ink-900 hover:bg-white",
   }[variante];
@@ -75,7 +75,7 @@ export function TelaAcesso({ titulo, subtitulo, children, voltar }: { titulo: st
       <section className="flex flex-col gap-5 bg-ink-900 p-6 text-paper md:gap-7 md:p-12">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={marca.selo} alt={marca.seloAlt} width={104} height={104} className="size-[88px] md:size-[104px] [filter:drop-shadow(0_0_1px_rgba(255,255,255,0.6))]" />
-        <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-marca-900">{marca.rotuloPortal}</span>
+        <span className="w-fit rounded-full bg-marca-500 px-3 py-1 text-xs font-semibold text-on-marca">{marca.rotuloPortal}</span>
         <p className="max-w-[18ch] font-display text-2xl font-semibold leading-tight md:text-4xl">Solicitações, aprovações, entregas e relatórios.</p>
         <p className="hidden max-w-[46ch] text-[#A9CBD6] md:block">Área exclusiva / Marketing {marca.nomeCurto} e Propaga</p>
       </section>

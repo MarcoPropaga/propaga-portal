@@ -299,7 +299,7 @@ function Conteudo() {
                 </div>
               ) : abaAtual.t === "ajustar" ? (
                 <div className="flex flex-wrap gap-3">
-                  <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">{t("Editar e reenviar ao {equipe}")}</a>
+                  <a href={`/nova-solicitacao/?editar=${encodeURIComponent(pd.protocolo)}`} className="inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-on-marca hover:brightness-105">{t("Editar e reenviar ao {equipe}")}</a>
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-3">

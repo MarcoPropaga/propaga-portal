@@ -14,7 +14,9 @@ export interface Marca {
   selo: string;
   seloAlt: string;
   /** Cores (hex). escura = menu e títulos; destaque = botão primário e item ativo (texto escuro sobre ela). */
-  cores: { escura: string; texto: string; destaque: string; claro: string; papel: string; borda: string; cinza: string };
+  cores: { escura: string; texto: string; destaque: string; claro: string; papel: string; borda: string; cinza: string;
+    /** Texto sobre o destaque (botão primário, item ativo do menu). Padrão: a cor escura. A DalPet usa branco sobre o vermelho. */
+    sobreDestaque?: string };
 }
 
 export interface Cliente {
@@ -36,7 +38,7 @@ export interface Cliente {
   /** Pares de serviços com escopo sobreposto: o portal alerta quando os dois estão no mesmo pedido. */
   sobreposicoes: [string, string][];
   /** Contrato assinado: data e link do PDF (Drive, acesso restrito). null = pendente. */
-  contrato: { assinadoEm: string | null; pdfUrl: string | null; minuta: string; consideradoAssinadoParaTestes?: boolean };
+  contrato: { assinadoEm: string | null; pdfUrl: string | null; minuta: string | null; consideradoAssinadoParaTestes?: boolean };
   /** Contato do atendimento Propaga mostrado em Ajuda. */
   atendimento: { nome: string; email: string };
 }
@@ -129,6 +131,38 @@ export const CLIENTES: Record<string, Cliente> = {
     audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela Varejo Teste", "Locução (cotada à parte)"],
     sobreposicoes: [["48", "52"], ["37", "39"]],
     contrato: { assinadoEm: null, pdfUrl: null, minuta: "2026-10-01", consideradoAssinadoParaTestes: true },
+    atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
+  },
+  // PROSPECT DalPet (teste de 48 h, decidido em 30/10/2026). Cadastro como na B&M Log; tudo que a DalPet ainda não confirmou
+  // é configuração marcada [A CONFIRMAR], nunca dado inventado. Logo e cores vieram do site atual; a DalPet confirma o que é oficial.
+  dalpet: {
+    id: "dalpet",
+    nome: "DalPet",
+    nomePortal: "Portal DalPet",
+    marca: {
+      nomeCurto: "DalPet",
+      equipe: "Equipe DalPet",
+      rotuloPortal: "Portal DalPet",
+      selo: "/brand/selo-mkt-dalpet.svg",
+      seloAlt: "DalPet",
+      // escura #756959 (títulos do site); destaque #E30818 (botões do site) com texto branco; claro e texto são tons nossos
+      // (o bege #E9E4D7 do site não passa em AA com o marrom; o vermelho do logo #EC1C24 não passa com texto branco).
+      cores: { escura: "#756959", texto: "#C8000F", destaque: "#E30818", claro: "#F1ECE0", papel: "#F4F5F0", borda: "#E4E2D8", cinza: "#4A4A4A", sobreDestaque: "#FFFFFF" },
+    },
+    prefixo: "DPT",
+    catalogoVersao: "1.0",
+    unidades: ["[A CONFIRMAR] Unidade principal", "Todas as unidades"],
+    publicos: [
+      { valor: "[A CONFIRMAR] Público principal", rotulo: "Principal · [A CONFIRMAR]" },
+      { valor: "[A CONFIRMAR] Público secundário", rotulo: "Secundário · [A CONFIRMAR]" },
+      { valor: "Ambos os públicos", rotulo: "Ambos os públicos" },
+    ],
+    canaisVideo: ["[A CONFIRMAR] Destino do vídeo", "Redes sociais da DalPet (solicitação expressa)"],
+    canaisSociais: ["Instagram", "Facebook"], // configuração: confirmar com a DalPet
+    audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela DalPet", "Locução (cotada à parte)"],
+    sobreposicoes: [["48", "52"], ["37", "39"]],
+    // Contrato novo, um por cliente conforme o pacote; ainda não existe (minuta null = ainda não redigida). O de 2021–2024 não vale.
+    contrato: { assinadoEm: null, pdfUrl: null, minuta: null },
     atendimento: { nome: "Marcelo Brum", email: "marcelo@propaga.com" },
   },
 };

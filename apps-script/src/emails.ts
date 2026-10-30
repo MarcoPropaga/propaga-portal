@@ -60,7 +60,7 @@ export function emailNovaSolicitacao(o: {
 <p style="margin:0 0 6px;font-weight:bold;font-size:14px">Serviços</p>
 <ul style="margin:0 0 20px;padding-left:18px;font-size:14px;line-height:1.6">${o.itens.map((i) =>
     `<li>${i.qtd}× ${esc(i.nome)}${i.detalhe ? ` <span style="color:${c.cinza}">· ${esc(i.detalhe)}</span>` : ""}${i.sobOrcamento ? ' <span style="color:#B42318">· sob orçamento</span>' : ""}</li>`).join("")}</ul>
-<p style="margin:0 0 16px"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir o portal</a></p>
+<p style="margin:0 0 16px"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.sobreDestaque ?? c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir o portal</a></p>
 <p style="margin:0;font-size:13px;color:${c.cinza};line-height:1.5">Os valores ficam no portal, em Jobs Propaga e Relatórios, para os perfis autorizados.</p>`, m);
   return { assunto, texto, html };
 }
@@ -76,7 +76,7 @@ export function emailAtualizacao(o: { cliente: string; protocolo: string; titulo
 <h1 style="margin:0 0 12px;font-size:22px">${esc(o.rotulo)}</h1>
 <p style="margin:0 0 12px;line-height:1.55"><b>${esc(o.titulo)}</b><br><span style="color:${c.cinza}">por ${esc(o.autor)} · etapa atual: ${esc(o.etapa)}</span></p>
 ${o.nota ? `<p style="margin:0 0 16px;line-height:1.55;background:${c.papel};padding:12px 14px;border-radius:4px;white-space:pre-wrap">${esc(o.nota)}</p>` : ""}
-<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir no portal</a></p>`, m);
+<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.sobreDestaque ?? c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir no portal</a></p>`, m);
   return { assunto, texto, html };
 }
 
@@ -98,7 +98,7 @@ export function emailConvite(o: { nome: string; link: string; cliente: string; c
 <p style="margin:0 0 6px;font-size:13px;color:${c.cinza}">${esc(o.cliente)}</p>
 <h1 style="margin:0 0 16px;font-size:22px">Olá, ${esc(o.nome)}.</h1>
 <p style="margin:0 0 16px;line-height:1.55">${esc(o.convidadoPor)} liberou seu acesso. Crie sua senha para entrar.</p>
-<p style="margin:0 0 20px"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Criar minha senha</a></p>
+<p style="margin:0 0 20px"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.sobreDestaque ?? c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Criar minha senha</a></p>
 <p style="margin:0 0 10px;line-height:1.55;font-size:14px">Depois, você ativa a verificação em duas etapas com um aplicativo autenticador no celular (Google Authenticator ou Microsoft Authenticator). Leva cerca de 1 minuto.</p>
 <p style="margin:0;font-size:13px;color:${c.cinza};line-height:1.5">O link vale por 1 hora. Se expirar, abra a página e use “Gerar novo link”. A Propaga nunca pede sua senha por e-mail.</p>
 `, m);
@@ -119,7 +119,7 @@ export function emailResumo(o: { nome: string; link: string; linhas: { protocolo
 <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;line-height:1.5;margin:0 0 18px;border-collapse:collapse">
 ${o.linhas.map((l) => `<tr><td style="padding:6px 8px 6px 0;border-top:1px solid ${c.borda};vertical-align:top"><b>${esc(l.peca)}</b><br><span style="color:${c.cinza}">${esc(l.protocolo)} · ${esc(l.titulo)}</span></td><td style="padding:6px 0;border-top:1px solid ${c.borda};text-align:right;white-space:nowrap;vertical-align:top;${l.atrasada ? "color:#B42318;font-weight:bold" : `color:${c.cinza}`}">prazo ${br(l.prazo)}</td></tr>`).join("")}
 </table>
-<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir Minhas tarefas</a></p>`, m);
+<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.sobreDestaque ?? c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">Abrir Minhas tarefas</a></p>`, m);
   return { assunto, texto, html };
 }
 
@@ -130,6 +130,6 @@ export function emailAviso(o: { titulo: string; texto: string; botao: string; li
   const html = moldura(`
 <h1 style="margin:0 0 12px;font-size:22px">${esc(o.titulo)}</h1>
 <p style="margin:0 0 16px;line-height:1.55">${esc(o.texto)}</p>
-<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">${esc(o.botao)}</a></p>`, m);
+<p style="margin:0"><a href="${esc(o.link)}" style="display:inline-block;background:${c.destaque};color:${c.sobreDestaque ?? c.escura};text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:4px">${esc(o.botao)}</a></p>`, m);
   return { assunto: o.titulo, texto, html };
 }

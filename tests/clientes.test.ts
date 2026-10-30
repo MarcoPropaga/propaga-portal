@@ -18,6 +18,12 @@ describe("cadastro de clientes", () => {
       expect(cat.desconto).toBeLessThan(1);
     }
   });
+  it("DalPet: prospect sem desconto de catálogo (Bônus 15% é campo próprio); nada herdado da B&M Log", () => {
+    expect(catalogoVigente("dalpet").desconto).toBe(0);
+    expect(CLIENTES.dalpet.prefixo).toBe("DPT");
+    expect(CLIENTES.dalpet.contrato).toMatchObject({ assinadoEm: null, pdfUrl: null, minuta: null });
+    expect(JSON.stringify(CLIENTES.dalpet)).not.toMatch(/B&M|BML/);
+  });
   it("o desconto é do contrato de cada cliente (B&M Log 15%; testes 10% e 5%)", () => {
     expect(catalogoVigente("bmlog").desconto).toBe(0.15);
     expect(catalogoVigente("pet").desconto).toBe(0.1);

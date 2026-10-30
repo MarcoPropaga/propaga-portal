@@ -10,6 +10,7 @@ O portal da B&M Log é o **molde oficial**. Cada cliente novo é uma cópia com 
 - **Serviços da Propaga e a tabela Jobs Propaga:** catálogo da agência, o mesmo para todos. O cliente vê a tabela inteira (inclusive o que não contratou) com o preço final dele.
 - **Avisos e rotina:** e-mails de aviso, resumo diário, verificação em duas etapas, estrutura de pastas no Drive (01 Briefing a 05 Arquivos abertos), relatórios e relatório mensal do criativo.
 - **Relatório do criativo por cliente (30/10/2026):** um relatório por criativo e mês (id `uid_AAAA-MM`), com as peças de todos os clientes vinculados e o cliente em cada linha; a Marisa paga uma vez. A tabela do criativo é a do catálogo-base, igual para todos. Peça de avaliação (teste de 48 h) entra pela tabela normal, marcada como "avaliação". Criativo sem vínculo registrado cai no cliente padrão.
+- **DalPet no código (30/10/2026):** cliente `dalpet` (prefixo DPT), catálogo v1.0 sem desconto, selo e cores do site atual. Unidades, públicos e destino de vídeo estão como `[A CONFIRMAR]`; contrato ainda não redigido (`minuta: null`). A marca ganhou o campo opcional `sobreDestaque` (cor do texto sobre o botão; padrão = cor escura): a DalPet usa branco sobre o vermelho #E30818. Falta rodar `configurarProjeto` no Apps Script após o merge.
 - **Regra de sigilo:** o que o criativo cobra da Propaga nunca aparece para o cliente nem para o atendimento.
 
 ## Configurável por cliente

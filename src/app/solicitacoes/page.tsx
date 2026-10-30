@@ -61,7 +61,7 @@ function Conteudo() {
               {(Object.keys(NOME_STATUS) as Status[]).filter((x) => x !== "rascunho").map((x) => <option key={x} value={x}>{t(NOME_STATUS[x])}</option>)}
             </select>
           </div>
-          {podeSolicitar && <a href="/nova-solicitacao/" className="ml-auto inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-ink-900 hover:brightness-105">+ Nova solicitação</a>}
+          {podeSolicitar && <a href="/nova-solicitacao/" className="ml-auto inline-flex min-h-11 items-center rounded bg-marca-500 px-5 font-semibold text-on-marca hover:brightness-105">+ Nova solicitação</a>}
         </div>
 
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
