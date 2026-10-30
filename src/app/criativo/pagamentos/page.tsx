@@ -9,14 +9,12 @@ import { Casca } from "@/components/casca";
 import { useSessao } from "@/components/auth/sessao";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora } from "@/components/pedido";
-import { cobradoDe, REGRA_CANCELADA_CRIATIVO, NOME_COLUNA, nomeMes, VE_PAGAMENTO_CRIATIVO, type RelatorioCriativo } from "@/lib/criativo";
+import { cobradoDe, nomeClienteDaLinha, situacaoDaLinha, totaisPorCliente, REGRA_CANCELADA_CRIATIVO, NOME_COLUNA, nomeMes, VE_PAGAMENTO_CRIATIVO, type RelatorioCriativo } from "@/lib/criativo";
 import { useFila } from "@/lib/usarFila";
 import { moeda } from "@/lib/usarTabelaCriativo";
 import type { Papel } from "@/lib/tipos";
-import { useTxt } from "@/components/tema";
 
 function Conteudo() {
-  const t = useTxt();
   const [lista, setLista] = useState<RelatorioCriativo[] | null>(null);
   const [erro, setErro] = useState("");
   const [aberto, setAberto] = useState<string>(() => (typeof window !== "undefined" && new URLSearchParams(location.search).get("id")) || "");
@@ -44,7 +42,7 @@ function Conteudo() {
     <Casca titulo="Pagamento dos criativos">
       <div className="grid max-w-6xl gap-5">
         {s.papel === "admin" && <a href="/criativo/tabela/" className="w-fit text-sm font-semibold text-marca-700 underline-offset-2 hover:underline">Ver a tabela de valores dos criativos (só administrador)</a>}
-        <p className="max-w-[75ch] text-gray-600">Relatórios mensais enviados pelos criativos da Propaga, com as peças concluídas ou canceladas e os valores que cada um cobra. {t(REGRA_CANCELADA_CRIATIVO)} Confira e registre o pagamento.</p>
+        <p className="max-w-[75ch] text-gray-600">Relatórios mensais enviados pelos criativos da Propaga, com as peças concluídas ou canceladas e os valores que cada um cobra. {REGRA_CANCELADA_CRIATIVO} Confira e registre o pagamento.</p>
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!lista && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {lista && !lista.length && <p className="rounded border border-dashed border-[#C9D7DC] bg-white px-4 py-8 text-center text-gray-600">Nenhum relatório enviado ainda.</p>}
@@ -64,17 +62,18 @@ function Conteudo() {
               <div key={a} className="rounded border border-gray-200 bg-white px-4 py-3"><p className="text-xs uppercase tracking-wide text-gray-600">{a}</p><p className="font-display text-2xl font-semibold tabular-nums">{b}</p></div>
             ))}
           </div>
+          {totaisPorCliente(r.linhas).length > 1 && <p className="text-sm text-gray-600">Por cliente: {totaisPorCliente(r.linhas).map((c) => `${c.nome} ${moeda(c.total)} (${c.pecas})`).join(" · ")}.</p>}
           <p className="text-sm text-gray-600">Enviado por {r.enviadoPor} em {brDataHora(r.enviadoEm)}{r.envios > 1 ? ` (${r.envios}ª versão)` : ""}.</p>
           <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full min-w-[760px] text-sm">
               <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
-                <tr><th className="px-3 py-2.5">Pedido · peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5">Serviço cobrado</th><th className="px-3 py-2.5 text-right">Valor</th></tr>
+                <tr><th className="px-3 py-2.5">Cliente · pedido · peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5">Serviço cobrado</th><th className="px-3 py-2.5 text-right">Valor</th></tr>
               </thead>
               <tbody>
                 {r.linhas.map((l) => (
                   <tr key={l.chave} className="border-t border-gray-200 align-top">
-                    <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div></td>
-                    <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : t("Cancelada pela {cliente}")}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
+                    <td className="px-3 py-2.5"><div className="text-xs font-semibold uppercase tracking-wide text-gray-600">{nomeClienteDaLinha(l)}</div><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div>{l.avaliacao && <div className="text-xs font-semibold text-marca-900">Avaliação</div>}</td>
+                    <td className="px-3 py-2.5">{situacaoDaLinha(l)}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                     <td className="px-3 py-2.5">{r.itens?.[l.item] ?? l.item}<div className="text-xs text-gray-600">{NOME_COLUNA[l.coluna]}</div></td>
                     <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{moeda(l.cobrado ?? cobradoDe(l))}{l.situacao === "cancelada" && <div className="text-xs text-gray-600">50% de {moeda(l.valor)}</div>}</td>
                   </tr>

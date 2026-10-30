@@ -8,14 +8,13 @@ import { Protegido } from "@/components/auth/protegido";
 import { Casca } from "@/components/casca";
 import { Aviso } from "@/components/ui";
 import { brData, brDataHora } from "@/components/pedido";
-import { cobradoDe, idRelatorio, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, type RelatorioCriativo } from "@/lib/criativo";
+import { cobradoDe, idRelatorio, nomeClienteDaLinha, situacaoDaLinha, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, type RelatorioCriativo } from "@/lib/criativo";
 import { NOME_STATUS } from "@/lib/fluxo";
 import { hojeSP } from "@/lib/datas";
 import { prazoEtapa, situacaoInterna, tarefasDoPedido } from "@/lib/pecas";
-import { usePedidos } from "@/lib/usarFila";
+import { usePedidosDosClientes } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
 import { useTxt } from "@/components/tema";
-import { CLIENTE_PADRAO } from "@/content/clientes";
 
 type Equipe = { lista: { uid: string; nome: string }[] };
 const cx = "min-h-11 rounded border border-[#C9D7DC] bg-white px-3";
@@ -29,7 +28,7 @@ function Conteudo() {
   const [equipe, setEquipe] = useState<Equipe["lista"] | null>(null);
   const [uid, setUid] = useState("");
   const [mes, setMes] = useState(() => meses()[0]);
-  const { lista, erro } = usePedidos(true, CLIENTE_PADRAO);
+  const { lista, erro } = usePedidosDosClientes();
   const { tab } = useTabelaCriativo();
   const [rel, setRel] = useState<RelatorioCriativo | null | undefined>(undefined);
 
@@ -126,8 +125,8 @@ function Conteudo() {
                 <tbody>
                   {linhas.map((l) => (
                     <tr key={l.chave} className="border-t border-gray-200 align-top">
-                      <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div></td>
-                      <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : t("Cancelada pela {cliente}")}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
+                      <td className="px-3 py-2.5"><div className="text-xs font-semibold uppercase tracking-wide text-gray-600">{nomeClienteDaLinha(l)}</div><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div></td>
+                      <td className="px-3 py-2.5">{situacaoDaLinha(l)}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                       <td className="px-3 py-2.5">{rel?.itens?.[l.item] ?? tab?.itens.find((i) => i.id === l.item)?.nome ?? l.item}<div className="text-xs text-gray-600">{NOME_COLUNA[l.coluna]}</div></td>
                       <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{l.valor == null ? "A informar" : moeda(l.cobrado ?? cobradoDe(l))}{l.situacao === "cancelada" && l.valor != null && <div className="text-xs text-gray-600">50% de {moeda(l.valor)}</div>}</td>
                     </tr>

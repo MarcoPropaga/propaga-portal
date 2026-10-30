@@ -639,6 +639,30 @@ describe("relatório mensal da Mariane (criativo) e pagamento pela Marisa", () =
     expect(fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: [{ chave: "BML-2026-0001:p1", item: "carrossel", coluna: "adaptacao" }] }).mensagem).toMatch(/não tem valor de Adaptação/);
   });
 
+  it("vários clientes: um relatório por mês com o cliente em cada linha; avaliação entra pela tabela normal e fica marcada", () => {
+    definirVinculos(new Firestore(f.p, "propaga-portal"), { uid: mri, clientes: ["bmlog", "pet"] });
+    f.docs.set("clientes/pet/solicitacoes/PET-2026-0001", { updateTime: "t0", fields: (paraValor({
+      protocolo: "PET-2026-0001", titulo: "Teste 48 h", status: "producao", avaliacao: true,
+      itens: [{ cod: "01", variante: 0, qtd: 1, nome: "Post estático" }],
+      pecas: [peca("q1", 0, "concluida", "2026-10-12T15:00:00Z"), peca("q2", 0, "encerrada", "2026-10-13T15:00:00Z")],
+    }) as any).mapValue.fields });
+    const aj = [{ chave: "BML-2026-0001:p2", item: "complexo", coluna: "nova", valor: 300 }];
+    const r = fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: aj });
+    expect(r.resultado.pecas).toBe(5);
+    expect(r.resultado.total).toBe(205 + 45 + 22.5);  // post novo: q1 cheia (45) + q2 cancelada, 50% (22,50)
+    const rel = f.doc(`relatoriosCriativo/${mri}_2026-10`);
+    expect(rel.linhas.filter((l: any) => l.clienteId === "pet").map((l: any) => [l.peca, l.situacao, l.avaliacao])).toEqual([["Peça q1", "aprovada", true], ["Peça q2", "cancelada", true]]);
+    expect(rel.linhas.filter((l: any) => l.clienteId === "bmlog" && l.avaliacao)).toHaveLength(0);
+    const email = f.emails.find((e) => e.assunto.startsWith("Relatório de Mariane")) as any;
+    expect(email.texto ?? email.html).toMatch(/B&M Log: R\$\s205,00; Pet Teste: R\$\s67,50/);
+  });
+
+  it("criativo sem vínculo registrado mantém o comportamento anterior (cliente padrão)", () => {
+    definirVinculos(new Firestore(f.p, "propaga-portal"), { uid: mri, clientes: [] });
+    const r = fila("relatorioCriativo", mri, { mes: "2026-10", ajustes: [{ chave: "BML-2026-0001:p2", item: "complexo", coluna: "nova", valor: 300 }] });
+    expect(r.resultado.pecas).toBe(3);
+  });
+
   it("sigilo e papéis: Marcelo não envia; Mariane não paga; Marisa paga e a Mariane é avisada; mês pago não é reenviado", () => {
     const aj = [{ chave: "BML-2026-0001:p2", item: "complexo", coluna: "nova", valor: 300 }];
     expect(fila("relatorioCriativo", mcl, { mes: "2026-10", ajustes: aj }).mensagem).toMatch(/Só o criativo/);
