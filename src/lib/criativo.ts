@@ -2,9 +2,12 @@
    - Os valores vêm da tabela da Mariane (documento criativo/tabela), não da tabela da Propaga.
    - Entra no mês a peça fechada nele: aprovada com arquivo final (concluída) ou cancelada pela B&M Log.
    - Peça cancelada pela B&M Log entra com 50% do valor da tabela (Marco, 15/10/2026); refações são observação, sem valor extra.
+   - Vários clientes (30/10/2026): um relatório por criativo e mês, com o cliente em cada linha; a tabela da Mariane é a do catálogo-base, igual para todos.
+     Peça de avaliação (teste de 48 h de um prospect) entra pela tabela normal e fica marcada como "avaliação".
    - O portal sugere o item pelo serviço escolhido pelo Marcelo; a Mariane confere, pode trocar o item
      e informa o valor dos itens "sob consulta". O servidor recalcula tudo antes de gravar.
    Mesmo módulo no navegador e no servidor; não contém valores. */
+import { CLIENTES } from "@/content/clientes";
 import { hojeSP } from "./datas";
 import type { Peca } from "./pecas";
 
@@ -19,7 +22,11 @@ export interface TabelaCriativo {
 }
 
 export interface LinhaCriativo {
-  chave: string;              // protocolo:idPeça
+  chave: string;              // protocolo:idPeça (o protocolo já é único por cliente: prefixo BML, DPT…)
+  /** Cliente do pedido. Relatórios enviados antes de 30/10/2026 não têm; use clienteDaLinha. */
+  clienteId?: string;
+  /** Peça feita na avaliação de 48 h de um prospect: vale o valor cheio da tabela, marcada para a Propaga acompanhar. */
+  avaliacao?: boolean;
   protocolo: string; titulo: string; peca: string;
   servico: string;            // serviço da Propaga (sem valor)
   situacao: "aprovada" | "cancelada";
@@ -31,7 +38,7 @@ export interface LinhaCriativo {
 }
 export interface Ajuste { chave: string; item: string; coluna: Coluna; valor?: number }
 
-type PedidoMin = { protocolo: string; titulo: string; status: string; itens: { cod: string; variante: number; nome: string; varianteRotulo?: string }[]; pecas?: Peca[]; criativo?: { uid: string; nome: string } | null };
+export type PedidoMin = { clienteId?: string; avaliacao?: boolean; protocolo: string; titulo: string; status: string; itens: { cod: string; variante: number; nome: string; varianteRotulo?: string }[]; pecas?: Peca[]; criativo?: { uid: string; nome: string } | null };
 
 /** Id do relatório mensal de um criativo: uid_AAAA-MM. */
 export const idRelatorio = (uid: string, mes: string) => `${uid}_${mes}`;
@@ -72,7 +79,7 @@ export function pecasDoMes(pedidos: PedidoMin[], mes: string, tab: TabelaCriativ
       if (!sug) sug = { item: "complexo", coluna: "nova" };
       if (!colunasDo(tab, sug.item).includes(sug.coluna)) sug = { item: "complexo", coluna: sug.coluna };
       linhas.push({
-        chave: `${p.protocolo}:${x.id}`, protocolo: p.protocolo, titulo: p.titulo, peca: x.nome,
+        chave: `${p.protocolo}:${x.id}`, ...(p.clienteId ? { clienteId: p.clienteId } : {}), ...(p.avaliacao ? { avaliacao: true } : {}), protocolo: p.protocolo, titulo: p.titulo, peca: x.nome,
         servico: it ? `${it.nome}${it.varianteRotulo ? ` · ${it.varianteRotulo}` : ""}` : "Peça avulsa",
         situacao: x.etapa === "concluida" ? "aprovada" : "cancelada",
         fechadaEm: hojeSP(new Date(fim)),
@@ -82,6 +89,29 @@ export function pecasDoMes(pedidos: PedidoMin[], mes: string, tab: TabelaCriativ
     }
   }
   return linhas.sort((a, b) => a.fechadaEm.localeCompare(b.fechadaEm) || a.chave.localeCompare(b.chave));
+}
+
+/** Cliente da linha: o gravado ou, em relatório antigo, o do prefixo do protocolo (BML-2026-0001 → bmlog). */
+export const clienteDaLinha = (l: { clienteId?: string; protocolo: string }) =>
+  l.clienteId ?? Object.values(CLIENTES).find((c) => l.protocolo.startsWith(`${c.prefixo}-`))?.id;
+/** Nome curto do cliente da linha, para os textos ("B&M Log", "DalPet"). */
+export const nomeClienteDaLinha = (l: { clienteId?: string; protocolo: string }) => {
+  const id = clienteDaLinha(l);
+  return (id && CLIENTES[id]?.marca.nomeCurto) || "cliente";
+};
+/** "Aprovada" ou "Cancelada pela DalPet". */
+export const situacaoDaLinha = (l: { situacao: string; clienteId?: string; protocolo: string }) =>
+  l.situacao === "aprovada" ? "Aprovada" : `Cancelada pela ${nomeClienteDaLinha(l)}`;
+/** Agrupa os totais por cliente (para a Marisa e a Mariane conferirem), na ordem do primeiro aparecimento. */
+export function totaisPorCliente(ls: LinhaCriativo[]): { nome: string; pecas: number; total: number }[] {
+  const m = new Map<string, { nome: string; pecas: number; total: number }>();
+  for (const l of ls) {
+    const k = clienteDaLinha(l) ?? "?";
+    const x = m.get(k) ?? { nome: nomeClienteDaLinha(l), pecas: 0, total: 0 };
+    x.pecas += 1; x.total = Math.round((x.total + (cobradoDe(l) ?? 0)) * 100) / 100;
+    m.set(k, x);
+  }
+  return [...m.values()];
 }
 
 /** Aplica as conferências da Mariane. Erro (string) se algo não fecha; o servidor usa a mesma função. */
@@ -107,7 +137,7 @@ export function aplicarAjustes(tab: TabelaCriativo, linhas: LinhaCriativo[], aju
 
 /** Peça cancelada pela B&M Log: a Mariane recebe esta fração do valor da tabela dela. */
 export const FATOR_CANCELADA_CRIATIVO = 0.5;
-export const REGRA_CANCELADA_CRIATIVO = "Peça cancelada pela {cliente} entra com 50% do valor da sua tabela. Refações aparecem como observação, sem valor extra. O pagamento é sempre de todos os serviços realizados no mês.";
+export const REGRA_CANCELADA_CRIATIVO = "Peça cancelada pelo cliente entra com 50% do valor da sua tabela. Refações aparecem como observação, sem valor extra. O pagamento é sempre de todos os serviços realizados no mês.";
 export const REGRA_COMPLEXO_CRIATIVO = "Projeto complexo (sob consulta): registre o valor definido; o Marcelo é avisado do valor ao enviar o relatório.";
 export const cobradoDe = (l: { situacao: string; valor: number | null }) =>
   l.valor == null ? null : Math.round(l.valor * (l.situacao === "cancelada" ? FATOR_CANCELADA_CRIATIVO : 1) * 100) / 100;

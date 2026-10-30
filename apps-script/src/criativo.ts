@@ -3,7 +3,7 @@
 import { catalogoVigente } from "@/content/catalogos";
 import { CLIENTES, CLIENTE_PADRAO } from "@/content/clientes";
 import { montarTabelaMariane } from "@/content/criativo/tabela-mariane";
-import { aplicarAjustes, chaveServico, foraDaTabela, idRelatorio, mesclarAdicionais, nomeMes, NOME_COLUNA, pecasDoMes, totalLinhas, type AdicionaisCriativo, type Ajuste, type Coluna, type PropostaItem } from "@/lib/criativo";
+import { aplicarAjustes, chaveServico, foraDaTabela, idRelatorio, mesclarAdicionais, nomeMes, NOME_COLUNA, pecasDoMes, totaisPorCliente, totalLinhas, type AdicionaisCriativo, type Ajuste, type Coluna, type PropostaItem } from "@/lib/criativo";
 import { hojeSP } from "@/lib/datas";
 import { emailAviso } from "./emails";
 import type { Firestore } from "./firestore";
@@ -17,8 +17,8 @@ const ADICIONAIS = "criativo/adicionais";
 const lerAdicionais = (fs: Firestore) => (fs.ler(ADICIONAIS)?.dados ?? null) as Partial<AdicionaisCriativo> | null;
 /** Tabela-base (código) + serviços acordados pelo portal (criativo/adicionais). */
 /* O criativo trabalha com o catálogo-base de serviços, igual em todos os clientes (molde); o desconto do cliente não entra na tabela dele.
-   Relatório e pagamento do criativo valem por enquanto só para o cliente padrão (B&M Log): o documento é um por criativo e mês, sem cliente no id.
-   Fazer por cliente é etapa futura (docs/MOLDE.md). */
+   Relatório e pagamento (30/10/2026): um documento por criativo e mês (id uid_AAAA-MM), com as peças de todos os clientes a que o criativo está vinculado;
+   cada linha leva o cliente. Criativo sem vínculo registrado mantém o comportamento anterior (cliente padrão). */
 export const tabelaCriativoAtual = (fs?: Firestore) => mesclarAdicionais(montarTabelaMariane(catalogoVigente(CLIENTE_PADRAO)), fs ? lerAdicionais(fs) : null);
 
 /** Cliente de um protocolo pelo prefixo (BML-2026-0001 → bmlog), para achar o pedido sem saber o cliente. */
@@ -108,6 +108,13 @@ export function tabelaCriativoFila(p: Plataforma, fs: Firestore, u: Usuario, bru
   throw new ErroUsuario("Ação inválida.");
 }
 
+/** Clientes cujos pedidos entram no relatório do criativo: os vinculados a ele; sem vínculo, o cliente padrão. */
+export function clientesDoCriativo(fs: Firestore, uid: string): string[] {
+  const v = (fs.ler(`usuarios/${uid}`)?.dados as { clientes?: string[] } | undefined)?.clientes ?? [];
+  const ids = v.filter((c) => c in CLIENTES);
+  return ids.length ? ids : [CLIENTE_PADRAO];
+}
+
 export function enviarRelatorioCriativo(p: Plataforma, fs: Firestore, u: Usuario, bruto: unknown) {
   if (u.papel !== "criativo") throw new ErroUsuario("Só o criativo envia este relatório.");
   const d = (bruto ?? {}) as { mes?: string; ajustes?: Ajuste[] };
@@ -119,7 +126,8 @@ export function enviarRelatorioCriativo(p: Plataforma, fs: Firestore, u: Usuario
   if ((atual?.dados as { status?: string } | undefined)?.status === "pago") throw new ErroUsuario("Este mês já foi pago pela Propaga e não pode ser reenviado.");
 
   const tab = tabelaCriativoAtual(fs);
-  const pedidos = fs.listar(`clientes/${CLIENTE_PADRAO}/solicitacoes`).map((x) => x.dados as never);
+  const pedidos = clientesDoCriativo(fs, u.uid).flatMap((cid) =>
+    fs.listar(`clientes/${cid}/solicitacoes`).map((x) => ({ ...(x.dados as object), clienteId: cid }) as never));
   const base = pecasDoMes(pedidos, d.mes, tab, u.uid);
   if (!base.length) throw new ErroUsuario(`Nenhuma peça concluída ou cancelada em ${nomeMes(d.mes)}.`);
   const linhas = aplicarAjustes(tab, base, ajustes);
@@ -136,11 +144,12 @@ export function enviarRelatorioCriativo(p: Plataforma, fs: Firestore, u: Usuario
   }]);
 
   const cfg = lerConfig(p);
+  const porCliente = totaisPorCliente(linhas);
   const dest = fs.listar("usuarios").map((x) => x.dados as { email: string; papel: string; nome: string })
     .filter((x) => x.papel === "financeiro_propaga" || x.papel === "admin");
   const msg = emailAviso({
     titulo: `Relatório de ${u.nome.split(" ")[0]} · ${nomeMes(d.mes)}`,
-    texto: `${u.nome} enviou o relatório de serviços de ${nomeMes(d.mes)}${envios > 1 ? " (versão corrigida)" : ""}: ${linhas.length} peça(s), total de ${moeda(total)}, pela tabela de valores do criativo. Confira e registre o pagamento no portal.`,
+    texto: `${u.nome} enviou o relatório de serviços de ${nomeMes(d.mes)}${envios > 1 ? " (versão corrigida)" : ""}: ${linhas.length} peça(s), total de ${moeda(total)}, pela tabela de valores do criativo${porCliente.length > 1 ? ` (${porCliente.map((c) => `${c.nome}: ${moeda(c.total)}`).join("; ")})` : ""}. Confira e registre o pagamento no portal.`,
     botao: "Conferir o relatório", link: `${cfg.portalUrl}/criativo/pagamentos/?id=${id}`,
   });
   for (const x of dest) {

@@ -8,13 +8,11 @@ import { Casca } from "@/components/casca";
 import { useSessao } from "@/components/auth/sessao";
 import { Aviso, Botao } from "@/components/ui";
 import { brData, brDataHora } from "@/components/pedido";
-import { idRelatorio, aplicarAjustes, cobradoDe, REGRA_CANCELADA_CRIATIVO, REGRA_COMPLEXO_CRIATIVO, colunasDo, NOME_COLUNA, nomeMes, pecasDoMes, totalLinhas, valorTabela,   type Coluna, type LinhaCriativo, type RelatorioCriativo } from "@/lib/criativo";
+import { idRelatorio, aplicarAjustes, cobradoDe, REGRA_CANCELADA_CRIATIVO, REGRA_COMPLEXO_CRIATIVO, colunasDo, NOME_COLUNA, nomeMes, pecasDoMes, nomeClienteDaLinha, situacaoDaLinha, totaisPorCliente, totalLinhas, valorTabela,   type Coluna, type LinhaCriativo, type RelatorioCriativo } from "@/lib/criativo";
 import { hojeSP } from "@/lib/datas";
-import { useFila, usePedidos } from "@/lib/usarFila";
+import { useFila, usePedidosDosClientes } from "@/lib/usarFila";
 import { moeda, useTabelaCriativo } from "@/lib/usarTabelaCriativo";
 import type { Papel } from "@/lib/tipos";
-import { useTxt } from "@/components/tema";
-import { CLIENTE_PADRAO } from "@/content/clientes";
 
 const ultimosMeses = (n = 12) => {
   const [a, m] = hojeSP().slice(0, 7).split("-").map(Number);
@@ -23,11 +21,10 @@ const ultimosMeses = (n = 12) => {
 const cx = "min-h-10 w-full rounded border border-[#C9D7DC] bg-white px-2 text-sm";
 
 function Conteudo() {
-  const t = useTxt();
   const meses = useMemo(() => ultimosMeses(), []);
   const [mes, setMes] = useState(() => (typeof window !== "undefined" && new URLSearchParams(location.search).get("mes")) || meses[0]);
   const { tab, erro: erroTab } = useTabelaCriativo();
-  const { lista, erro } = usePedidos(true, CLIENTE_PADRAO);
+  const { lista, erro } = usePedidosDosClientes();
   const enviar = useFila();
   const uid = useSessao().usuario?.uid ?? "";
   const [rel, setRel] = useState<RelatorioCriativo | null | undefined>(undefined);
@@ -54,6 +51,7 @@ function Conteudo() {
   const enviado = !!rel && !corrigir;
   const vis = enviado ? rel!.linhas : linhas;
   const total = totalLinhas(vis);
+  const porCliente = totaisPorCliente(vis);
   const nomeItem = (id: string) => tab?.itens.find((x) => x.id === id)?.nome ?? rel?.itens?.[id] ?? id;
 
   function mudar(l: LinhaCriativo, p: Partial<{ item: string; coluna: Coluna; valor?: number }>) {
@@ -80,7 +78,7 @@ function Conteudo() {
   return (
     <Casca titulo="Meu relatório do mês">
       <div className="grid max-w-6xl gap-5">
-        <p className="max-w-[75ch] text-gray-600">{t("Peças que você criou e que foram concluídas ou canceladas pela {cliente} no mês, com os valores da sua tabela. Confira cada linha e envie para a Marisa (Financeiro Propaga).")}</p>
+        <p className="max-w-[75ch] text-gray-600">Peças que você criou e que foram concluídas ou canceladas pelo cliente no mês, de todos os clientes em que você trabalha, com os valores da sua tabela. Confira cada linha e envie para a Marisa (Financeiro Propaga).</p>
         <div className="flex flex-wrap items-end gap-3 print:hidden">
           <div className="grid gap-1.5">
             <label htmlFor="mes" className="text-sm font-semibold">Mês</label>
@@ -104,18 +102,19 @@ function Conteudo() {
               <div key={a} className="rounded border border-gray-200 bg-white px-4 py-3"><p className="text-xs uppercase tracking-wide text-gray-600">{a}</p><p className="font-display text-2xl font-semibold tabular-nums">{b}</p></div>
             ))}
           </div>
+          {porCliente.length > 1 && <p className="text-sm text-gray-600">Por cliente: {porCliente.map((c) => `${c.nome} ${moeda(c.total)} (${c.pecas})`).join(" · ")}.</p>}
           <div className="relative overflow-x-auto rounded border border-gray-200 bg-white">
             <table className="w-full min-w-[980px] text-sm">
               <thead className="bg-[#EAF3F5] text-left text-xs uppercase tracking-wide text-gray-600">
-                <tr><th className="px-3 py-2.5">Pedido · peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5">Item da sua tabela</th><th className="min-w-[160px] px-3 py-2.5">Tipo</th><th className="px-3 py-2.5 text-right">Valor</th></tr>
+                <tr><th className="px-3 py-2.5">Cliente · pedido · peça</th><th className="px-3 py-2.5">Situação</th><th className="px-3 py-2.5">Item da sua tabela</th><th className="min-w-[160px] px-3 py-2.5">Tipo</th><th className="px-3 py-2.5 text-right">Valor</th></tr>
               </thead>
               <tbody>
                 {vis.map((l) => {
                   const it = tab.itens.find((x) => x.id === l.item);
                   return (
                     <tr key={l.chave} className="border-t border-gray-200 align-top">
-                      <td className="px-3 py-2.5"><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div><div className="text-xs text-gray-600">Pedido do Marcelo: {l.servico}</div></td>
-                      <td className="px-3 py-2.5">{l.situacao === "aprovada" ? "Aprovada" : t("Cancelada pela {cliente}")}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
+                      <td className="px-3 py-2.5"><div className="text-xs font-semibold uppercase tracking-wide text-gray-600">{nomeClienteDaLinha(l)}</div><b>{l.peca}</b><div className="text-xs text-gray-600">{l.protocolo} · {l.titulo}</div><div className="text-xs text-gray-600">Pedido do Marcelo: {l.servico}</div>{l.avaliacao && <div className="text-xs font-semibold text-marca-900">Avaliação</div>}</td>
+                      <td className="px-3 py-2.5">{situacaoDaLinha(l)}<div className="text-xs text-gray-600">{brData(l.fechadaEm)} · {l.refacoes ? `${l.refacoes} refação(ões)` : "sem refação"}</div></td>
                       <td className="px-3 py-2.5">{enviado ? nomeItem(l.item) : (
                         <select aria-label={`Item da tabela para ${l.peca}`} className={cx} value={l.item} onChange={(e) => mudar(l, { item: e.target.value })}>
                           {tab.itens.map((i) => <option key={i.id} value={i.id}>{i.nome}</option>)}
@@ -138,7 +137,7 @@ function Conteudo() {
               {vis.length > 0 && <tfoot><tr className="border-t-2 border-ink-900 font-semibold"><td className="px-3 py-2.5" colSpan={4}>Total de {nomeMes(mes)} · {vis.length} peça(s){refs ? ` · ${refs} refação(ões) sem valor extra` : ""}</td><td className="px-3 py-2.5 text-right tabular-nums">{moeda(total)}</td></tr></tfoot>}
             </table>
           </div>
-          <p className="text-sm text-gray-600">{t(REGRA_CANCELADA_CRIATIVO)} {REGRA_COMPLEXO_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
+          <p className="text-sm text-gray-600">{REGRA_CANCELADA_CRIATIVO} {REGRA_COMPLEXO_CRIATIVO} O item foi sugerido pelo serviço que o Marcelo escolheu; ajuste quando não corresponder.</p>
           <div className="flex flex-wrap gap-3 print:hidden">
             {!rel && vis.length > 0 && <Botao onClick={enviarMarisa} carregando={ocupado}>Enviar para a Marisa</Botao>}
             {rel?.status === "enviado" && !corrigir && <Botao variante="linha" onClick={() => setCorrigir(true)}>Corrigir e reenviar</Botao>}

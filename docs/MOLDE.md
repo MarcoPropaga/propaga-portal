@@ -9,6 +9,7 @@ O portal da B&M Log é o **molde oficial**. Cada cliente novo é uma cópia com 
 - **Isolamento:** um cliente nunca vê outro; cada criativo só vê o que é dele; profissional Propaga só entra nos clientes vinculados pelo admin; um atendimento por cliente.
 - **Serviços da Propaga e a tabela Jobs Propaga:** catálogo da agência, o mesmo para todos. O cliente vê a tabela inteira (inclusive o que não contratou) com o preço final dele.
 - **Avisos e rotina:** e-mails de aviso, resumo diário, verificação em duas etapas, estrutura de pastas no Drive (01 Briefing a 05 Arquivos abertos), relatórios e relatório mensal do criativo.
+- **Relatório do criativo por cliente (30/10/2026):** um relatório por criativo e mês (id `uid_AAAA-MM`), com as peças de todos os clientes vinculados e o cliente em cada linha; a Marisa paga uma vez. A tabela do criativo é a do catálogo-base, igual para todos. Peça de avaliação (teste de 48 h) entra pela tabela normal, marcada como "avaliação". Criativo sem vínculo registrado cai no cliente padrão.
 - **Regra de sigilo:** o que o criativo cobra da Propaga nunca aparece para o cliente nem para o atendimento.
 
 ## Configurável por cliente
@@ -55,5 +56,5 @@ Durante o período de teste ninguém de fora da Propaga entra no portal (decisã
 - Para criar um cliente novo: acrescentar em `src/content/clientes.ts`, criar `src/content/catalogos/<id>-v1.0.ts`, registrar em `catalogos/index.ts`, colocar o selo em `public/brand` e rodar `configurarProjeto` no Apps Script. Os testes `clientes.test.ts` e `tema.test.ts` conferem prefixo único, catálogo, selo e contraste AA.
 - **Cliente ativo:** quem é do cliente trabalha sempre no próprio. A equipe Propaga escolhe no menu ("Cliente em atendimento"): admin e Financeiro Propaga veem todos; atendimento, criativo e mídia social só os vinculados (tela Usuários). A marca e as cores acompanham o cliente escolhido. O acesso de verdade continua nas regras do banco e no servidor.
 - A migração de vínculos antigos põe os profissionais só na B&M Log; clientes novos são vinculados pelo admin.
-- **Pendência:** relatório e pagamento do criativo valem só para a B&M Log (um documento por criativo e mês, sem cliente no id). Fazer por cliente é etapa futura.
+- **Pendência:** relatório e pagamento do criativo valem só para a B&M Log (um documento por criativo e mês, sem cliente no id). Por cliente: feito em 30/10/2026.
 - **Pendência:** `configurarProjeto` precisa rodar uma vez no Apps Script para publicar os dois clientes e catálogos no banco; depois, vincular a equipe aos clientes de teste em Usuários e convidar usuários de teste (a trava `EMAILS_PERMITIDOS` continua valendo).

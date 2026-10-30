@@ -51,3 +51,19 @@ describe("cliente ativo", () => {
     expect(escolherCliente(["pet", "varejo"], null, "bmlog")).toBe("pet");
   });
 });
+
+import { clienteDaLinha, nomeClienteDaLinha, situacaoDaLinha, totaisPorCliente, type LinhaCriativo } from "@/lib/criativo";
+describe("relatório do criativo por cliente (textos e totais)", () => {
+  const l = (protocolo: string, situacao: "aprovada" | "cancelada", valor: number, clienteId?: string) =>
+    ({ chave: `${protocolo}:p`, protocolo, titulo: "", peca: "", servico: "", situacao, fechadaEm: "2026-10-01", refacoes: 0, item: "post", coluna: "nova", valor, ...(clienteId ? { clienteId } : {}) }) as LinhaCriativo;
+  it("relatório antigo sem clienteId acha o cliente pelo prefixo do protocolo", () => {
+    expect(clienteDaLinha(l("BML-2026-0001", "aprovada", 10))).toBe("bmlog");
+    expect(nomeClienteDaLinha(l("PET-2026-0001", "aprovada", 10))).toBe("Pet Teste");
+    expect(situacaoDaLinha(l("BML-2026-0001", "cancelada", 10))).toBe("Cancelada pela B&M Log");
+    expect(situacaoDaLinha(l("PET-2026-0001", "cancelada", 10, "pet"))).toBe("Cancelada pela Pet Teste");
+  });
+  it("totais por cliente somam o cobrado (cancelada = 50%)", () => {
+    expect(totaisPorCliente([l("BML-2026-0001", "aprovada", 10), l("PET-2026-0001", "cancelada", 10), l("BML-2026-0002", "aprovada", 5)]))
+      .toEqual([{ nome: "B&M Log", pecas: 2, total: 15 }, { nome: "Pet Teste", pecas: 1, total: 5 }]);
+  });
+});
