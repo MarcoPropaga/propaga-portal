@@ -158,13 +158,14 @@ export const CLIENTES: Record<string, Cliente> = {
     },
     prefixo: "DPT",
     catalogoVersao: "1.0",
-    unidades: ["[A CONFIRMAR] Unidade principal", "Todas as unidades"],
+    // Configuração de 31/10/2026, a partir do site da DalPet (unidades e públicos ainda sem validação da empresa).
+    unidades: ["Matriz · Itajaí/SC", "Fábrica · Três Barras/SC", "Todas as unidades"],
     publicos: [
-      { valor: "[A CONFIRMAR] Público principal", rotulo: "Principal · [A CONFIRMAR]" },
-      { valor: "[A CONFIRMAR] Público secundário", rotulo: "Secundário · [A CONFIRMAR]" },
+      { valor: "Tutores de cães e gatos", rotulo: "Principal · Tutores de cães e gatos" },
+      { valor: "Lojistas e revendedores", rotulo: "Secundário · Lojistas e revendedores" },
       { valor: "Ambos os públicos", rotulo: "Ambos os públicos" },
     ],
-    canaisVideo: ["[A CONFIRMAR] Destino do vídeo", "Redes sociais da DalPet (solicitação expressa)"],
+    canaisVideo: ["Redes sociais da DalPet"],
     canaisSociais: ["Instagram", "Facebook"], // configuração: confirmar com a DalPet
     audiosVideo: ["Sem áudio, com legendas", "Trilha licenciada", "Áudio fornecido pela DalPet", "Locução (cotada à parte)"],
     sobreposicoes: [["48", "52"], ["37", "39"]],
