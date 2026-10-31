@@ -16,6 +16,7 @@ const ITENS = [
   { href: "/nova-solicitacao/", rotulo: "Nova solicitação", papeis: VE_NOVA_SOLICITACAO as string[] },
   { href: "/solicitacoes/", rotulo: "Solicitações" },
   { href: "/aprovacoes/", rotulo: "Minhas tarefas", papeis: VE_TAREFAS as string[] },
+  { href: "/empresa/", rotulo: "Empresa", papeis: ["solicitante", "atendimento", "admin"], soTeste: true },
   { href: "/valores/", rotulo: "Jobs Propaga", papeis: VE_VALORES as string[] },
   { href: "/relatorios/", rotulo: "Relatórios", papeis: VE_RELATORIOS as string[] },
   { href: "/criativo/relatorio/", rotulo: "Meu relatório", papeis: ["criativo"] },
@@ -63,7 +64,7 @@ export function Casca({ titulo, children }: { titulo: string; children: ReactNod
           )}
         </div>
         <nav className="flex flex-wrap gap-1 md:grid">
-          {ITENS.filter((i) => !(i as { fora?: string[] }).fora?.includes(s.papel ?? "") && (!i.papeis || (s.papel && i.papeis.includes(s.papel)))).map((i) => {
+          {ITENS.filter((i) => !(i as { fora?: string[] }).fora?.includes(s.papel ?? "") && (!(i as { soTeste?: boolean }).soTeste || !!ativo.cliente.avaliacao) && (!i.papeis || (s.papel && i.papeis.includes(s.papel)))).map((i) => {
             const atual = caminho === i.href || (i.href === "/solicitacoes/" && caminho.startsWith("/solicitacoes/"));
             return <a key={i.href} href={i.href} aria-current={atual ? "page" : undefined}
               className={`flex items-center gap-2 rounded px-3 py-2.5 font-medium ${atual ? "bg-marca-500 text-on-marca" : "hover:bg-white/10"}`}>{i.rotulo}

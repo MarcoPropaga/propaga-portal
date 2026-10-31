@@ -19,6 +19,8 @@ import { FormPublicar } from "@/components/publicar";
 import { FormAcao } from "@/components/formAcao";
 import { useTxt } from "@/components/tema";
 import { useClienteAtivo } from "@/components/cliente-ativo";
+import { useTravaDownload } from "@/components/avaliacao";
+import { MSG_TRAVA } from "@/lib/avaliacao";
 
 interface Evento { id: string; em: unknown; nome: string; rotulo: string; nota?: string; chave?: boolean; acao?: string }
 interface Valores { itens: { unitario: number | null; subtotal: number | null; orcado: boolean }[]; total: number; pendencias: number }
@@ -31,6 +33,7 @@ const ms = (v: unknown) => (v && typeof v === "object" && "toMillis" in v ? (v a
 function Conteudo() {
   const t = useTxt();
   const s = useSessao();
+  const trava = useTravaDownload();
   const protocolo = useSearchParams().get("p") ?? "";
   const { clienteId } = useClienteAtivo();
   const [pedido, setPedido] = useState<PedidoDoc | null | undefined>(undefined);
@@ -200,7 +203,9 @@ function Conteudo() {
             </Painel>
             <Painel titulo="Arquivos no Drive">
               {pedido.drive.propaga && s.papel !== "solicitante" && s.papel !== "financeiro_cliente" && <p className="text-sm">Drive da Propaga (equipe): <a href={pedido.drive.propaga} target="_blank" rel="noopener noreferrer" className="break-all underline">{pedido.drive.propaga}<span className="sr-only"> (abre em nova aba)</span></a></p>}
-              <a href={pedido.drive.link} target="_blank" rel="noopener noreferrer" className="break-all text-sm underline">{pedido.drive.link}<span className="sr-only"> (abre em nova aba)</span></a>
+              {trava && pedido.avaliacao
+                ? <p className="text-sm">{MSG_TRAVA[trava]} {trava === "cadastro" && <a href="/empresa/" className="font-semibold underline">Abrir o cadastro</a>}</p>
+                : <a href={pedido.drive.link} target="_blank" rel="noopener noreferrer" className="break-all text-sm underline">{pedido.drive.link}<span className="sr-only"> (abre em nova aba)</span></a>}
               <p className="text-sm">{pedido.drive.verificado ? <span className="text-[#1E7047]">Acesso conferido pela Propaga.</span> : <span className="text-gray-600">Acesso ainda não conferido pela Propaga.</span>}</p>
             </Painel>
           </div>

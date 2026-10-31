@@ -16,6 +16,7 @@ import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
 import { executarPublicacao } from "./publicacao";
 import { executarAvaliacao } from "./avaliacao";
+import { executarCadastro } from "./cadastro";
 import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo, tabelaCriativoFila } from "./criativo";
 import { arquivarRodada } from "./arquivo";
 import { Firestore, type Doc } from "./firestore";
@@ -272,6 +273,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       return arquivarRodada(p, fs, { uid, ...u }, dados);
     case "avaliacao":
       return executarAvaliacao(p, fs, { uid, ...u }, dados);
+    case "cadastro":
+      return executarCadastro(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "enviar":
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "acao":

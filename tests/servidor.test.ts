@@ -1,3 +1,4 @@
+import { CAMPOS_CADASTRO } from "@/content/cadastro";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { paraValor, deValor } from "../apps-script/src/firestore";
 import { configurarProjeto, convidar as convidarBase, definirVinculos, processarFila } from "../apps-script/src/servidor";
@@ -1415,5 +1416,46 @@ describe("Iniciar teste da DalPet: checklist, entrega do acesso e decisão (fila
 
   it("cliente sem teste (B&M Log) recusa as ações", () => {
     expect(fila(adm, { clienteId: "bmlog", acao: "estado" }).mensagem).toMatch(/não está em teste/);
+  });
+});
+
+describe("Cadastro da empresa do prospect (fila 'cadastro')", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, neide: string, deb: string;
+  let seq = 0;
+  const fila = (uid: string, dados: { clienteId: string; valores: unknown }) => {
+    const id = `c${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo: "cadastro", uid, clienteId: dados.clienteId, status: "pendente", criadoEm: id, dados: { valores: dados.valores } }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const convite = (dados: Record<string, unknown>) => convidarBase(f.p, dados, { uid: adm, nome: "Marco" });
+  beforeEach(() => {
+    f = fake();
+    adm = convite({ nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }).uid;
+    neide = convite({ nome: "Neide Dalçoquio", email: "propagacliente2@gmail.com", papel: "solicitante", clienteId: "dalpet", adiar: true }).uid;
+    deb = convite({ nome: "Débora", email: "d@x.com", papel: "solicitante", clienteId: "bmlog" }).uid;
+  });
+
+  it("salva por campo, mescla com o que já existe e conta os preenchidos; campo vazio apaga", () => {
+    const r1 = fila(neide, { clienteId: "dalpet", valores: { razao: "DalPet Ltda", cnpj: "" } });
+    expect(r1.status).toBe("ok");
+    expect(r1.resultado).toMatchObject({ preenchidos: 1, total: 42, completo: false });
+    fila(neide, { clienteId: "dalpet", valores: { cnpj: "00.000.000/0001-00" } });
+    expect(f.doc("clientes/dalpet/cadastro/dados").valores).toEqual({ razao: "DalPet Ltda", cnpj: "00.000.000/0001-00" });
+    fila(neide, { clienteId: "dalpet", valores: { razao: "" } });
+    expect(Object.keys(f.doc("clientes/dalpet/cadastro/dados").valores)).toEqual(["cnpj"]);
+  });
+
+  it("completo quando os 42 campos têm resposta", () => {
+    const todos = Object.fromEntries(CAMPOS_CADASTRO.map((c) => [c.id, "não se aplica"]));
+    expect(fila(neide, { clienteId: "dalpet", valores: todos }).resultado).toMatchObject({ preenchidos: 42, completo: true });
+  });
+
+  it("recusa campo desconhecido, texto longo, outro cliente e cliente sem teste", () => {
+    expect(fila(neide, { clienteId: "dalpet", valores: { inventado: "x" } }).mensagem).toMatch(/Campo desconhecido/);
+    expect(fila(neide, { clienteId: "dalpet", valores: { razao: "x".repeat(801) } }).mensagem).toMatch(/no máximo 800/);
+    expect(fila(deb, { clienteId: "dalpet", valores: { razao: "x" } }).mensagem).toMatch(/Cliente inválido/);
+    expect(fila(deb, { clienteId: "bmlog", valores: { razao: "x" } }).mensagem).toMatch(/clientes em teste/);
   });
 });

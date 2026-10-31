@@ -64,3 +64,17 @@ export const ITENS_PRONTO = [
 ] as const;
 export type ItemProntoId = (typeof ITENS_PRONTO)[number]["id"];
 export interface ItemPronto { id: ItemProntoId; rotulo: string; auto: boolean; ajuda: string; ok: boolean }
+
+/* Trava do Baixar (etapa 3b): o prospect só abre os arquivos do teste com o cadastro da empresa completo,
+   e só até `diasDownload` dias depois do fim previsto (sem aceite). Quem virou cliente não tem trava. */
+export type MotivoTrava = "cadastro" | "prazo";
+export function travaDownload(cfg: AvaliacaoConfig | undefined, estado: EstadoAvaliacao | null | undefined, cadastroOk: boolean, agora: Date): MotivoTrava | null {
+  const fase = faseAvaliacao(cfg, estado);
+  if (fase === "contratado" || !cfg) return null;
+  if (estado && agora.getTime() > downloadAte(estado.expiraEm, cfg.diasDownload).getTime()) return "prazo";
+  return cadastroOk ? null : "cadastro";
+}
+export const MSG_TRAVA: Record<MotivoTrava, string> = {
+  cadastro: "Para baixar os posts, complete o cadastro da empresa.",
+  prazo: "O prazo para baixar os posts do teste terminou. Fale com a Propaga.",
+};
