@@ -73,3 +73,8 @@ Durante o período de teste ninguém de fora da Propaga entra no portal (decisã
 - Trava (`travaDownload`): o prospect só vê o link do Drive dos posts do teste com os 42 campos preenchidos, e até 7 dias após o fim previsto (`diasDownload`, contado de `expiraEm`). Quem aceitou a proposta e a equipe Propaga não têm trava.
 - Limite: a trava é de tela. O link do Drive continua existindo no pedido; a permissão do Drive é da Propaga.
 - O item "Empresa" do checklist de Iniciar teste segue manual (pré-cadastro conferido pelo admin); o cadastro de 42 campos é preenchido pela DalPet durante o teste.
+
+## Bônus e contrato por cliente (passo 5, 31/10/2026)
+- `Cliente.bonus {nome, percentual, motivo, ate}`: registro do contrato, mostrado em Contrato. Não altera preços. DalPet: Bônus 15% por cliente de longa data, toda a vigência (`ate: null`). Separado dos honorários e do desconto de 15% do catálogo da B&M Log.
+- Contrato da Mariane: só a observação "bônus para novo cliente"; cláusula a definir, item 1.1 intacto.
+- Contrato da DalPet segue sem minuta (`minuta: null`): o novo contrato é redigido após o pacote escolhido.
