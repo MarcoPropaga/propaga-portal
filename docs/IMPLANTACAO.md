@@ -32,3 +32,6 @@ Hosting → Adicionar domínio personalizado `portal.propaga.com` → criar na H
 - Marco recebe o convite, cria a senha, ativa o autenticador e entra.
 - Em /admin/usuarios, convidar os demais (Débora, Mariana, Marcelo, Marisa).
 - Cada um entra com senha + código; Débora não vê Relatórios nem valores por pedido.
+
+## 5. Publicação automática (31/10/2026)
+`.github/workflows/publicar.yml` publica hosting e regras a cada merge no main (ou à mão em Actions > Publicar portal). Precisa do segredo `FIREBASE_SERVICE_ACCOUNT` (JSON da conta de serviço do Firebase) em GitHub > Settings > Secrets > Actions. A configuração web do Firebase e a URL do servidor ficam no próprio arquivo (são públicas). O servidor Apps Script continua sendo atualizado à mão (colar Codigo.gs e criar Nova versão).
