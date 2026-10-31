@@ -24,6 +24,12 @@ describe("cadastro de clientes", () => {
     expect(CLIENTES.dalpet.contrato).toMatchObject({ assinadoEm: null, pdfUrl: null, minuta: null });
     expect(JSON.stringify(CLIENTES.dalpet)).not.toMatch(/B&M|BML/);
   });
+  it("bônus é registro do contrato: DalPet 15% por toda a vigência; B&M Log não tem", () => {
+    expect(CLIENTES.dalpet.bonus).toEqual({ nome: "Bônus 15%", percentual: 15, motivo: "cliente de longa data", ate: null });
+    expect(CLIENTES.dalpet.bonus!.percentual).toBeGreaterThan(0);
+    expect(CLIENTES.bmlog.bonus).toBeUndefined();
+  });
+
   it("o desconto é do contrato de cada cliente (B&M Log 15%; testes 10% e 5%)", () => {
     expect(catalogoVigente("bmlog").desconto).toBe(0.15);
     expect(catalogoVigente("pet").desconto).toBe(0.1);

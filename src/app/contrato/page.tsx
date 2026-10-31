@@ -18,6 +18,7 @@ function ContratoCriativo() {
     ["Valores", "Os da sua tabela de valores (Minha tabela), por peça/serviço. Projetos complexos são avaliados individualmente e o valor é informado por você no relatório."],
     ["O que entra no mês", "Cada peça entra no relatório do mês em que foi concluída (arquivo final em 04 Aprovados). Refações são registradas como observação, sem valor extra."],
     ["Relatório e pagamento", "No fim do mês você confere o relatório e envia à Marisa (Financeiro Propaga), que confere e registra o pagamento. Você é avisada por e-mail."],
+    ["Observação", "Bônus para novo cliente: registrado como observação; a cláusula ainda não está definida e o item 1.1 do contrato não muda."],
     ["Sigilo", "Sua tabela e este contrato são vistos só por você e pela administração da Propaga. O marketing e o financeiro da {cliente} e o Atendimento não têm acesso."],
   ];
   return (
@@ -55,6 +56,7 @@ function Conteudo() {
   const testes = !assinado && !!c.contrato.consideradoAssinadoParaTestes;
   const pontos: [string, string][] = [
     ["Valores", "Preço de referência aprovado com o desconto do contrato, arredondado por unidade. O portal mostra só o preço final, subtotais e total."],
+    ...(c.bonus ? [["Bônus", `${c.bonus.nome}: ${c.bonus.percentual}% por ${c.bonus.motivo}, ${c.bonus.ate ? `até ${brData(c.bonus.ate)}` : "por toda a vigência do contrato"}. É condição do contrato, separada dos honorários; não aparece nos preços do catálogo.`] as [string, string]] : []),
     ["Autorização", "Com o contrato assinado, os valores do catálogo já estão aprovados. A produção começa quando a Propaga aceita o pedido e confirma o cronograma. Itens “a cotar” recebem o valor da Propaga, conforme o contrato, nesse momento."],
     ["Inclusões", "Imagens e vídeos gerados pela Propaga estão incluídos. Filmagem, fotografia presencial, impressão, fabricação, montagem, mídia, locução, tradução e licenças específicas são orçadas à parte."],
     ["Prazo", `${PRAZO_PADRAO_DIAS_UTEIS} dias úteis para a 1ª apresentação em serviços simples, contados do aceite do pedido com briefing completo e materiais acessíveis. Pedidos complexos ou urgentes recebem cronograma individual.`],
