@@ -15,6 +15,7 @@ import { emailAtualizacao, emailAviso, emailConvite, emailNovaSolicitacao, MARCA
 import { avisarPessoas, executarAcao } from "./acoes";
 import { executarPeca, resumoDiario } from "./pecas";
 import { executarPublicacao } from "./publicacao";
+import { executarAvaliacao } from "./avaliacao";
 import { enviarRelatorioCriativo, pagarRelatorioCriativo, publicarTabelaCriativo, tabelaCriativoFila } from "./criativo";
 import { arquivarRodada } from "./arquivo";
 import { Firestore, type Doc } from "./firestore";
@@ -108,11 +109,17 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
   const uid = existente ? existente.localId : id.criar(d.email, d.nome);
   id.definirClaims(uid, propaga ? { papel: d.papel, propaga: true } : { papel: d.papel, clienteId });
 
-  const oob = id.codigoDefinirSenha(d.email);
-  const link = `${cfg.portalUrl}/primeiro-acesso/?oobCode=${encodeURIComponent(oob)}`;
-  const nomePortal = clienteId ? CLIENTES[clienteId].nomePortal : "Portal Propaga";
-  const msg = emailConvite({ nome: d.nome.split(" ")[0], link, cliente: nomePortal, convidadoPor: convidadoPor.nome, marca: clienteId ? CLIENTES[clienteId].marca : MARCA_PROPAGA });
-  p.enviarEmail({ para: d.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente });
+  // Prospect em preparação: cadastro sem e-mail; o convite sai no "Iniciar teste" (decisão de 29/10/2026).
+  const adiar = d.adiar === true;
+  if (adiar && !(clienteId && CLIENTES[clienteId].avaliacao && faseDoCliente(new Firestore(p, cfg.projeto), clienteId) === "nao_iniciada"))
+    throw new ErroUsuario("Só dá para adiar o convite de um prospect antes de iniciar o teste.");
+  if (!adiar) {
+    const oob = id.codigoDefinirSenha(d.email);
+    const link = `${cfg.portalUrl}/primeiro-acesso/?oobCode=${encodeURIComponent(oob)}`;
+    const nomePortal = clienteId ? CLIENTES[clienteId].nomePortal : "Portal Propaga";
+    const msg = emailConvite({ nome: d.nome.split(" ")[0], link, cliente: nomePortal, convidadoPor: convidadoPor.nome, marca: clienteId ? CLIENTES[clienteId].marca : MARCA_PROPAGA });
+    p.enviarEmail({ para: d.email, assunto: msg.assunto, html: msg.html, texto: msg.texto, nomeRemetente: cfg.remetente });
+  }
 
   const fsU = new Firestore(p, cfg.projeto);
   const atual = fsU.ler(`usuarios/${uid}`)?.dados as { clientes?: string[] } | undefined;
@@ -120,7 +127,7 @@ export function convidar(p: Plataforma, dadosBrutos: unknown, convidadoPor: { ui
     caminho: `usuarios/${uid}`, mesclar: true,
     dados: {
       nome: d.nome, email: d.email, papel: d.papel, perfil: aplicarMarca(NOMES_PAPEIS[d.papel], clienteAtivo(clienteId).marca), clienteId, propaga,
-      status: "convidado", convidadoEm: p.agora(), convidadoPor: convidadoPor.uid,
+      status: adiar ? "preparado" : "convidado", ...(adiar ? {} : { convidadoEm: p.agora(), convidadoPor: convidadoPor.uid }),
       // Profissional novo começa sem clientes; o admin vincula depois. Reenvio de convite não apaga vínculos.
       ...(ehVinculado(d.papel) && !atual?.clientes ? { clientes: [] } : {}),
     },
@@ -263,6 +270,8 @@ function executar(p: Plataforma, fs: Firestore, item: Doc): Record<string, unkno
       return tabelaCriativoFila(p, fs, { uid, ...u }, dados);
     case "arquivarRodada":
       return arquivarRodada(p, fs, { uid, ...u }, dados);
+    case "avaliacao":
+      return executarAvaliacao(p, fs, { uid, ...u }, dados);
     case "enviar":
       return enviarSolicitacao(p, fs, { uid, ...u }, String(item.dados.clienteId ?? ""), dados);
     case "acao":
