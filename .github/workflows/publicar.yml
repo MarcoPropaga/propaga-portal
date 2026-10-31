@@ -1,0 +1,43 @@
+# Publica o portal (hosting + regras do Firestore) no Firebase.
+# Dispara a cada merge no main e também à mão (Actions > Publicar portal > Run workflow).
+# Segredo necessário no GitHub: FIREBASE_SERVICE_ACCOUNT (conteúdo do JSON da conta de serviço). Nunca colocar a chave no código.
+name: Publicar portal
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: publicar
+  cancel-in-progress: false
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Configuração web do Firebase: pública por natureza (a proteção está nas regras do Firestore e no 2FA).
+      NEXT_PUBLIC_FIREBASE_API_KEY: AIzaSyDheYN9jmeHy5TEuYR4FsQGojQZak_JtMs
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: propaga-portal.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: propaga-portal
+      NEXT_PUBLIC_FIREBASE_APP_ID: 1:1082816228136:web:f128523a9fe6674115be1d
+      NEXT_PUBLIC_SERVIDOR_URL: https://script.google.com/macros/s/AKfycbwN0FMcR5xF5WnmtUudV9AFtK6cedlGNnZWjxZRlQ1dmDIn1ebgOGBimkGa23ytm488/exec
+      NEXT_PUBLIC_USAR_EMULADOR: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Credencial do Firebase
+        env:
+          CHAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          test -n "$CHAVE" || { echo "Falta o segredo FIREBASE_SERVICE_ACCOUNT no GitHub."; exit 1; }
+          printf '%s' "$CHAVE" > "$RUNNER_TEMP/firebase-chave.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-chave.json" >> "$GITHUB_ENV"
+      - run: npx firebase-tools deploy --only hosting,firestore:rules,firestore:indexes --project propaga-portal --non-interactive
+      - if: always()
+        run: rm -f "$RUNNER_TEMP/firebase-chave.json"
