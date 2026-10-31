@@ -20,7 +20,7 @@ import { useClienteAtivo } from "@/components/cliente-ativo";
 
 /* ---------- tipos ---------- */
 interface ServicoPublico extends ServicoBase { descricao: string; escopo: string; nota?: string; variantes: { rotulo: string; modalidade: string; preco: number | null }[] }
-interface CatalogoPublico { versao: string; status: string; categorias: { id: string; nome: string }[]; servicos: ServicoPublico[] }
+interface CatalogoPublico { versao: string; status: string; /** Teste de 48 h: sem preços. */ semValores?: boolean; categorias: { id: string; nome: string }[]; servicos: ServicoPublico[] }
 interface ItemForm { cod: string; variante: number; qtd: number; opcao: string; canal: string; audio: string; obs: string }
 interface Rascunho {
   titulo: string; unidade: string; email: string; objetivo: string; publico: string; itens: ItemForm[];
@@ -103,7 +103,7 @@ function ItemServico({ i, it, cat, cliente, erros, onChange, onRemover }: {
 }) {
   const s = cat.servicos.find((x) => x.cod === it.cod) ?? cat.servicos[0];
   const v = s.variantes[it.variante];
-  const sobOrcamento = v?.preco == null;
+  const sobOrcamento = v?.preco == null && !cat.semValores;
   const id = (k: string) => `it${i}-${k}`;
   const trocarServico = (cod: string) => {
     const novo = cat.servicos.find((x) => x.cod === cod)!;
@@ -255,7 +255,7 @@ function Conteudo() {
   const primeira = somarDiasUteis(hoje, PRAZO_PADRAO_DIAS_UTEIS);
   const servico = (cod: string) => cat.servicos.find((x) => x.cod === cod)!;
   const pares = sobreposicoes(cliente, r.itens);
-  const pendentes = r.itens.filter((it) => servico(it.cod)?.variantes[it.variante]?.preco == null).length;
+  const pendentes = cat.semValores ? 0 : r.itens.filter((it) => servico(it.cod)?.variantes[it.variante]?.preco == null).length;
 
   const montar = () => limpo({
     titulo: r.titulo, unidade: r.unidade, email: r.email.trim(), objetivo: r.objetivo, publico: r.publico,
@@ -454,7 +454,7 @@ function Conteudo() {
                       <tr key={i} className="border-t border-gray-200">
                         <td className="px-3 py-2.5 tabular-nums">{it.qtd}×</td>
                         <td className="px-3 py-2.5"><b>{sv.nome}</b><div className="text-gray-600">{sv.cod} · {det}</div></td>
-                        <td className="px-3 py-2.5">{v?.preco == null ? <span className="rounded-full bg-aviso-100 px-2.5 py-0.5 text-xs font-semibold text-aviso-700">A cotar</span> : <span className="text-gray-600">Catálogo</span>}</td>
+                        <td className="px-3 py-2.5">{v?.preco == null && !cat.semValores ? <span className="rounded-full bg-aviso-100 px-2.5 py-0.5 text-xs font-semibold text-aviso-700">A cotar</span> : <span className="text-gray-600">{cat.semValores ? "Teste" : "Catálogo"}</span>}</td>
                       </tr>
                     );
                   })}
@@ -463,7 +463,7 @@ function Conteudo() {
             </div>
           ) : <p className="rounded border border-dashed border-[#C9D7DC] px-4 py-6 text-center text-sm text-gray-600">Adicione ao menos um serviço na seção 02.</p>}
           <Nota><b>Prazo:</b> {PRAZO_PADRAO_DIAS_UTEIS} dias úteis após o aceite do pedido pela Propaga (1ª apresentação prevista para {brData(primeira)}, se aceito hoje).</Nota>
-          <Nota>Os preços ficam no menu Jobs Propaga e nos Relatórios.{pendentes ? ` ${pendentes > 1 ? "Os itens a cotar recebem" : "O item a cotar recebe"} valor da Propaga conforme o contrato.` : ""}</Nota>
+          <Nota>{cat.semValores ? "No teste não há valores: a Propaga apresenta a proposta depois das 48 horas." : "Os preços ficam no menu Jobs Propaga e nos Relatórios."}{pendentes ? ` ${pendentes > 1 ? "Os itens a cotar recebem" : "O item a cotar recebe"} valor da Propaga conforme o contrato.` : ""}</Nota>
 
           {listaErros.length > 0 && (
             <div ref={caixaErros} role="alert" className="rounded bg-alerta-100 px-4 py-3 text-sm text-alerta-700">

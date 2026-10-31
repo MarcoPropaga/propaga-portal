@@ -13,7 +13,7 @@ import { useTxt } from "@/components/tema";
 import { useClienteAtivo } from "@/components/cliente-ativo";
 
 interface Cat {
-  versao: string; data: string; status: string; desconto?: number; categorias: { id: string; nome: string }[];
+  versao: string; data: string; status: string; desconto?: number; semValores?: boolean; categorias: { id: string; nome: string }[];
   servicos: { cod: string; categoria: string; nome: string; descricao: string; escopo: string; nota?: string; variantes: { rotulo: string; modalidade: string; preco: number | null }[] }[];
 }
 
@@ -47,7 +47,7 @@ function Conteudo() {
   return (
     <Casca titulo="Jobs Propaga">
       <div className="grid max-w-5xl gap-5">
-        <p className="max-w-[75ch] text-gray-600">Preços finais por unidade, com o desconto do seu contrato{cat?.desconto != null ? ` (${Math.round(cat.desconto * 100)}%)` : ""} já aplicado. “A cotar” significa que a Propaga define o valor conforme o contrato ao aceitar o pedido.</p>
+        {cat?.semValores ? <p className="max-w-[75ch] text-gray-600">Estes são os Jobs Propaga liberados no teste de 48 horas. Os valores não aparecem no teste: a Propaga apresenta a proposta com os preços depois das 48 horas.</p> : <p className="max-w-[75ch] text-gray-600">Preços finais por unidade, com o desconto do seu contrato{cat?.desconto != null ? ` (${Math.round(cat.desconto * 100)}%)` : ""} já aplicado. “A cotar” significa que a Propaga define o valor conforme o contrato ao aceitar o pedido.</p>}
         {erro && <Aviso tipo="erro">{erro}</Aviso>}
         {!cat && !erro && <p className="text-gray-600" aria-busy="true">Carregando…</p>}
         {cat && <>
@@ -76,7 +76,7 @@ function Conteudo() {
                     <dl className="grid gap-1 text-sm">
                       {x.variantes.map((v, i) => (
                         <div key={i} className="flex justify-between gap-3 border-b border-dashed border-gray-200 pb-1 last:border-0">
-                          <dt className="text-gray-600">{v.rotulo}</dt><dd className={`whitespace-nowrap tabular-nums ${v.preco == null ? "text-gray-600" : "font-semibold"}`}>{moeda(v.preco)}</dd>
+                          <dt className="text-gray-600">{v.rotulo}</dt><dd className={`whitespace-nowrap tabular-nums ${v.preco == null ? "text-gray-600" : "font-semibold"}`}>{cat.semValores ? "Após as 48 horas" : moeda(v.preco)}</dd>
                         </div>
                       ))}
                     </dl>

@@ -1261,3 +1261,86 @@ describe("dois clientes: protocolo, desconto e isolamento (Pet Teste × Varejo T
     expect(f.doc("interno/catalogos/versoes/pet-1.0").servicos[0].variantes[0].referencia).toBe(200);
   });
 });
+
+describe("avaliação de 48 h da DalPet (prospect): relógio, 3 pedidos de 1 post, sem valores", () => {
+  let f: ReturnType<typeof fake>;
+  let nei: string;
+  let seq = 0;
+  const pedido = (extra: Record<string, unknown> = {}) => ({
+    titulo: "Teste", unidade: "Todas as unidades", email: "propagacliente2@gmail.com", objetivo: "Testar", publico: "Ambos os públicos",
+    itens: [{ cod: "01", variante: 0, qtd: 1, opcao: "4:5" }],
+    drive: { link: "https://drive.google.com/drive/folders/abc123", conferido: true },
+    obs: "", prazo: { desejada: "2026-10-20", urgente: false }, conferido: true, ...extra,
+  });
+  const enviar = (dados: unknown) => {
+    const id = `v${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo: "enviar", uid: nei, clienteId: "dalpet", status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const estado = (e: Record<string, unknown> | null) => { if (e) f.docs.set("clientes/dalpet/avaliacao/estado", { updateTime: "t0", fields: (paraValor(e) as any).mapValue.fields }); };
+  beforeEach(() => {
+    f = fake();
+    const adm = convidar(f.p, { nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }, { uid: "sistema", nome: "Portal" }).uid;
+    nei = convidar(f.p, { nome: "Neide", email: "propagacliente2@gmail.com", papel: "solicitante", clienteId: "dalpet" }, { uid: adm, nome: "Marco" }).uid;
+    f.emails.length = 0;
+  });
+
+  it("antes de 'Iniciar teste' não aceita pedido; depois do fim previsto segue aceitando e avisa só o admin, uma vez", () => {
+    expect(enviar(pedido()).mensagem).toMatch(/ainda não começou/);
+    estado({ iniciadoEm: "2026-09-30T12:00:00Z", expiraEm: "2026-10-02T11:59:00Z" }); // fim previsto já passou
+    expect(enviar(pedido()).status).toBe("ok");
+    const avisos = () => f.emails.filter((e) => e.assunto.startsWith("Fim do teste de 48 horas"));
+    expect(avisos().map((e) => e.para)).toEqual(["marco@propaga.com"]);
+    expect(f.doc("clientes/dalpet/avaliacao/estado").avisadoEm).toBeTruthy();
+    processarFila(f.p);
+    expect(avisos()).toHaveLength(1); // não repete
+  });
+
+  it("teste encerrado pelo admin (decisão recusada) não aceita pedido", () => {
+    estado({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z", decisao: "recusada" });
+    expect(enviar(pedido()).mensagem).toMatch(/encerrado/);
+    expect(f.emails.filter((e) => e.assunto.startsWith("Fim do teste"))).toHaveLength(0); // decidido: sem aviso
+  });
+
+  it("durante o teste: pedido marcado como avaliação, sem documento de valores", () => {
+    estado({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z" });
+    const r = enviar(pedido());
+    expect(r.status).toBe("ok");
+    expect(f.doc("clientes/dalpet/solicitacoes/DPT-2026-0001").avaliacao).toBe(true);
+    expect(f.docs.has("clientes/dalpet/valores/DPT-2026-0001")).toBe(false);
+  });
+
+  it("até 3 pedidos, 1 post cada, só post estático e carrossel; o 4º é recusado", () => {
+    estado({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z" });
+    expect(enviar(pedido({ itens: [{ cod: "01", variante: 0, qtd: 2, opcao: "4:5" }] })).mensagem).toMatch(/um post/);
+    expect(enviar(pedido({ itens: [{ cod: "03", variante: 0, qtd: 1, opcao: "4:5" }] })).mensagem).toMatch(/não está disponível no teste/);
+    expect(enviar(pedido({ itens: [{ cod: "01", variante: 0, qtd: 1, opcao: "4:5" }, { cod: "02", variante: 0, qtd: 1, opcao: "1:1" }] })).mensagem).toMatch(/um post/);
+    for (let i = 0; i < 3; i++) expect(enviar(pedido()).status).toBe("ok");
+    expect(enviar(pedido()).mensagem).toMatch(/já usou os 3 pedidos/);
+  });
+
+  it("depois do aceite vira cliente normal: sem limite e com valores", () => {
+    estado({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z", decisao: "aceita" });
+    expect(enviar(pedido({ itens: [{ cod: "01", variante: 0, qtd: 5, opcao: "4:5" }] })).status).toBe("ok");
+    const p = f.doc("clientes/dalpet/solicitacoes/DPT-2026-0001");
+    expect(p.avaliacao).toBeUndefined();
+    expect(f.docs.has("clientes/dalpet/valores/DPT-2026-0001")).toBe(true);
+  });
+
+  it("clientes sem teste (B&M Log) não são afetados", () => {
+    expect(CLIENTES.bmlog.avaliacao).toBeUndefined();
+  });
+
+  it("catálogo do teste: só os Jobs liberados e nenhum preço; depois do aceite, completo", () => {
+    configurarProjeto(f.p);
+    const cat = f.doc("clientes/dalpet/catalogo/1.0");
+    expect(cat.semValores).toBe(true);
+    expect(cat.servicos.map((s: any) => s.cod)).toEqual(["01", "02"]);
+    expect(JSON.stringify(cat)).not.toMatch(/"preco":\d|referencia/);
+    estado({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z", decisao: "aceita" });
+    configurarProjeto(f.p);
+    expect(f.doc("clientes/dalpet/catalogo/1.0").servicos.length).toBeGreaterThan(2);
+    expect(f.doc("clientes/bmlog/catalogo/1.0").semValores).toBeUndefined();
+  });
+});
