@@ -48,6 +48,8 @@ export const conviteSchema = z
     email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
     papel: z.enum([...PAPEIS_CLIENTE, ...PAPEIS_PROPAGA], { message: "Escolha o perfil." }),
     clienteId: z.string().trim().nullish(),
+    /** Prospect em preparação: cadastra sem enviar o e-mail; o convite sai no "Iniciar teste". */
+    adiar: z.boolean().optional(),
   })
   .refine((d) => !(PAPEIS_CLIENTE as readonly string[]).includes(d.papel) || !!d.clienteId, {
     message: "Perfis de cliente precisam de um cliente vinculado.",

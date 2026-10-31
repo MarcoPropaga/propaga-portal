@@ -85,7 +85,7 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos']
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos', 'avaliacao']
           : papel() == 'midia_social' ? ['publicacao']
           : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo', 'arquivarRodada']
           : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']

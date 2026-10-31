@@ -50,3 +50,17 @@ export function validarPedidoAvaliacao(cfg: AvaliacaoConfig, itens: { cod: strin
   if (!cfg.servicos.includes(itens[0].cod)) return "Este serviço não está disponível no teste. Escolha post estático ou carrossel.";
   return null;
 }
+
+/* Checklist de 7 itens que libera o botão "Iniciar teste" (decisão de 29/10/2026).
+   `auto`: o servidor confere sozinho; os demais o admin confirma à mão. */
+export const ITENS_PRONTO = [
+  { id: "empresa", rotulo: "Empresa", auto: false, ajuda: "Dados da empresa conferidos na ficha do prospect." },
+  { id: "marca", rotulo: "Marca", auto: true, ajuda: "Logo e cores no portal, com contraste AA." },
+  { id: "configuracao", rotulo: "Configuração", auto: true, ajuda: "Unidades, públicos e destinos de vídeo confirmados (sem [A CONFIRMAR])." },
+  { id: "equipe", rotulo: "Equipe vinculada", auto: true, ajuda: "Atendimento e criativo vinculados ao cliente." },
+  { id: "fornecedores", rotulo: "Fornecedores", auto: false, ajuda: "Parceiros de produção confirmados para o teste." },
+  { id: "termo", rotulo: "Termo de uso", auto: false, ajuda: "Termo da avaliação definido e aceito pelo cliente." },
+  { id: "contato", rotulo: "Contato do acesso", auto: true, ajuda: "Ao menos um usuário do cliente cadastrado, com e-mail." },
+] as const;
+export type ItemProntoId = (typeof ITENS_PRONTO)[number]["id"];
+export interface ItemPronto { id: ItemProntoId; rotulo: string; auto: boolean; ajuda: string; ok: boolean }

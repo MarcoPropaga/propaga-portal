@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { paraValor, deValor } from "../apps-script/src/firestore";
 import { configurarProjeto, convidar as convidarBase, definirVinculos, processarFila } from "../apps-script/src/servidor";
 import { resumoDiario } from "../apps-script/src/pecas";
@@ -1342,5 +1342,78 @@ describe("avaliação de 48 h da DalPet (prospect): relógio, 3 pedidos de 1 pos
     configurarProjeto(f.p);
     expect(f.doc("clientes/dalpet/catalogo/1.0").servicos.length).toBeGreaterThan(2);
     expect(f.doc("clientes/bmlog/catalogo/1.0").semValores).toBeUndefined();
+  });
+});
+
+describe("Iniciar teste da DalPet: checklist, entrega do acesso e decisão (fila 'avaliacao')", () => {
+  let f: ReturnType<typeof fake>;
+  let adm: string, mcl: string, mri: string;
+  let seq = 0;
+  const guardado = { unidades: CLIENTES.dalpet.unidades, publicos: CLIENTES.dalpet.publicos, canaisVideo: CLIENTES.dalpet.canaisVideo };
+  const fila = (uid: string, dados: unknown) => {
+    const id = `t${++seq}`;
+    f.docs.set(`fila/${id}`, { updateTime: "t0", fields: (paraValor({ tipo: "avaliacao", uid, clienteId: null, status: "pendente", criadoEm: id, dados }) as any).mapValue.fields });
+    processarFila(f.p);
+    return f.doc(`fila/${id}`);
+  };
+  const a = (dados: Record<string, unknown>, uid = adm) => fila(uid, { clienteId: "dalpet", ...dados });
+  const convite = (dados: Record<string, unknown>) => convidarBase(f.p, dados, { uid: adm, nome: "Marco" });
+  beforeEach(() => {
+    f = fake();
+    Object.assign(CLIENTES.dalpet, { unidades: ["Matriz · Itajaí/SC", "Todas as unidades"], publicos: [{ valor: "Clientes finais", rotulo: "Principal · Clientes finais" }], canaisVideo: ["Redes sociais da DalPet"] });
+    adm = convite({ nome: "Marco Chaves", email: "marco@propaga.com", papel: "admin" }).uid;
+    mcl = convite({ nome: "Marcelo Brum", email: "marcelo@propaga.com", papel: "atendimento" }).uid;
+    mri = convite({ nome: "Mariane Garcia", email: "contato@mondesign.com.br", papel: "criativo" }).uid;
+    f.emails.length = 0;
+  });
+  afterEach(() => { Object.assign(CLIENTES.dalpet, guardado); });
+
+  it("cadastro com convite adiado: sem e-mail, status 'preparado'; só vale para prospect antes do teste", () => {
+    convite({ nome: "Neide Dalçoquio", email: "propagacliente2@gmail.com", papel: "solicitante", clienteId: "dalpet", adiar: true });
+    expect(f.emails).toHaveLength(0);
+    expect(() => convite({ nome: "Débora", email: "d@x.com", papel: "solicitante", clienteId: "bmlog", adiar: true })).toThrow(/adiar o convite/);
+  });
+
+  it("checklist de 7 itens: o portal confere 4, o admin marca 3; sem tudo pronto não inicia", () => {
+    expect(a({ acao: "estado" }).resultado.itens.map((i: any) => [i.id, i.ok])).toEqual([
+      ["empresa", false], ["marca", true], ["configuracao", true], ["equipe", false], ["fornecedores", false], ["termo", false], ["contato", false]]);
+    expect(a({ acao: "marcar", item: "marca", ok: true }).mensagem).toMatch(/conferido pelo portal/);
+    expect(a({ acao: "iniciar" }).mensagem).toMatch(/Ainda falta: Empresa, Equipe vinculada, Fornecedores, Termo de uso, Contato do acesso/);
+    expect(f.docs.has("clientes/dalpet/avaliacao/estado")).toBe(false);
+  });
+
+  it("configuração com [A CONFIRMAR] não passa", () => {
+    CLIENTES.dalpet.unidades = ["[A CONFIRMAR] Unidade principal", "Todas as unidades"];
+    expect(a({ acao: "estado" }).resultado.itens.find((i: any) => i.id === "configuracao").ok).toBe(false);
+  });
+
+  it("tudo pronto: inicia, entrega o acesso (e-mail só agora) e não inicia de novo", () => {
+    convite({ nome: "Neide Dalçoquio", email: "propagacliente2@gmail.com", papel: "solicitante", clienteId: "dalpet", adiar: true });
+    definirVinculos(new Firestore(f.p, "propaga-portal"), { uid: mcl, clientes: ["dalpet"] });
+    definirVinculos(new Firestore(f.p, "propaga-portal"), { uid: mri, clientes: ["dalpet"] });
+    for (const item of ["empresa", "fornecedores", "termo"]) expect(a({ acao: "marcar", item, ok: true }).status).toBe("ok");
+    expect(a({ acao: "estado" }).resultado.preparados).toBe(1);
+    f.emails.length = 0;
+    const r = a({ acao: "iniciar" });
+    expect(r.resultado.entregues).toBe(1);
+    expect(f.emails.map((e) => e.para)).toEqual(["propagacliente2@gmail.com"]);
+    const est = f.doc("clientes/dalpet/avaliacao/estado");
+    expect(new Date(est.expiraEm).getTime() - new Date(est.iniciadoEm).getTime()).toBe(48 * 3_600_000);
+    expect(a({ acao: "estado" }).resultado).toMatchObject({ fase: "ativa", preparados: 0 });
+    expect(a({ acao: "iniciar" }).mensagem).toMatch(/já foi iniciado/);
+  });
+
+  it("decisão: aceitar libera o catálogo completo; encerrar fecha os pedidos; só o admin decide", () => {
+    f.docs.set("clientes/dalpet/avaliacao/estado", { updateTime: "t0", fields: (paraValor({ iniciadoEm: "2026-10-02T10:00:00Z", expiraEm: "2026-10-04T10:00:00Z" }) as any).mapValue.fields });
+    expect(a({ acao: "decidir", decisao: "aceita" }, mcl).mensagem).toMatch(/Só o administrador/);
+    expect(a({ acao: "decidir", decisao: "talvez" }).mensagem).toMatch(/aceitar ou encerrar/);
+    expect(a({ acao: "decidir", decisao: "aceita" }).status).toBe("ok");
+    expect(f.doc("clientes/dalpet/avaliacao/estado").decisao).toBe("aceita");
+    expect(f.doc("clientes/dalpet/catalogo/1.0").servicos.length).toBeGreaterThan(2);
+    expect(a({ acao: "decidir", decisao: "recusada" }).mensagem).toMatch(/já tem decisão/);
+  });
+
+  it("cliente sem teste (B&M Log) recusa as ações", () => {
+    expect(fila(adm, { clienteId: "bmlog", acao: "estado" }).mensagem).toMatch(/não está em teste/);
   });
 });

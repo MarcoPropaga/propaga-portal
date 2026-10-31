@@ -19,7 +19,7 @@ function Conteudo() {
   const t = useTxt();
   const s = useSessao();
   const [lista, setLista] = useState<Usuario[]>([]);
-  const [form, setForm] = useState({ nome: "", email: "", papel: "solicitante", clienteId: "bmlog" });
+  const [form, setForm] = useState({ nome: "", email: "", papel: "solicitante", clienteId: "bmlog", adiar: false });
   const [erros, setErros] = useState<Record<string, string>>({});
   const [estado, setEstado] = useState<Estado>({ tipo: "ocioso" });
 
@@ -52,7 +52,7 @@ function Conteudo() {
     if (estado.tipo !== "aguardando") return;
     return onSnapshot(doc(db(), "fila", estado.id), (d) => {
       const x = d.data() as { status: string; mensagem?: string } | undefined;
-      if (x?.status === "ok") { setEstado({ tipo: "ok", msg: "Convite enviado. A pessoa recebe o e-mail em instantes." }); carregar(); }
+      if (x?.status === "ok") { setEstado({ tipo: "ok", msg: form.adiar ? "Pessoa cadastrada, sem convite. O e-mail sai no Iniciar teste." : "Convite enviado. A pessoa recebe o e-mail em instantes." }); carregar(); }
       if (x?.status === "erro") setEstado({ tipo: "erro", msg: x.mensagem || "Não foi possível enviar o convite." });
     });
   }, [estado]);
@@ -61,7 +61,7 @@ function Conteudo() {
     e.preventDefault();
     const dados = reenviar
       ? { nome: reenviar.nome, email: reenviar.email, papel: reenviar.papel, clienteId: reenviar.clienteId ?? undefined }
-      : { ...form, clienteId: (PAPEIS_CLIENTE as readonly string[]).includes(form.papel) ? form.clienteId : undefined };
+      : { ...form, clienteId: (PAPEIS_CLIENTE as readonly string[]).includes(form.papel) ? form.clienteId : undefined, adiar: form.adiar && !!CLIENTES[form.clienteId]?.avaliacao ? true : undefined };
     const r = conviteSchema.safeParse(dados);
     if (!r.success) {
       setErros(Object.fromEntries(r.error.issues.map((i) => [String(i.path[0]), i.message])));
@@ -126,6 +126,10 @@ function Conteudo() {
               </div>
             )}
           </div>
+          {cliente && !!CLIENTES[form.clienteId]?.avaliacao && (
+            <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1 size-4" checked={form.adiar} onChange={(e) => setForm({ ...form, adiar: e.target.checked })} />
+              <span>Cadastrar sem enviar o convite agora. O e-mail sai quando você clicar em <b>Iniciar teste</b> em Prospecção.</span></label>
+          )}
           {estado.tipo === "aguardando" && <Aviso>Enviando convite… costuma levar poucos segundos (no máximo 1 minuto).</Aviso>}
           {estado.tipo === "ok" && <Aviso tipo="ok">{estado.msg}</Aviso>}
           {estado.tipo === "erro" && <Aviso tipo="erro">{estado.msg}</Aviso>}

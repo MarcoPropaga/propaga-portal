@@ -60,3 +60,10 @@ Durante o período de teste ninguém de fora da Propaga entra no portal (decisã
 - A migração de vínculos antigos põe os profissionais só na B&M Log; clientes novos são vinculados pelo admin.
 - **Pendência:** relatório e pagamento do criativo valem só para a B&M Log (um documento por criativo e mês, sem cliente no id). Por cliente: feito em 30/10/2026.
 - **Pendência:** `configurarProjeto` precisa rodar uma vez no Apps Script para publicar os dois clientes e catálogos no banco; depois, vincular a equipe aos clientes de teste em Usuários e convidar usuários de teste (a trava `EMAILS_PERMITIDOS` continua valendo).
+
+## Iniciar teste (Prospecção)
+- Admin > Prospecção: lista os clientes com `avaliacao` (hoje DalPet). Checklist de 7 itens (empresa, fornecedores e termo são confirmados à mão; marca, configuração, equipe e contato o portal confere).
+- "Iniciar teste" só libera com os 7 prontos; grava início e fim previsto (+48 h) e envia os convites que estavam adiados.
+- Em Usuários, a caixa "Cadastrar sem enviar o convite agora" deixa a pessoa em status "preparado".
+- Decisão: "aceitou a proposta" publica o catálogo completo; "encerrar" bloqueia novos pedidos. Sem relógio na tela; o admin recebe e-mail no fim previsto.
+- Pendente: fechar contas na recusa.
