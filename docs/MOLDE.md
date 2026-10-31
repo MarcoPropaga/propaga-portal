@@ -67,3 +67,9 @@ Durante o período de teste ninguém de fora da Propaga entra no portal (decisã
 - Em Usuários, a caixa "Cadastrar sem enviar o convite agora" deixa a pessoa em status "preparado".
 - Decisão: "aceitou a proposta" publica o catálogo completo; "encerrar" bloqueia novos pedidos. Sem relógio na tela; o admin recebe e-mail no fim previsto.
 - Pendente: fechar contas na recusa.
+
+## Cadastro da empresa e trava do Baixar (3b, 31/10/2026)
+- `src/content/cadastro.ts`: 42 campos em 8 grupos (da ficha do prospect), texto livre, "não se aplica" vale. Gravado em `clientes/{id}/cadastro/dados` só pelo servidor (fila `cadastro`; solicitante, atendimento e admin). Menu "Empresa" aparece só para cliente com `avaliacao`.
+- Trava (`travaDownload`): o prospect só vê o link do Drive dos posts do teste com os 42 campos preenchidos, e até 7 dias após o fim previsto (`diasDownload`, contado de `expiraEm`). Quem aceitou a proposta e a equipe Propaga não têm trava.
+- Limite: a trava é de tela. O link do Drive continua existindo no pedido; a permissão do Drive é da Propaga.
+- O item "Empresa" do checklist de Iniciar teste segue manual (pré-cadastro conferido pelo admin); o cadastro de 42 campos é preenchido pela DalPet durante o teste.

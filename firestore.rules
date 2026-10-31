@@ -76,6 +76,12 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Cadastro da empresa do prospect (42 campos): leitura por quem preenche; escrita só pelo servidor.
+      match /cadastro/{doc} {
+        allow read: if membro(c) && papel() in ['solicitante', 'atendimento', 'admin'];
+        allow write: if false;
+      }
+
       match /rascunhos/{uid} {
         allow read, delete: if membro(c) && request.auth.uid == uid;
         allow create, update: if membro(c) && request.auth.uid == uid && request.resource.size() < 200000;
@@ -85,11 +91,11 @@ service cloud.firestore {
     // Fila de ações: o navegador só cria pedidos de ação; o servidor valida e executa.
     match /fila/{id} {
       function tiposPermitidos() {
-        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos', 'avaliacao']
+        return admin() ? ['convidar', 'reenviarConvite', 'acessos', 'enviar', 'acao', 'peca', 'publicacao', 'relatorioCriativo', 'pagarCriativo', 'tabelaCriativo', 'arquivarRodada', 'vinculos', 'avaliacao', 'cadastro']
           : papel() == 'midia_social' ? ['publicacao']
           : papel() == 'criativo' ? ['peca', 'relatorioCriativo', 'tabelaCriativo', 'arquivarRodada']
           : papel() == 'financeiro_propaga' ? ['acao', 'peca', 'pagarCriativo']
-          : papel() in ['solicitante', 'atendimento'] ? ['enviar', 'acao', 'peca', 'publicacao']
+          : papel() in ['solicitante', 'atendimento'] ? ['enviar', 'acao', 'peca', 'publicacao', 'cadastro']
           : []; // lista fechada (24/10/2026): papel fora da lista, como o Financeiro do cliente, não escreve na fila
       }
       allow create: if logado() && doisFatores()
