@@ -21,6 +21,12 @@ export interface Marca {
 
 import type { AvaliacaoConfig } from "@/lib/avaliacao";
 
+/** Marca neutra da Propaga: área "Portal Propaga" do admin, convites da equipe e resumos que misturam clientes. */
+export const MARCA_PROPAGA: Marca = {
+  nomeCurto: "Propaga", equipe: "Propaga", rotuloPortal: "Portal Propaga", selo: "", seloAlt: "Propaga",
+  cores: { escura: "#141414", texto: "#C81500", destaque: "#FF1B00", claro: "#FFE3DE", papel: "#F7F5F2", borda: "#E9E9E9", cinza: "#5F5A56" },
+};
+
 export interface Cliente {
   id: string;
   nome: string;

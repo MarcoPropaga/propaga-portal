@@ -1,7 +1,8 @@
 "use client";
 import { VE_NOVA_SOLICITACAO } from "@/lib/fluxo";
 import { Protegido } from "@/components/auth/protegido";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useClienteAtivo } from "@/components/cliente-ativo";
 import { useSessao } from "@/components/auth/sessao";
 import { Casca } from "@/components/casca";
 import { CLIENTES, NOMES_PAPEIS } from "@/content/clientes";
@@ -16,7 +17,7 @@ const ATALHOS: { href: string; rotulo: string; texto: string; papeis?: string[] 
   { href: "/relatorios/", rotulo: "Relatórios", texto: "Totais por período, unidade e etapa.", papeis: VE_RELATORIOS },
   { href: "/criativo/relatorio/", rotulo: "Meu relatório", texto: "Peças do mês com os valores da sua tabela; envio à Marisa.", papeis: ["criativo"] },
   { href: "/criativo/tabela/", rotulo: "Minha tabela", texto: "Seus valores por peça e serviço.", papeis: ["criativo"] },
-  { href: "/criativo/pagamentos/", rotulo: "Pagamento dos criativos", texto: "Relatórios mensais dos criativos para conferir e pagar.", papeis: ["financeiro_propaga", "admin"] },
+  { href: "/criativo/pagamentos/", rotulo: "Pagamento dos criativos", texto: "Relatórios mensais dos criativos para conferir e pagar.", papeis: ["financeiro_propaga"] },
   { href: "/contrato/", rotulo: "Contrato", texto: "Regras do contrato e documento assinado.", papeis: [...VE_CONTRATO, "criativo"] },
   { href: "/arquivos/", rotulo: "Arquivos no Drive", texto: "Pastas de cada pedido.", papeis: VE_ARQUIVOS },
   { href: "/ajuda/", rotulo: "Ajuda", texto: "Dúvidas frequentes e contato." },
@@ -27,6 +28,16 @@ function Conteudo() {
   const s = useSessao();
   // Mídias sociais (Kauan) não tem Início: entra direto nas tarefas.
   useEffect(() => { if (s.papel === "midia_social") window.location.replace("/aprovacoes/"); }, [s.papel]);
+  // Admin entra primeiro na área Propaga; o Início de um cliente só abre com ?cliente=<id>.
+  const ativo = useClienteAtivo();
+  const [liberado, setLiberado] = useState(s.papel !== "admin");
+  useEffect(() => {
+    if (s.papel !== "admin") { setLiberado(true); return; }
+    const id = new URLSearchParams(window.location.search).get("cliente");
+    if (id && CLIENTES[id]) { ativo.escolher(id); setLiberado(true); }
+    else window.location.replace("/propaga/");
+  }, [s.papel]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!liberado) return <main className="grid min-h-screen place-items-center text-gray-600" aria-busy="true">Carregando…</main>;
   const nome = (s.usuario?.displayName || "").split(" ")[0];
   const podeSolicitar = !!s.papel && (VE_NOVA_SOLICITACAO as string[]).includes(s.papel);
   return (
