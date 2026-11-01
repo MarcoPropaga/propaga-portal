@@ -45,7 +45,7 @@ export function ClienteAtivoProvider({ children }: { children: ReactNode }) {
   const valor: ClienteAtivo = {
     clienteId,
     cliente: CLIENTES[clienteId],
-    opcoes: s.propaga ? permitidos.map((c) => CLIENTES[c]) : [],
+    opcoes: s.propaga ? permitidos.map((c) => CLIENTES[c]).filter((c) => !c.oculto) : [],
     escolher: (id) => { if (permitidos.includes(id)) { gravarEscolha(id); setEscolha(id); } },
   };
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
