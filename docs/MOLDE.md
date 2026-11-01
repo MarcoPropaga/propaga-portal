@@ -61,6 +61,11 @@ Durante o período de teste ninguém de fora da Propaga entra no portal (decisã
 - **Pendência:** relatório e pagamento do criativo valem só para a B&M Log (um documento por criativo e mês, sem cliente no id). Por cliente: feito em 30/10/2026.
 - **Pendência:** `configurarProjeto` precisa rodar uma vez no Apps Script para publicar os dois clientes e catálogos no banco; depois, vincular a equipe aos clientes de teste em Usuários e convidar usuários de teste (a trava `EMAILS_PERMITIDOS` continua valendo).
 
+## Área "Portal Propaga" (admin)
+- O admin entra primeiro em `/propaga/` (marca Propaga, sem seletor de cliente): lista de clientes e de prospects, com "Abrir portal" / "Ver como portal".
+- Menu da área: Início, Prospecção, Equipe, Pagamento dos criativos, Visão do criativo, Tabela dos criativos, Arquivar rodada de testes. Regra em `src/lib/area.ts` (`areaDe`).
+- Dentro do portal de um cliente o menu não traz mais itens só do admin; o item "← Portal Propaga" volta à área. `/inicio/` do admin exige `?cliente=<id>`; sem ele, redireciona para `/propaga/`.
+
 ## Iniciar teste (Prospecção)
 - Admin > Prospecção: lista os clientes com `avaliacao` (hoje DalPet). Checklist de 7 itens (empresa, fornecedores e termo são confirmados à mão; marca, configuração, equipe e contato o portal confere).
 - "Iniciar teste" só libera com os 7 prontos; grava início e fim previsto (+48 h) e envia os convites que estavam adiados.
