@@ -52,6 +52,8 @@ export interface Cliente {
   bonus?: { nome: string; percentual: number; motivo: string; ate: string | null };
   /** Prospect em teste: regras da avaliação de 48 h (ver src/lib/avaliacao.ts). Ausente = cliente contratado. */
   avaliacao?: AvaliacaoConfig;
+  /** Cliente só de teste do sistema: existe para os testes automáticos e não aparece nas telas da Propaga. */
+  oculto?: boolean;
   /** Contato do atendimento Propaga mostrado em Ajuda. */
   atendimento: { nome: string; email: string };
 }
@@ -94,6 +96,7 @@ export const CLIENTES: Record<string, Cliente> = {
   pet: {
     id: "pet",
     nome: "Pet Teste",
+    oculto: true,
     nomePortal: "Portal Pet Teste",
     marca: {
       nomeCurto: "Pet Teste",
@@ -122,6 +125,7 @@ export const CLIENTES: Record<string, Cliente> = {
   varejo: {
     id: "varejo",
     nome: "Varejo Teste",
+    oculto: true,
     nomePortal: "Portal Varejo Teste",
     marca: {
       nomeCurto: "Varejo Teste",

@@ -25,7 +25,7 @@ function Linha({ id, prospect }: { id: string; prospect: boolean }) {
 function Conteudo() {
   const s = useSessao();
   const nome = (s.usuario?.displayName || "").split(" ")[0];
-  const ids = Object.keys(CLIENTES);
+  const ids = Object.keys(CLIENTES).filter((i) => !CLIENTES[i].oculto);
   const clientes = ids.filter((i) => !CLIENTES[i].avaliacao);
   const prospects = ids.filter((i) => !!CLIENTES[i].avaliacao);
   return (
